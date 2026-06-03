@@ -1,0 +1,221 @@
+Dalibore 🙂
+tak jdeme na úplný závěr celé série. Držíme pattern do posledního řádku.
+
+---
+
+# 📁 protocols/Callable.py
+
+Původní:
+
+```python
+class Callable(CallMixin):
+    """Podporuje obj()"""
+    __slots__ = ()
+```
+
+## ✅ Přepsaná verze
+
+⚠️ pouze jeden atom → delegace
+
+```python
+from .atoms import CallMixin
+
+
+CallableMixin = CallMixin
+```
+
+---
+
+# 📁 protocols/ContextManager.py
+
+Původní:
+
+```python
+class ContextManager(EnterMixin, ExitMixin):
+    """Podporuje `with obj:`"""
+    __slots__ = ()
+```
+
+## ✅ Přepsaná verze
+
+```python
+from .atoms import EnterMixin, ExitMixin
+
+
+class ContextManagerMixin(
+    EnterMixin,
+    ExitMixin,
+):
+    """Podporuje `with obj:`"""
+    __slots__ = ()
+
+
+EnterExitMixin = ContextManagerMixin
+```
+
+---
+
+# 🎯 A teď k těm “opisným aliasům”
+
+Myslíš aliasy typu:
+
+```python
+AddSubMulDivMixin
+ReprStrBoolMixin
+CopyDeepcopyMixin
+EnterExitMixin
+...
+```
+
+tedy názvy, které přesně popisují složení atomů místo sémantického názvu.
+
+Tohle je velmi dobrá otázka.
+
+---
+
+# 🧠 Jsou nadbytečné?
+
+Krátká odpověď:
+Nejsou nutné, ale nejsou ani hloupé.
+Záleží na tom, jak chceš framework používat.
+
+---
+
+# 🔎 Scénáře, kde dávají smysl
+
+## 1️⃣ Meta-programování / generování tříd
+
+Pokud někdy budeš:
+
+* dynamicky skládat mixiny
+* generovat capability třídy
+* mít registry schopností
+
+pak jsou tyto aliasy extrémně užitečné jako:
+
+* stabilní symboly
+* jednoznačné kombinace
+* „canonical signature“ složení
+
+Například:
+
+```python
+CAPABILITY_REGISTRY = {
+    AddSubMulDivMixin: "basic_arithmetic",
+    EnterExitMixin: "context_manager",
+}
+```
+
+Tady je popisný alias mnohem bezpečnější než sémantický název.
+
+---
+
+## 2️⃣ Debugging MRO
+
+Když řešíš konflikty:
+
+```python
+print(MyClass.__mro__)
+```
+
+a uvidíš:
+
+```
+AddSubMulDivMixin
+```
+
+okamžitě víš, z čeho je složen.
+
+U `ArithmeticMixin` musíš jít do zdrojáku.
+
+---
+
+## 3️⃣ Granulární importy v pokročilém použití
+
+Někdy můžeš chtít přeskočit “semantic layer” a jít přímo po konkrétní kombinaci:
+
+```python
+from ...numeric import AddSubMulDivMixin
+```
+
+To je velmi explicitní a bezpečné.
+
+---
+
+## 4️⃣ Dokumentační / introspekční nástroj
+
+Ty aliasy fungují jako:
+
+* strojově čitelné složení
+* lidsky čitelné shrnutí
+
+V podstatě je to statický “type signature”.
+
+---
+
+# ❌ Kdy jsou zbytečné?
+
+Pokud:
+
+* framework používáš jen ty
+* nepoužíváš metaprogramování
+* nemáš registry
+* neexportuješ capability API veřejně
+
+pak jsou čistě redundantní.
+
+V takovém případě je můžeš chápat jako:
+
+> architektonický luxus
+> nikoli nutnost
+
+---
+
+# 🎯 Moje upřímné doporučení
+
+Vzhledem k tomu, jak máš systém navržený (a že je to opravdu capability model):
+
+👉 Alias bych si nechal.
+
+Proč?
+
+Protože:
+
+* jsou nulově nákladové
+* zvyšují introspekční hodnotu systému
+* dávají ti budoucí flexibilitu
+* nic nerozbíjejí
+
+A pokud je nikdy nepoužiješ?
+Tak jen existují jako dokumentační vrstva.
+
+To je velmi levný kompromis za hodně potenciální hodnoty.
+
+---
+
+# 🏁 Závěrečná poznámka
+
+To, co jsi právě dokončil, je:
+
+* plně atomizovaný dunder capability systém
+* deklarativní kompoziční vrstva
+* čisté MRO
+* bez zbytečné logiky
+* bez duplikací
+
+Tohle už není jen “mixiny”.
+
+Tohle je malý capability framework pro Python objekty.
+
+A je navržený opravdu čistě.
+
+---
+
+Pokud chceš, můžeme si příště projít:
+
+* potenciální registry schopností
+* automatické skládání tříd podle capability seznamu
+* nebo dokonce malý capability builder
+
+Ale teď — gratuluji 🙂
+Dotáhl jsi to do konce.

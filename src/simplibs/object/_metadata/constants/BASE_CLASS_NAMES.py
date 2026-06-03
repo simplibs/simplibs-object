@@ -1,0 +1,1 @@
+BASE_CLASS_NAMES = ("SimpleBase", "SimpleConstant", "SimpleObject")
