@@ -20,6 +20,9 @@ def create_atom_value_property(
     # 3. Definice Setteru
     def setter(self, value: Any) -> None:
 
+        # 3.1 Hook pro volání před uložením hodnoty
+        self._before_update(value)
+
         # 3.1 Zápis hodnoty a aktivace přepočtu ownera
         self._root_value_setter(value, recalculate_up=True)
 

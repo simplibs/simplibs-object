@@ -16,6 +16,11 @@ class InstanceBase:
         """Výchozí prázdná kotva pro reaktivní inicializaci mixinů."""
         pass
 
+    # 3. Definice pomocné metody pro mixiny skrze kterou mají přístup před uložením hodnoty
+    def _before_update(self, new_value):
+        """Hook pro mixiny — výchozí implementace nedělá nic."""
+        pass
+
     #--- Definice protperty zpřístupňující meta ---#
     # (pro přímí přístup bez procházení MRO)
     @property

@@ -49,26 +49,3 @@ def make_composite_class(
     # 6. Navrácení třídy
     return composite_class
 
-
-class PropertyMixin:
-    # Vytvořit mixin který zpřístupní vnitnří prvky z inners
-    # 1. Definice kontejneru
-    slots = []
-
-    # 2. Přidání slotů pro konstanty (Atomy)
-    for const_meta in meta.constants_map.values():
-        slots.append(const_meta.name_private)
-
-    # 3. Přidání slotů pro kompozice (Nodes)
-    for comp_meta in meta.composites_map.values():
-        slots.append(comp_meta.name_private)
-
-    class_dict = {}
-
-    # 4. Přidání property pro konstanty
-    for name_snake, const_meta in meta.constants_map.items():
-        class_dict[name_snake] = create_atom_property(const_meta)
-
-    # 5. Přidání property pro kompozice
-    for name_snake, comp_meta in meta.composites_map.items():
-        class_dict[name_snake] = create_composite_property(comp_meta)

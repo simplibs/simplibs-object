@@ -8,22 +8,6 @@ from .validations.mixins import validate_mixin_is_simple_base_subclass, validate
 from .validations.slots import raise_mixin_slots_conflict_error
 
 
-def build_recursive_maps(meta):
-    constants = {}
-    composites = {}
-
-    def walk(m):
-        for inner in m.inners:
-            if inner.meta.is_constant:
-                constants[inner.meta.name_snake] = inner.meta
-            else:
-                composites[inner.meta.name_snake] = inner.meta
-                walk(inner.meta)
-
-    walk(meta)
-    return constants, composites
-
-
 def create_instance(
     cls: SimpleClassType,
     mixins: tuple,
@@ -69,49 +53,17 @@ def create_instance(
     # noinspection PyUnboundLocalVariable
     _instance_cls.__qualname__ = class_name
 
-    # 6.5 Doplnění třídní logiky
+    # 7. Doplnění třídní logiky
     for mixin in mixins:
         if hasattr(mixin, "__extend_instance_class__"):
             _instance_cls = mixin.__extend_instance_class__(_instance_cls)
 
-    # 7. Vytvoření živé instance a její inicializace
+    # 8. Vytvoření živé instance a její inicializace
     # noinspection PyTypeChecker
     instance = object.__new__(_instance_cls)
     # noinspection PyArgumentList
     instance.__init__()
 
+    # 9. Navrácení vytvořené instance
     return instance
 
-"""
-Proč větev except nezachytává nic jiného:
-| Možný zdroj chyby | Eliminováno? | Kde? |
-| --- | --- | --- |
-| Nevalidní rodič | ✔️ | ``validate_mixin_is_class`` |
-| Nevalidní dědičnost | ✔️ | ``validate_mixin_is_simple_base_subclass`` |
-| Nevalidní režim | ✔️ | ``validate_mixin_is_compatible`` |
-| Nevalidní sloty | ✔️ | ``verify_mixin_definition`` |
-| Zakázané atributy | ✔️ | ``verify_mixin_definition`` |
-| Konflikt property vs slot | ✔️ | forbidden names |
-| Nevalidní class_dict | ✔️ | pevně definovaný |
-| Nevalidní jméno třídy | ✔️ | pevně definované |
-| Konflikt MRO | ✔️ | validace mixinů |
-| Konflikt slotů | ❌ | jediná věc, kterou Python řeší až v ``type()`` |
-"""
-
-# 6.5 Rozšíření instanční třídy podle mixinů
-if InnersPropertyMixin in mixins:
-    extend_class_with_inners_properties(_instance_cls, cls.meta)
-
-if DefaultStateMixin in mixins:
-    extend_class_with_default_state(_instance_cls, cls.meta)
-
-# 6.5 Rozšíření instanční třídy podle mixinů
-for mixin in mixins:
-    if hasattr(mixin, "__extend_instance_class__"):
-        mixin.__extend_instance_class__(_instance_cls, cls.meta)
-
-
-class InnersPropertyMixin(SimpleMixin):
-    @staticmethod
-    def __extend_instance_class__(instance_cls, meta):
-        extend_class_with_inners_properties(instance_cls, meta)

@@ -1,16 +1,11 @@
-# class ContextManager(EnterMixin, ExitMixin):
-#     """Podporuje `with obj:`"""
-#     __slots__ = ()
-
-from .atoms import EnterMixin, ExitMixin
+class ContextManagerMixin(SimpleMixin):
+    """Umožňuje použití objektu jako kontextového manažeru (with obj:)."""
 
 
-class ContextManagerMixin(
-    EnterMixin,
-    ExitMixin,
-):
-    """Podporuje `with obj:`"""
     __slots__ = ()
 
+    def __enter__(self):
+        return self
 
-EnterExitMixin = ContextManagerMixin
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        return False  # neignorujeme výjimky
