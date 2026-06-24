@@ -1,1 +1,0 @@
-from .create_properties_for_inner import create_properties_for_inner

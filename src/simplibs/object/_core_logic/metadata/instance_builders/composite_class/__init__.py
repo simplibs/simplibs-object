@@ -1,0 +1,1 @@
+from .make_composite_class import make_composite_class

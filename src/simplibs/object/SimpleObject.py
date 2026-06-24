@@ -1,10 +1,13 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 from simplibs.sentinels import UNSET
 # Inners
 from .SimpleConstant import SimpleConstant
-from ._types import SimpleClassType
-from ._types.params import CopyLogicParams, P, R
+from .protocols import LogicSignature, P, R
 from ._validations import process_calculate_value_params
+# Anotations
+if TYPE_CHECKING:
+    from .protocols.classes import SimpleClassLike
+
 
 
 class SimpleObject(SimpleConstant):
@@ -26,7 +29,7 @@ class SimpleObject(SimpleConstant):
 
     #--- Vnitřní prvky třídy ---#
     # (povinný atribut - musí odpovídat paramerů _logic)
-    _inners: tuple[SimpleClassType, ...] = UNSET
+    _inners: tuple["SimpleClassLike", ...] = UNSET
 
     #--- Hlavní metoda pro výpočet hodnoty ---#
     # (povinný prvek - vypočítává default)
@@ -56,7 +59,7 @@ class SimpleObject(SimpleConstant):
     # ===================================
 
     @classmethod
-    def calculate_value(cls: CopyLogicParams[P, R], *args: P.args, **kwargs: P.kwargs) -> R:
+    def calculate_value(cls: LogicSignature[P, R], *args: P.args, **kwargs: P.kwargs) -> R:
         """
         Dynamicky spočítá hodnotu kompozice.
         Díky ParamSpec PyCharm nahlédne do uživatelské metody '_logic'

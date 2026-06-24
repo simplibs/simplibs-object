@@ -1,4 +1,11 @@
-class OrderingMixin(SimpleMixin):
+from typing import Any
+# Outers
+from .....protocols import SimpleInstanceType
+from ...base_class import SimpleMixin
+
+
+# noinspection PyUnresolvedReferences
+class Ordering(SimpleMixin):
     """
     Porovnávání velikosti pro Simple instance.
     Porovnává podle hodnoty (self.value).
@@ -7,28 +14,52 @@ class OrderingMixin(SimpleMixin):
 
     __slots__ = ()
 
-    def __lt__(self, other: Any) -> bool:
+    def __lt__(self: SimpleInstanceType, other: Any) -> bool:
+        """
+        Vrací True, pokud je hodnota této instance menší než hodnota druhého
+        operandu. Pokud je operand Simple instance, použije se jeho .value,
+        jinak se porovnává přímo s hodnotou operandu. Při nekompatibilních
+        typech vrací NotImplemented.
+        """
         other_value = getattr(other, "value", other)
         try:
             return self.value < other_value
         except TypeError:
             return NotImplemented
 
-    def __le__(self, other: Any) -> bool:
+    def __le__(self: SimpleInstanceType, other: Any) -> bool:
+        """
+        Vrací True, pokud je hodnota této instance menší nebo rovna hodnotě
+        druhého operandu. Pokud je operand Simple instance, použije se jeho
+        .value, jinak se porovnává přímo s hodnotou operandu. Při
+        nekompatibilních typech vrací NotImplemented.
+        """
         other_value = getattr(other, "value", other)
         try:
             return self.value <= other_value
         except TypeError:
             return NotImplemented
 
-    def __gt__(self, other: Any) -> bool:
+    def __gt__(self: SimpleInstanceType, other: Any) -> bool:
+        """
+        Vrací True, pokud je hodnota této instance větší než hodnota druhého
+        operandu. Pokud je operand Simple instance, použije se jeho .value,
+        jinak se porovnává přímo s hodnotou operandu. Při nekompatibilních
+        typech vrací NotImplemented.
+        """
         other_value = getattr(other, "value", other)
         try:
             return self.value > other_value
         except TypeError:
             return NotImplemented
 
-    def __ge__(self, other: Any) -> bool:
+    def __ge__(self: SimpleInstanceType, other: Any) -> bool:
+        """
+        Vrací True, pokud je hodnota této instance větší nebo rovna hodnotě
+        druhého operandu. Pokud je operand Simple instance, použije se jeho
+        .value, jinak se porovnává přímo s hodnotou operandu. Při
+        nekompatibilních typech vrací NotImplemented.
+        """
         other_value = getattr(other, "value", other)
         try:
             return self.value >= other_value

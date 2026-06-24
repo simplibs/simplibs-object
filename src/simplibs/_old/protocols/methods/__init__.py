@@ -1,0 +1,1 @@
+from .LogicSignature import LogicSignature, P, R

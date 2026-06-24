@@ -1,3 +1,5 @@
+from simplibs.sentinels import UNSET
+
 # Inners
 from .constants import FORBIDDEN_NAMES
 from .errors import (
@@ -25,11 +27,11 @@ def verify_mixin_definition(cls):
         raise_mixin_slots_unsuport_type(cls)
 
     # 4. Validace zda všechny prvky jsou str
-    if not all(isinstance(s, str) for s in slots):
+    slots_set = set(slots) if isinstance(slots, tuple) else {slots}
+    if not all(isinstance(s, str) for s in slots_set):
         raise_mixin_slots_contain_unvalid_type(cls)
 
     # 5. Validace zda některý z prvků není zakázaný
-    slots_set = set(slots) if isinstance(slots, tuple) else {slots}
     if FORBIDDEN_NAMES & slots_set:
         raise_mixin_slots_contains_forbidden_slot_names(cls)
 
@@ -38,9 +40,40 @@ def verify_mixin_definition(cls):
         raise_mixin_dict_contains_forbidden_attributes(cls)
 
     # 7. Validace zda _composite_only je v případě definice uživatelem zapsán jako bool
-    if ("_composite_only" in cls.__dict__ and
-        not isinstance(cls.__dict__["_composite_only"], bool)):
-        raise_mixin_composite_only_flag_is_not_bool(cls)
+    for flag in ("_constant_only", "_composite_only", "_mutable_only", "_immutable_only"):
+        if flag in cls.__dict__ and not isinstance(cls.__dict__[flag], bool):
+            raise TypeError(
+                f"Mixin {cls.__name__}: deklarativní flag '{flag}' musí být typu bool."
+            )
+
+    # 7.y Validace _only_types
+    if "_only_types" in cls.__dict__:
+        only = cls.__dict__["_only_types"]
+
+        # UNSET je povolená hodnota
+        if only is UNSET:
+            pass
+
+        # type je povolený
+        elif isinstance(only, type):
+            pass
+
+        # tuple typů je povolený
+        elif (
+            isinstance(only, tuple)
+            and all(isinstance(t, type) for t in only)
+        ):
+            pass
+
+        # Union typ je povolený
+        elif getattr(only, "__origin__", None) is Union:
+            pass
+
+        # jinak → chyba
+        else:
+            raise TypeError(
+                f"Mixin {cls.__name__}: hodnota '_only_types' musí být type, tuple[type,...], Union[...] nebo UNSET."
+            )
 
     # 8. Validace přítomnosti super() v metodě init_mixins
     if "init_mixins" in cls.__dict__:

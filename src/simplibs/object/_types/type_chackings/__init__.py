@@ -1,2 +1,0 @@
-from .SimpleMetaType import SimpleMetaType
-from .SimpleClassType import SimpleClassType, SimpleInstanceType, BaseSimpleClassType, SimpleObjectInstanceType

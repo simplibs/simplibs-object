@@ -1,0 +1,1 @@
+from .NewInstance import NewInstanceMixin

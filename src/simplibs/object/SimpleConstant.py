@@ -1,8 +1,13 @@
-from typing import Any, Callable
+from typing import Any
 from simplibs.sentinels import UNSET
 # Inners
 from .SimpleBase import SimpleBase
-from ._utils.constant_class import validate_type, validate, normalize, bool_or_raise_validate_error
+from ._utils.atom_class import (
+    validate_type,
+    validate,
+    normalize,
+    bool_or_raise_validate_error
+)
 
 
 class SimpleConstant(SimpleBase):
@@ -39,17 +44,17 @@ class SimpleConstant(SimpleBase):
     # ===================================
 
     @classmethod
-    def validate_type(cls, value: Any, *, return_bool: bool = False) -> bool:
+    def validate_type(cls, value: Any, *, return_bool: bool = False) -> bool | None:
         """Provede deterministickou validaci typu na základě metadat třídy."""
         return validate_type(cls, value, return_bool=return_bool)
 
     @classmethod
-    def validate(cls, value: Any, *, return_bool: bool = False) -> bool:
+    def validate(cls, value: Any, *, return_bool: bool = False) -> bool | None:
         """Provede validaci typu a validaci skrze upřesňující validační metodu."""
         return validate(cls, value, return_bool=return_bool)
 
     @classmethod
-    def is_valid(cls, value: Any) -> bool:
+    def is_valid(cls, value: Any) -> bool | None:
         """Vrátí True, pokud hodnota projde kompletní validací, jinak False."""
         return cls.validate(value, return_bool=True)
 

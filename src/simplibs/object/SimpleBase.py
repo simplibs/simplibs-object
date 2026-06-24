@@ -1,9 +1,11 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 from simplibs.sentinels import UNSET
 # Inners
 from ._metadata import SimpleMeta
-from ._types import SimpleMetaType
 from .settings import SimpleSettings
+# Anotations
+if TYPE_CHECKING:
+    from .protocols import SimpleMetadataType
 
 
 class SimpleBase(metaclass=SimpleMeta):
@@ -26,7 +28,7 @@ class SimpleBase(metaclass=SimpleMeta):
 
     #--- Definice slotu pro metadata ---#
     # (pro základní třídy nastavuje hodnotu UNSET - vypočítává se pouze pro definiční třídy)
-    __metadata__: SimpleMetaType = UNSET
+    __metadata__: "SimpleMetadataType" = UNSET
 
 
     # ===================================
