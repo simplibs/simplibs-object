@@ -1,10 +1,14 @@
-# Outers
-from ....protocols import SimpleClassType
+from typing import TYPE_CHECKING
 # Inners
 from .class_name_splitter import class_name_splitter
+# Annotations
+if TYPE_CHECKING:
+    from .....protocols.classes import SimpleClassLike
 
 
-def create_names(owner_class: SimpleClassType) -> tuple[tuple[str, ...], str, str]:
+def create_names(
+    owner_class: "SimpleClassLike"
+) -> tuple[tuple[str, ...], str, str]:
     """
     Procesní pipeline pro generování deterministických názvů třídy.
 

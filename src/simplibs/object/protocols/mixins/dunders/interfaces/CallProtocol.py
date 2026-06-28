@@ -1,12 +1,11 @@
 from typing import Protocol, runtime_checkable, Any, Self
 # Outers
-from ...core_mixins import NodesDictsProtocol, SnapshotProtocol
+from ...core_mixins import InfrastructureProtocol
 
 
 @runtime_checkable
 class CallProtocol(
-    NodesDictsProtocol,
-    SnapshotProtocol,
+    InfrastructureProtocol,
     Protocol
 ):
     """

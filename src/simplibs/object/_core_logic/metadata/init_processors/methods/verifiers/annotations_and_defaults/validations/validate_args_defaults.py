@@ -1,13 +1,15 @@
-from typing import Any
+from typing import TYPE_CHECKING, Any
 # Outers
-from .......protocols import ClassMethodProtocol
-from .......exceptions import SimpleMetadataError
+from ........exceptions import SimpleMetadataError
+# Annotations
+if TYPE_CHECKING:
+    from ........protocols.methods import ClassMethodProtocol
 
 
 def validate_args_defaults(
     expected_args_defaults: tuple[Any, ...],
     expected_params: tuple[str, ...],
-    bound_method: ClassMethodProtocol,
+    bound_method: "ClassMethodProtocol",
     base_info: dict[str, str | tuple[str, ...]],
 ) -> None:
     """

@@ -1,13 +1,15 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 # Outers
-from .......exceptions import SimpleMetadataError
-from .......protocols import SimpleClassType
+from ........exceptions import SimpleMetadataError
 from .._exceptions_helpers import exception_info_for_type
+# Annotations
+if TYPE_CHECKING:
+    from ........protocols.classes import SimpleClassLike
 
 
 def validate_type_is_not_empty(
     processed_type: Any,
-    owner_class: SimpleClassType
+    owner_class: "SimpleClassLike"
 ) -> None:
     """
     Validuje, že atribut _type nemá prázdnou hodnotu.

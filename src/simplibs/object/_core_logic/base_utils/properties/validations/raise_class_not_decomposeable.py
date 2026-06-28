@@ -1,7 +1,14 @@
+from typing import TYPE_CHECKING
+# Outers
 from .....exceptions import SimpleLogicError
+# Anotations
+if TYPE_CHECKING:
+    from .....protocols.metadata import SimpleMetadataLike
 
 
-def raise_class_not_decomposeable(meta) -> None:
+def raise_class_not_decomposeable(
+    meta: "SimpleMetadataLike"
+) -> None:
 
     # !!Je potřeba ji dodefinovat - bylo zde:
     raise TypeError(

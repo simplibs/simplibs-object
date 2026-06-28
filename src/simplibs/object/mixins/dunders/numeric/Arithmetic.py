@@ -1,10 +1,13 @@
+from typing import TYPE_CHECKING, Any
 import operator
 from numbers import Number
 # Outers
 from ...core_mixins import NodesDicts, Snapshot
 # Inners
-from ._utils.arithmetic import execute_op, execute_rop
-
+from ._utils import execute_arithmetic_op
+# Annotations
+if TYPE_CHECKING:
+    from ....protocols.mixins.dunders.numeric import ArithmeticProtocol
 
 
 class Arithmetic(NodesDicts, Snapshot):
@@ -20,84 +23,131 @@ class Arithmetic(NodesDicts, Snapshot):
     - konverze se provádí pouze pokud je bezpečná (např. int → float/Decimal/Fraction)
     """
 
-    __slots__ = ()
+    # ----------------------------------------
+    # Základní rozhraní
+    # ----------------------------------------
 
-    # Omezení na číselné typy
+    # Definice určení
     _only_types = Number
 
+    # Definice slotů
+    __slots__ = ()
+
     # -------------------------
-    # Sčítání (+)
+    # Metody - Sčítání (+)
     # -------------------------
-    def __add__(self, other):
+    def __add__(
+        self: "ArithmeticProtocol",
+        other: Any
+    ) -> "ArithmeticProtocol":
         """Vrací novou instanci s hodnotou self.value + other (s lazy fallback konverzí)."""
-        return execute_op(self, operator.add, other)
+        return execute_arithmetic_op(self, operator.add, other)
 
-    def __radd__(self, other):
+    def __radd__(
+        self: "ArithmeticProtocol",
+        other: Any
+    ) -> "ArithmeticProtocol":
         """Vrací novou instanci s hodnotou other + self.value (s lazy fallback konverzí)."""
-        return execute_rop(self, operator.add, other)
+        return execute_arithmetic_op(self, operator.add, other, is_reversed=True)
 
     # -------------------------
-    # Odčítání (-)
+    # Metody - Odčítání (-)
     # -------------------------
-    def __sub__(self, other):
+    def __sub__(
+        self: "ArithmeticProtocol",
+        other: Any
+    ) -> "ArithmeticProtocol":
         """Vrací novou instanci s hodnotou self.value - other (s lazy fallback konverzí)."""
-        return execute_op(self, operator.sub, other)
+        return execute_arithmetic_op(self, operator.sub, other)
 
-    def __rsub__(self, other):
+    def __rsub__(
+        self: "ArithmeticProtocol",
+        other: Any
+    ) -> "ArithmeticProtocol":
         """Vrací novou instanci s hodnotou other - self.value (s lazy fallback konverzí)."""
-        return execute_rop(self, operator.sub, other)
+        return execute_arithmetic_op(self, operator.sub, other, is_reversed=True)
 
     # -------------------------
-    # Násobení (*)
+    # Metody - Násobení (*)
     # -------------------------
-    def __mul__(self, other):
+    def __mul__(
+        self: "ArithmeticProtocol",
+        other: Any
+    ) -> "ArithmeticProtocol":
         """Vrací novou instanci s hodnotou self.value * other (s lazy fallback konverzí)."""
-        return execute_op(self, operator.mul, other)
+        return execute_arithmetic_op(self, operator.mul, other)
 
-    def __rmul__(self, other):
+    def __rmul__(
+        self: "ArithmeticProtocol",
+        other: Any
+    ) -> "ArithmeticProtocol":
         """Vrací novou instanci s hodnotou other * self.value (s lazy fallback konverzí)."""
-        return execute_rop(self, operator.mul, other)
+        return execute_arithmetic_op(self, operator.mul, other, is_reversed=True)
 
     # -------------------------
-    # Dělení (/)
+    # Metody - Dělení (/)
     # -------------------------
-    def __truediv__(self, other):
+    def __truediv__(
+        self: "ArithmeticProtocol",
+        other: Any
+    ) -> "ArithmeticProtocol":
         """Vrací novou instanci s hodnotou self.value / other (s lazy fallback konverzí)."""
-        return execute_op(self, operator.truediv, other)
+        return execute_arithmetic_op(self, operator.truediv, other)
 
-    def __rtruediv__(self, other):
+    def __rtruediv__(
+        self: "ArithmeticProtocol",
+        other: Any
+    ) -> "ArithmeticProtocol":
         """Vrací novou instanci s hodnotou other / self.value (s lazy fallback konverzí)."""
-        return execute_rop(self, operator.truediv, other)
+        return execute_arithmetic_op(self, operator.truediv, other, is_reversed=True)
 
     # -------------------------
-    # Celočíselné dělení (//)
+    # Metody - Celočíselné dělení (//)
     # -------------------------
-    def __floordiv__(self, other):
+    def __floordiv__(
+        self: "ArithmeticProtocol",
+        other: Any
+    ) -> "ArithmeticProtocol":
         """Vrací novou instanci s hodnotou self.value // other (s lazy fallback konverzí)."""
-        return execute_op(self, operator.floordiv, other)
+        return execute_arithmetic_op(self, operator.floordiv, other)
 
-    def __rfloordiv__(self, other):
+    def __rfloordiv__(
+        self: "ArithmeticProtocol",
+        other: Any
+    ) -> "ArithmeticProtocol":
         """Vrací novou instanci s hodnotou other // self.value (s lazy fallback konverzí)."""
-        return execute_rop(self, operator.floordiv, other)
+        return execute_arithmetic_op(self, operator.floordiv, other, is_reversed=True)
 
     # -------------------------
-    # Modulo (%)
+    # Metody - Modulo (%)
     # -------------------------
-    def __mod__(self, other):
+    def __mod__(
+        self: "ArithmeticProtocol",
+        other: Any
+    ) -> "ArithmeticProtocol":
         """Vrací novou instanci s hodnotou self.value % other (s lazy fallback konverzí)."""
-        return execute_op(self, operator.mod, other)
+        return execute_arithmetic_op(self, operator.mod, other)
 
-    def __rmod__(self, other):
+    def __rmod__(
+        self: "ArithmeticProtocol",
+        other: Any
+    ) -> "ArithmeticProtocol":
         """Vrací novou instanci s hodnotou other % self.value (s lazy fallback konverzí)."""
-        return execute_rop(self, operator.mod, other)
+        return execute_arithmetic_op(self, operator.mod, other, is_reversed=True)
 
     # -------------------------
-    # Mocnina (**)
+    # Metody - Mocnina (**)
     # -------------------------
-    def __pow__(self, other):
+    def __pow__(
+        self: "ArithmeticProtocol",
+        other: Any
+    ) -> "ArithmeticProtocol":
         """Vrací novou instanci s hodnotou self.value ** other (s lazy fallback konverzí)."""
-        return execute_op(self, operator.pow, other)
+        return execute_arithmetic_op(self, operator.pow, other)
 
-    def __rpow__(self, other):
+    def __rpow__(
+        self: "ArithmeticProtocol",
+        other: Any
+    ) -> "ArithmeticProtocol":
         """Vrací novou instanci s hodnotou other ** self.value (s lazy fallback konverzí)."""
-        return execute_rop(self, operator.pow, other)
+        return execute_arithmetic_op(self, operator.pow, other, is_reversed=True)

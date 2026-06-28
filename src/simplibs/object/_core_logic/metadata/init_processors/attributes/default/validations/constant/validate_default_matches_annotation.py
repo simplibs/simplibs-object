@@ -1,14 +1,16 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 # Outers
-from .......exceptions import SimpleMetadataError
-from .......protocols import SimpleClassType
+from ........exceptions import SimpleMetadataError
 from .._exceptions_helpers import exception_info_for_default
+# Annotations
+if TYPE_CHECKING:
+    from ........protocols.classes import SimpleClassLike
 
 
 def validate_default_matches_annotation(
     default_value: Any,
     expected_type: Any,
-    owner_class: SimpleClassType,
+    owner_class: "SimpleClassLike",
 ) -> None:
     """
     Validuje, že hodnota '_default' odpovídá definovanému typu '_type'.

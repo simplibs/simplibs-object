@@ -1,4 +1,4 @@
-from typing import Protocol, runtime_checkable, Any, Self, Type, Literal
+from typing import Protocol, runtime_checkable, Self, Literal, Type
 from types import TracebackType
 # Outers
 from ...base_class import SimpleMixinProtocol
@@ -12,7 +12,7 @@ class ContextProtocol(
     """
     Protokol pro mixin Context.
 
-    Garantuje podporu pro kontextové řízení (with obj:), což umožňuje 
+    Garantuje podporu pro kontextové řízení (with obj:), což umožňuje
     bezpečné ohraničení kódu. Vstup do kontextu vrací samotnou instanci (Self).
     """
 

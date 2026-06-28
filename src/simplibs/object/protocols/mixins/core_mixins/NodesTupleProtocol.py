@@ -1,9 +1,10 @@
-from typing import Protocol, runtime_checkable, TYPE_CHECKING
+from typing import Protocol, runtime_checkable, TYPE_CHECKING, TypeAlias
 # Outers
 from ..base_class import SimpleMixinProtocol
 # Annotations
 if TYPE_CHECKING:
-    from ...instance import SimpleInstanceLike
+    from ...alias_typings import NodesTuple, NamesTuple
+
 
 
 @runtime_checkable
@@ -21,7 +22,7 @@ class NodesTupleProtocol(
     # --- TECHNICKÉ ATRIBUTY (Inicializované v init_mixins) ---
 
     # Obsahuje n-tici dvojic (živá_instance_prvku, její_relativní_cesta)
-    _nodes_tuple: tuple[tuple["SimpleInstanceLike", tuple[str, ...]], ...]
+    _nodes_tuple: "NodesTuple"
 
     # Obsahuje n-tici čistých name_snake názvů všech sub-node prvků
-    _node_names_tuple: tuple[str, ...]
+    _node_names_tuple: "NamesTuple"

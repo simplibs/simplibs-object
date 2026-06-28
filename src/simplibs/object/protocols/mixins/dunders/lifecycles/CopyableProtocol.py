@@ -1,4 +1,4 @@
-from typing import Protocol, runtime_checkable, Any, Self
+from typing import Protocol, runtime_checkable, Self, Any
 # Outers
 from ...core_mixins import NodesDictsProtocol, SnapshotProtocol
 
@@ -12,8 +12,8 @@ class CopyableProtocol(
     """
     Protokol pro mixin Copyable.
 
-    Garantuje podporu pro standardní mělké a hluboké kopírování objektu 
-    v rámci Python ekosystému (integrace s modulem copy). Strategie se 
+    Garantuje podporu pro standardní mělké a hluboké kopírování objektu
+    v rámci Python ekosystému (integrace s modulem copy). Strategie se
     uvnitř přizpůsobuje stavu mutability, navenek ale vždy vrací identický typ (Self).
     """
 

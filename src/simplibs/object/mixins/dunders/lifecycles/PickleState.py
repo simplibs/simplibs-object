@@ -1,5 +1,10 @@
+from typing import TYPE_CHECKING
 # Outers
 from ...core_mixins import Serialization
+# Annotations
+if TYPE_CHECKING:
+    from ....protocols.mixins.dunders.lifecycles import PickleStateProtocol
+    from ....protocols.alias_typings import StateDict
 
 
 class PickleState(Serialization):
@@ -19,9 +24,20 @@ class PickleState(Serialization):
       automaticky použije).
     """
 
+    # ----------------------------------------
+    # Základní rozhraní
+    # ----------------------------------------
+
+    # Definice slotů
     __slots__ = ()
 
-    def __getstate__(self) -> dict:
+    # ----------------------------------------
+    # Metody - GETSTATE / SETSTATE
+    # ----------------------------------------
+
+    def __getstate__(
+        self: "PickleStateProtocol"
+    ) -> "StateDict":
         """
         Vrací stav instance jako dict pomocí to_dict().
 
@@ -31,7 +47,10 @@ class PickleState(Serialization):
         """
         return self.to_dict()
 
-    def __setstate__(self, state: dict) -> None:
+    def __setstate__(
+        self: "PickleStateProtocol",
+        state: "StateDict"
+    ) -> None:
         """
         Obnoví stav instance z dictu pomocí from_dict().
 

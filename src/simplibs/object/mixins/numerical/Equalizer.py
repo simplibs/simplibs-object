@@ -1,15 +1,29 @@
+from typing import TYPE_CHECKING
 from numbers import Number
 # Outers
-from ....protocols import SimpleInstanceType
-from .._shared_logic.constants import STEPPER
+from .._common.constants import STEPPER
 from ..core_mixins import NodesTuple
 # Inners
-from ._utils.stepper_class import Stepper
+from ._stepper_class import Stepper
+# Annotations
+if TYPE_CHECKING:
+    from ...protocols.mixins.numerical import EqualizerProtocol
+    from ...protocols.mixins.numerical.internal_types import SteppersMap
+    from ...protocols.instance import SimpleInstanceLike
 
 
-
-# noinspection PyAttributeOutsideInit
 class Equalizer(NodesTuple):
+    """
+    Poskytuje přístup k stepperu pro všechny inners.
+
+    Garantuje přítomnost číselných ovladačů (stepperů) pro všechny sub-node prvky
+    kompozice. Tyto ovladače jsou generovány dynamicky na základě blueprintu
+    a jsou dostupné skrze dynamické properties s postfixem.
+    """
+
+    # ----------------------------------------
+    # Základní rozhraní
+    # ----------------------------------------
 
     # Definice určení
     _composite_only = True
@@ -19,15 +33,23 @@ class Equalizer(NodesTuple):
     # Definice slotů
     __slots__ = ("_steppers",)
 
-    # Akce na instanční třídě před inicializací
+    # ----------------------------------------
+    # Hook pro úpravu instanční třídy
+    # ----------------------------------------
+
     @staticmethod
-    def __extend_instance_class__(instance_cls):
+    def __extend_instance_class__(
+        instance_cls: "SimpleInstanceLike"
+    ) -> "SimpleInstanceLike":
+        """
+        Interní metoda pro připojení prvků k třídě, před inicializačním procesem.
+        """
 
         # 1. Vytvoření potřebných properties
         for name in instance_cls.meta.node_names_set:
 
             # 1.1 Definice getteru
-            def getter(self, _name=name):
+            def getter(self: "EqualizerProtocol", _name: str = name):
                 return self._steppers[_name]
 
             # 1.2 Nastavení jména getteru a docstringu
@@ -44,10 +66,23 @@ class Equalizer(NodesTuple):
         # 2. Navrácení pozměněné třídy
         return instance_cls
 
-    # Inicializace mixinu
-    def init_mixins(self):
+    # ----------------------------------------
+    # Hook pro inicializaci
+    # ----------------------------------------
+
+    # noinspection PyAttributeOutsideInit
+    def init_mixins(
+        self: "EqualizerProtocol"
+    ) -> None:
+        """
+        Metoda, předávající svojí logiku do inicializačního procesu instance.
+        """
+
+        # 1. Inicializace předků
         super().init_mixins()
-        self._steppers = {
+
+        # 2. Slovník se steppery pro všechny prvky
+        self._steppers: "SteppersMap" = {
             instance.meta.name_snake: Stepper(instance)
-            for instance, _ in self.nodes_tuple
+            for instance, _ in self._nodes_tuple
         }

@@ -1,9 +1,15 @@
+from typing import TYPE_CHECKING
+# Inners
 from ._collect_nodes_data import _collect_nodes_data
-# Outers
-from ......protocols import SimpleInstanceType
+# Annotations
+if TYPE_CHECKING:
+    from .....protocols.mixins.core_mixins import NodesTupleProtocol
+    from .....protocols.alias_typings import NodesTuple
 
 
-def build_nodes_tuple(self) -> tuple[tuple[SimpleInstanceType, tuple[str, ...]]]:
+def build_nodes_tuple(
+    self: "NodesTupleProtocol"
+) -> "NodesTuple":
     """
     Vytvoří tuple s vnitřními tuple (instance, path), kde path obsahuje name_snake názvy vedoucí k danému uzlu.
     """

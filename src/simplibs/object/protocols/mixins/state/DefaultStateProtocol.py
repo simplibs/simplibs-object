@@ -1,6 +1,9 @@
-from typing import Protocol, runtime_checkable, Self, Any
+from typing import Protocol, runtime_checkable, Self, TYPE_CHECKING
 # Outers
 from ..core_mixins.SnapshotProtocol import SnapshotProtocol
+# Annotations
+if TYPE_CHECKING:
+    from ...alias_typings import SnapshotTuple
 
 
 @runtime_checkable
@@ -18,7 +21,7 @@ class DefaultStateProtocol(
     # --- TECHNICKÉ ATRIBUTY (Inicializované v init_mixins) ---
 
     # Uchovává otisk stavu (snapshot) hodnot v momentu vzniku instance
-    _default_state_snapshot: tuple[Any, ...]
+    _default_state_snapshot: "SnapshotTuple"
 
     # --- VEŘEJNÉ API PRO SPRÁVU STAVU ---
 

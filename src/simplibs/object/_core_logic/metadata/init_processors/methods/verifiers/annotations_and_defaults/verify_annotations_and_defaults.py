@@ -1,13 +1,15 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 # Outers
-from ......protocols import ClassMethodProtocol
 from .._exceptions_helpers import exception_info_for_classmethod
 # Inners
 from .validations import validate_args_defaults, validate_kwargs_defaults, validate_annotations
+# Annotations
+if TYPE_CHECKING:
+    from .......protocols.methods import ClassMethodProtocol
 
 
 def verify_annotations_and_defaults(
-    bound_method: ClassMethodProtocol,
+    bound_method: "ClassMethodProtocol",
     expected_params: tuple[str, ...],
     expected_args_params_count: int,
     bound_method_annotations: dict[str, Any],

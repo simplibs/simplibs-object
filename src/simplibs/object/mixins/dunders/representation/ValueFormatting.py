@@ -1,6 +1,9 @@
+from typing import TYPE_CHECKING
 # Outers
-from .....protocols import SimpleInstanceType
 from ...base_class import SimpleMixin
+# Annotations
+if TYPE_CHECKING:
+    from ....protocols.mixins.dunders.representation import ValueDisplayProtocol
 
 
 class ValueFormatting(SimpleMixin):
@@ -10,9 +13,21 @@ class ValueFormatting(SimpleMixin):
     Funguje pro atomické i kompozitní typy, protože oba mají hodnotu.
     """
 
+    # ----------------------------------------
+    # Základní rozhraní
+    # ----------------------------------------
+
+    # Definice slotů
     __slots__ = ()
 
-    def format(self: SimpleInstanceType, pattern: str | None = None) -> str:
+    # ----------------------------------------
+    # Methods = FORMAT
+    # ----------------------------------------
+
+    def format(
+        self: "ValueDisplayProtocol",
+        pattern: str | None = None
+    ) -> str:
         """
         Zformátuje hodnotu instance podle zadaného patternu.
         Pokud není pattern zadán, použije masku z metadat (meta.mask),
@@ -27,14 +42,23 @@ class ValueFormatting(SimpleMixin):
 
         return str(value)
 
-    def __format__(self, format_spec: str = "") -> str:
+    def __format__(
+        self,
+        format_spec: str = ""
+    ) -> str:
         """
         Podpora pro f-string formátování.
         Umožňuje zápis typu: f"{obj:pattern}".
         """
         return self.format(format_spec or None)
 
-    def __bytes__(self: SimpleInstanceType) -> bytes:
+    # ----------------------------------------
+    # Methods = BYTES / BOOL
+    # ----------------------------------------
+
+    def __bytes__(
+        self: "ValueDisplayProtocol"
+    ) -> bytes:
         """
         Převod hodnoty instance na bytes.
         Podporuje:
@@ -59,37 +83,11 @@ class ValueFormatting(SimpleMixin):
             f"(type={type(value).__name__}) na bytes."
         )
 
-    def __bool__(self: SimpleInstanceType) -> bool:
+    def __bool__(
+        self: "ValueDisplayProtocol"
+    ) -> bool:
         """
         Pravdivost objektu odpovídá pravdivosti jeho hodnoty.
         """
         return bool(self.value)
 
-
-
-"""
-### ✔ `format()`  
-- používá `self.value` (správně)  
-- používá masku z metadat (správně)  
-- fallback na `str(value)` (správně)  
-- žádná mutace (správně)  
-- žádné výjimky navíc (správně)  
-
-### ✔ `__format__`  
-- deleguje na `format()`  
-- podporuje f-stringy  
-- správná signatura  
-- správné chování  
-
-### ✔ `__bytes__`  
-- podporuje bytes, bytearray, memoryview  
-- podporuje str → UTF‑8  
-- pro ostatní typy vyhazuje TypeError  
-- správná chybová hláška  
-- žádná mutace  
-
-### ✔ `__bool__`  
-- vrací `bool(self.value)`  
-- správné chování  
-- žádná mutace  
-"""

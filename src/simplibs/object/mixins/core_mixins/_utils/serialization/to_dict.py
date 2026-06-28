@@ -1,10 +1,18 @@
+from typing import Any, TYPE_CHECKING
 from simplibs.sentinels import UNSET
 # Outers
-from ....._constants import OWNER_CLASS, VALUE
+from ...._common.constants import OWNER_CLASS, VALUE
+# Annotations
+if TYPE_CHECKING:
+    from .....protocols.mixins.core_mixins import SerializationProtocol
+    from .....protocols.alias_typings import StateDict
 
 
 # noinspection PyProtectedMember
-def to_dict(self, constant_only: bool = False):
+def to_dict(
+    self: "SerializationProtocol",
+    constant_only: bool = False
+) -> "StateDict":
 
     # 1. Definice proměných
     result = {OWNER_CLASS: self.meta.owner_class}

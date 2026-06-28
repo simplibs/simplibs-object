@@ -1,12 +1,18 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 from simplibs.sentinels import UNSET
 # Outers
-from ....._constants import OWNER_CLASS, VALUE
-from .helpers import create_new_instance  # uprav import podle nové struktury
+from ...._common.constants import OWNER_CLASS, VALUE
+from ...._common.immutability import create_new_instance
+# Annotations
+if TYPE_CHECKING:
+    from .....protocols.mixins.core_mixins import SerializationProtocol
+    from .....protocols.alias_typings import StateDict
 
 
-# noinspection PyProtectedMember
-def from_dict(self, user_dict: dict) -> Any:
+def from_dict(
+    self: "SerializationProtocol",
+    user_dict: "StateDict"
+) -> "SerializationProtocol":
     """
     Univerzální rekonstrukce stavu instance ze slovníku.
     Podporuje jak mutable (in-place zápis), tak immutable (generování nové instance) režim.

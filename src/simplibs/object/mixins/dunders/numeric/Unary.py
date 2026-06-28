@@ -1,9 +1,13 @@
+from typing import TYPE_CHECKING
 import operator
 from numbers import Number
 # Outers
 from ...core_mixins import NodesDicts, Snapshot
 # Inners
-from ._utils.unary import execute_unary_op
+from ._utils import execute_unary_op
+# Annotations
+if TYPE_CHECKING:
+    from ....protocols.mixins.dunders.numeric import UnaryProtocol
 
 
 class Unary(NodesDicts, Snapshot):
@@ -19,22 +23,33 @@ class Unary(NodesDicts, Snapshot):
     - konverze se provádí pouze pokud je bezpečná (např. int → float/Decimal/Fraction)
     """
 
-    __slots__ = ()
+    # ----------------------------------------
+    # Základní rozhraní
+    # ----------------------------------------
 
-    # Omezení na číselné typy
+    # Definice určení
     _only_types = Number
 
-    # ---------------------------------------------------------
-    # Unární operátory (-x, +x, abs(x))
-    # ---------------------------------------------------------
-    def __neg__(self):
+    # Definice slotů
+    __slots__ = ()
+
+    # ----------------------------------------
+    # Methods - Unární operátory (-x, +x, abs(x))
+    # ----------------------------------------
+    def __neg__(
+        self: "UnaryProtocol"
+    ) -> "UnaryProtocol":
         """Vrací novou instanci s hodnotou -self.value."""
         return execute_unary_op(self, operator.neg)
 
-    def __pos__(self):
+    def __pos__(
+        self: "UnaryProtocol"
+    ) -> "UnaryProtocol":
         """Vrací novou instanci s hodnotou +self.value."""
         return execute_unary_op(self, operator.pos)
 
-    def __abs__(self):
+    def __abs__(
+        self: "UnaryProtocol"
+    ) -> "UnaryProtocol":
         """Vrací novou instanci s hodnotou abs(self.value)."""
         return execute_unary_op(self, abs)

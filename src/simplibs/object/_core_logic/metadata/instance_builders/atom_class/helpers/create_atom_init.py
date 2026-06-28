@@ -1,11 +1,14 @@
-from typing import Callable
+from typing import TYPE_CHECKING
+from collections.abc import Callable
 from simplibs.sentinels import UNSET
-# Outers
-from .....protocols import SimpleMetadataType
+# Annotations
+if TYPE_CHECKING:
+    from ......protocols.metadata import SimpleMetadataLike
+    from ......protocols.instance import SimpleInstanceLike
 
 
 def create_atom_init(
-    meta: SimpleMetadataType,
+    meta: "SimpleMetadataLike",
     base_class_name: str
 ) -> Callable:
     """
@@ -14,7 +17,9 @@ def create_atom_init(
     """
 
     # 1. Definice logiky initu
-    def __init__(self):
+    def __init__(
+        self: "SimpleInstanceLike"
+    ) -> None:
 
         # Vytvoření hodnoty z defaultu
         self._value = meta.default

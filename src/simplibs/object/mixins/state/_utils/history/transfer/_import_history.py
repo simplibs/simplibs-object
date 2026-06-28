@@ -1,4 +1,13 @@
-def _import_history(self, history_list: list):
+from typing import TYPE_CHECKING
+# Annotations
+if TYPE_CHECKING:
+    from ......protocols.mixins.state import HistoryProtocol
+
+
+def _import_history(
+    self: "HistoryProtocol",
+    history_list: list
+) -> None:
     """Importuje historii. Při chybě obnoví původní stav."""
 
     # 1. Záloha předchozího stavu

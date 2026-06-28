@@ -1,5 +1,5 @@
 # Outers
-from .......exceptions import SimpleMetadataError
+from ........exceptions import SimpleMetadataError
 
 
 def validate_method_param_match_expected(

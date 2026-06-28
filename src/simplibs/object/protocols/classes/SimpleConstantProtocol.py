@@ -1,6 +1,9 @@
 from typing import Protocol, Any, runtime_checkable, TYPE_CHECKING
 # Inners
 from .SimpleBaseProtocol import SimpleBaseProtocol
+# Annotations
+if TYPE_CHECKING:
+    from ..alias_typings import ValidTypes
 
 
 @runtime_checkable
@@ -14,7 +17,7 @@ class SimpleConstantProtocol(
     """
 
     # --- VNITŘNÍ ROZHRANÍ (Definuje uživatel při zakládání třídy) ---
-    _type: type
+    _type: "ValidTypes"
     _default: Any
 
     @classmethod

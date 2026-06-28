@@ -1,5 +1,5 @@
 # Outers
-from .......exceptions import SimpleMetadataError
+from ........exceptions import SimpleMetadataError
 
 def validate_method_not_use_param_placeholders(
     has_varargs: bool,

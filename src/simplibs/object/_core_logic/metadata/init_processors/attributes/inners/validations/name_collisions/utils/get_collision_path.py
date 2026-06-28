@@ -1,9 +1,11 @@
-# Outers
-from ........protocols import SimpleClassType
+from typing import TYPE_CHECKING
+# Annotations
+if TYPE_CHECKING:
+    from .........protocols.classes import SimpleClassLike
 
 
 def get_collision_path(
-    current_class: SimpleClassType,
+    current_class: "SimpleClassLike",
     collision_name: str,
 ) -> str | None:
     """

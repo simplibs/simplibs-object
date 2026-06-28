@@ -17,9 +17,9 @@ class ArithmeticProtocol(
     Všechny operace jsou čisté a vracejí novou instanci stejného typu (Self).
     """
 
-    # ---------------------------------------------------------
+    # ----------------------------------------
     # Sčítání (+)
-    # ---------------------------------------------------------
+    # ----------------------------------------
     def __add__(self, other: Any) -> Self:
         """Vrací novou instanci s hodnotou (self.value + other)."""
         ...
@@ -28,9 +28,9 @@ class ArithmeticProtocol(
         """Pravostranné sčítání. Vrací novou instanci s hodnotou (other + self.value)."""
         ...
 
-    # ---------------------------------------------------------
+    # ----------------------------------------
     # Odčítání (-)
-    # ---------------------------------------------------------
+    # ----------------------------------------
     def __sub__(self, other: Any) -> Self:
         """Vrací novou instanci s hodnotou (self.value - other)."""
         ...
@@ -39,9 +39,9 @@ class ArithmeticProtocol(
         """Pravostranné odčítání. Vrací novou instanci s hodnotou (other - self.value)."""
         ...
 
-    # ---------------------------------------------------------
+    # ----------------------------------------
     # Násobení (*)
-    # ---------------------------------------------------------
+    # ----------------------------------------
     def __mul__(self, other: Any) -> Self:
         """Vrací novou instanci s hodnotou (self.value * other)."""
         ...
@@ -50,9 +50,9 @@ class ArithmeticProtocol(
         """Pravostranné násobení. Vrací novou instanci s hodnotou (other * self.value)."""
         ...
 
-    # ---------------------------------------------------------
+    # ----------------------------------------
     # Dělení (/)
-    # ---------------------------------------------------------
+    # ----------------------------------------
     def __truediv__(self, other: Any) -> Self:
         """Vrací novou instanci s hodnotou (self.value / other)."""
         ...
@@ -61,9 +61,9 @@ class ArithmeticProtocol(
         """Pravostranné dělení. Vrací novou instanci s hodnotou (other / self.value)."""
         ...
 
-    # ---------------------------------------------------------
+    # ----------------------------------------
     # Celočíselné dělení (//)
-    # ---------------------------------------------------------
+    # ----------------------------------------
     def __floordiv__(self, other: Any) -> Self:
         """Vrací novou instanci s hodnotou (self.value // other)."""
         ...
@@ -72,9 +72,9 @@ class ArithmeticProtocol(
         """Pravostranné celočíselné dělení. Vrací novou instanci s hodnotou (other // self.value)."""
         ...
 
-    # ---------------------------------------------------------
+    # ----------------------------------------
     # Modulo (%)
-    # ---------------------------------------------------------
+    # ----------------------------------------
     def __mod__(self, other: Any) -> Self:
         """Vrací novou instanci s hodnotou (self.value % other)."""
         ...
@@ -83,9 +83,9 @@ class ArithmeticProtocol(
         """Pravostranné modulo. Vrací novou instanci s hodnotou (other % self.value)."""
         ...
 
-    # ---------------------------------------------------------
+    # ----------------------------------------
     # Mocnina (**)
-    # ---------------------------------------------------------
+    # ----------------------------------------
     def __pow__(self, other: Any) -> Self:
         """Vrací novou instanci s hodnotou (self.value ** other)."""
         ...

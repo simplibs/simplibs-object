@@ -1,14 +1,16 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 # Outers
-from .......exceptions import SimpleMetadataError
-from .......protocols import SimpleClassType
+from ........exceptions import SimpleMetadataError
 from .._exceptions_helpers import exception_info_for_type
+# Annotations
+if TYPE_CHECKING:
+    from ........protocols.classes import SimpleClassLike
 
 
 def validate_type_from_tuple_is_not_none(
     inner_type: Any,
     type_tuple: tuple[Any, ...],
-    owner_class: SimpleClassType
+    owner_class: "SimpleClassLike"
 ) -> None:
     """
     Validuje, že atribut _type neobsahuje hodnotu None.

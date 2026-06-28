@@ -1,14 +1,17 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
+from types import UnionType
 # Outers
-from .......protocols import ClassMethodProtocol
-from .......exceptions import SimpleMetadataError
+from ........exceptions import SimpleMetadataError
 from ..._exceptions_helpers import exception_context_for_classmethod
+# Annotations
+if TYPE_CHECKING:
+    from ........protocols.methods import ClassMethodProtocol
 
 
 def raise_method_return_unvalide_outcome_type(
     calculated_value: Any,
-    expected_return_type: type,
-    bound_method: ClassMethodProtocol,
+    expected_return_type: type | UnionType,
+    bound_method: "ClassMethodProtocol",
 ) -> None:
     """
     Vytváří výjimku, když hodnota vrácená zkušebním výpočtem neodpovídá očekávanému typu.

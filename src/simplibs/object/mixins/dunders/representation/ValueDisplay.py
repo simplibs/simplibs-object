@@ -1,6 +1,9 @@
+from typing import TYPE_CHECKING
 # Outers
-from .....protocols import SimpleInstanceType
 from ...base_class import SimpleMixin
+# Annotations
+if TYPE_CHECKING:
+    from ....protocols.mixins.dunders.representation import ValueDisplayProtocol
 
 
 class ValueDisplay(SimpleMixin):
@@ -20,13 +23,23 @@ class ValueDisplay(SimpleMixin):
 
     """
 
+    # ----------------------------------------
+    # Základní rozhraní
+    # ----------------------------------------
+
     # Definice určení
     _constant_only = True
 
     # Definice slotů
     __slots__ = ()
 
-    def __repr__(self: SimpleInstanceType) -> str:
+    # ----------------------------------------
+    # Methods - REPR / STR
+    # ----------------------------------------
+
+    def __repr__(
+        self: "ValueDisplayProtocol"
+    ) -> str:
         """
         Technická reprezentace objektu ve formátu:
             ClassName(value_repr)
@@ -34,7 +47,9 @@ class ValueDisplay(SimpleMixin):
         """
         return f"{self.meta.class_name}({self.value!r})"
 
-    def __str__(self: SimpleInstanceType) -> str:
+    def __str__(
+        self: "ValueDisplayProtocol"
+    ) -> str:
         """
         Uživatelská reprezentace objektu.
         Vrací čistou hodnotu převedenou na řetězec.

@@ -16,9 +16,9 @@ class UnaryProtocol(
     Všechny operace jsou čisté a vracejí novou instanci téhož typu (Self).
     """
 
-    # ---------------------------------------------------------
+    # ----------------------------------------
     # Unární operace znamének
-    # ---------------------------------------------------------
+    # ----------------------------------------
     def __neg__(self) -> Self:
         """Matematická negace. Vrací novou instanci s hodnotou (-self.value)."""
         ...
@@ -27,9 +27,9 @@ class UnaryProtocol(
         """Unární plus. Vrací novou instanci s hodnotou (+self.value)."""
         ...
 
-    # ---------------------------------------------------------
+    # ----------------------------------------
     # Absolutní hodnota
-    # ---------------------------------------------------------
+    # ----------------------------------------
     def __abs__(self) -> Self:
         """Vrací novou instanci s absolutní hodnotou: abs(self.value)."""
         ...

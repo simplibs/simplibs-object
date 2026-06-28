@@ -1,5 +1,4 @@
 from typing import Protocol, Any, runtime_checkable, TYPE_CHECKING
-from simplibs.sentinels import UnsetType
 # Outers
 from ...classes import SimpleConstantProtocol
 # Inners
@@ -22,11 +21,11 @@ class AtomInstanceProtocol(
 
     # --- Interní stav (slots) ---
     _value: Any
-    _owner: "SimpleInstanceLike | UnsetType"
+    _owner: "SimpleInstanceLike"
     _locked: bool
 
     # --- Interní metody ---
-    def _root_value_setter(self, new_value: Any) -> None:
+    def _root_value_setter(self, new_value: Any, recalculate_up: bool) -> None:
         """Interní mechanismus pro bezpečné nastavení hodnoty kořene."""
         ...
 
@@ -36,7 +35,12 @@ class AtomInstanceProtocol(
         """Aktuální normalizovaná hodnota tohoto atomu."""
         ...
 
+    @value.setter
+    def value(self, new_value: Any) -> None:
+        """Nastaví novou hodnotu atomu (dostupné v mutable režimu)."""
+        ...
+
     @property
-    def owner(self) -> "SimpleInstanceLike | UnsetType":
+    def owner(self) -> "SimpleInstanceLike":
         """Reference na nadřazenou kompozici (pokud existuje)."""
         ...

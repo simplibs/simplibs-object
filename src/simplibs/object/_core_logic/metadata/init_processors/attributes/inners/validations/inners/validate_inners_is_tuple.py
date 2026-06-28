@@ -1,13 +1,15 @@
-from typing import Any
+from typing import TYPE_CHECKING, Any
 # Outers
-from .......exceptions import SimpleMetadataError
-from .......protocols import SimpleClassType
+from ........exceptions import SimpleMetadataError
 from .._exceptions_helpers import exception_info_for_inners
+# Annotations
+if TYPE_CHECKING:
+    from ........protocols.classes import SimpleClassLike
 
 
 def validate_inners_is_tuple(
     inners: Any,
-    owner_class: SimpleClassType
+    owner_class: "SimpleClassLike"
 ) -> None:
     """
     Validuje, že '_inners' jsou definovány jako 'tuple'.

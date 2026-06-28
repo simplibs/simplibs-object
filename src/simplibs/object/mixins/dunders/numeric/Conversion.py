@@ -1,9 +1,13 @@
+from typing import TYPE_CHECKING
 import math
 from numbers import Number
 # Outers
 from ...base_class import SimpleMixin
 #Inners
-from ._utils.conversion import execute_conv
+from ._utils import execute_conversion
+# Annotations
+if TYPE_CHECKING:
+    from ....protocols.mixins.dunders.numeric import ConversionProtocol
 
 
 class Conversion(SimpleMixin):
@@ -17,30 +21,43 @@ class Conversion(SimpleMixin):
     - vyhazují TypeError při nevalidní konverzi
     """
 
-    __slots__ = ()
+    # ----------------------------------------
+    # Základní rozhraní
+    # ----------------------------------------
 
-    # Omezení na číselné typy
+    # Definice určení
     _only_types = Number
 
-    # ---------------------------------------------------------
-    # int(x), float(x), complex(x)
-    # ---------------------------------------------------------
-    def __int__(self) -> int:
+    # Definice slotů
+    __slots__ = ()
+
+    # ----------------------------------------
+    # Methods - int(x), float(x), complex(x)
+    # ----------------------------------------
+    def __int__(
+        self: "ConversionProtocol"
+    ) -> int:
         """Vrací nativní int(self.value)."""
-        return execute_conv(self, int)
+        return execute_conversion(self, int)
 
-    def __float__(self) -> float:
+    def __float__(
+        self: "ConversionProtocol"
+    ) -> float:
         """Vrací nativní float(self.value)."""
-        return execute_conv(self, float)
+        return execute_conversion(self, float)
 
-    def __complex__(self) -> complex:
+    def __complex__(
+        self: "ConversionProtocol"
+    ) -> complex:
         """Vrací nativní complex(self.value)."""
-        return execute_conv(self, complex)
+        return execute_conversion(self, complex)
 
-    # ---------------------------------------------------------
-    # index(x) — pro použití v slice, range, atd.
-    # ---------------------------------------------------------
-    def __index__(self) -> int:
+    # ----------------------------------------
+    # Methods - index(x) — pro použití v slice, range, atd.
+    # ----------------------------------------
+    def __index__(
+        self: "ConversionProtocol"
+    ) -> int:
         """
         Vrací nativní int(self.value) pro použití v range(), slice, atd.
         Musí vracet přesný int, jinak Python vyhazuje TypeError.
@@ -53,24 +70,37 @@ class Conversion(SimpleMixin):
             )
         return value
 
-    # ---------------------------------------------------------
-    # round(x, n)
-    # ---------------------------------------------------------
-    def __round__(self, n: int | None = None) -> int | float:
+    # ----------------------------------------
+    # Methods - round(x, n)
+    # ----------------------------------------
+    def __round__(
+        self: "ConversionProtocol",
+        n: int | None = None
+    ) -> int | float:
         """Vrací nativní round(self.value, n)."""
-        return execute_conv(self, round, n) if n is not None else execute_conv(self, round)
+        return (
+            execute_conversion(self, round, n)
+            if n is not None
+            else execute_conversion(self, round)
+        )
 
-    # ---------------------------------------------------------
-    # floor(x), ceil(x), trunc(x)
-    # ---------------------------------------------------------
-    def __floor__(self) -> int:
+    # ----------------------------------------
+    # Methods - floor(x), ceil(x), trunc(x)
+    # ----------------------------------------
+    def __floor__(
+        self: "ConversionProtocol"
+    ) -> int:
         """Vrací nativní math.floor(self.value)."""
-        return execute_conv(self, math.floor)
+        return execute_conversion(self, math.floor)
 
-    def __ceil__(self) -> int:
+    def __ceil__(
+        self: "ConversionProtocol"
+    ) -> int:
         """Vrací nativní math.ceil(self.value)."""
-        return execute_conv(self, math.ceil)
+        return execute_conversion(self, math.ceil)
 
-    def __trunc__(self) -> int:
+    def __trunc__(
+        self: "ConversionProtocol"
+    ) -> int:
         """Vrací nativní math.trunc(self.value)."""
-        return execute_conv(self, math.trunc)
+        return execute_conversion(self, math.trunc)

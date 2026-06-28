@@ -16,9 +16,9 @@ class BitwiseProtocol(
     Všechny operace jsou čisté a vracejí novou instanci stejného typu (Self).
     """
 
-    # ---------------------------------------------------------
+    # ----------------------------------------
     # Operátor AND (&)
-    # ---------------------------------------------------------
+    # ----------------------------------------
     def __and__(self, other: Any) -> Self:
         """Vrací novou instanci s hodnotou (self.value & other)."""
         ...
@@ -27,9 +27,9 @@ class BitwiseProtocol(
         """Pravostranný AND. Vrací novou instanci s hodnotou (other & self.value)."""
         ...
 
-    # ---------------------------------------------------------
+    # ----------------------------------------
     # Operátor OR (|)
-    # ---------------------------------------------------------
+    # ----------------------------------------
     def __or__(self, other: Any) -> Self:
         """Vrací novou instanci s hodnotou (self.value | other)."""
         ...
@@ -38,9 +38,9 @@ class BitwiseProtocol(
         """Pravostranný OR. Vrací novou instanci s hodnotou (other | self.value)."""
         ...
 
-    # ---------------------------------------------------------
+    # ----------------------------------------
     # Operátor XOR (^)
-    # ---------------------------------------------------------
+    # ----------------------------------------
     def __xor__(self, other: Any) -> Self:
         """Vrací novou instanci s hodnotou (self.value ^ other)."""
         ...
@@ -49,9 +49,9 @@ class BitwiseProtocol(
         """Pravostranný XOR. Vrací novou instanci s hodnotou (other ^ self.value)."""
         ...
 
-    # ---------------------------------------------------------
+    # ----------------------------------------
     # Operátor LSHIFT (<<)
-    # ---------------------------------------------------------
+    # ----------------------------------------
     def __lshift__(self, other: Any) -> Self:
         """Bitový posun vlevo. Vrací novou instanci s hodnotou (self.value << other)."""
         ...
@@ -60,9 +60,9 @@ class BitwiseProtocol(
         """Pravostranný posun vlevo. Vrací novou instanci s hodnotou (other << self.value)."""
         ...
 
-    # ---------------------------------------------------------
+    # ----------------------------------------
     # Operátor RSHIFT (>>)
-    # ---------------------------------------------------------
+    # ----------------------------------------
     def __rshift__(self, other: Any) -> Self:
         """Bitový posun vpravo. Vrací novou instanci s hodnotou (self.value >> other)."""
         ...
@@ -71,9 +71,9 @@ class BitwiseProtocol(
         """Pravostranný posun vpravo. Vrací novou instanci s hodnotou (other >> self.value)."""
         ...
 
-    # ---------------------------------------------------------
+    # ----------------------------------------
     # Operátor INVERT (~)
-    # ---------------------------------------------------------
+    # ----------------------------------------
     def __invert__(self) -> Self:
         """Unární bitová inverze. Vrací novou instanci s hodnotou (~self.value)."""
         ...

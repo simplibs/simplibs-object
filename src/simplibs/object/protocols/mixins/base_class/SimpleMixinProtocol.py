@@ -1,6 +1,9 @@
-from typing import Protocol, runtime_checkable, Union
+from typing import Protocol, runtime_checkable, TYPE_CHECKING
 # Outers
 from ...instance import SimpleInstanceLike
+# Annotations
+if TYPE_CHECKING:
+    from ...alias_typings import ValidTypes
 
 
 @runtime_checkable
@@ -20,7 +23,7 @@ class SimpleMixinProtocol(
     _composite_only: bool
     _mutable_only: bool
     _immutable_only: bool
-    _only_types: type | Union
+    _only_types: "ValidTypes"
 
     # --- INICIALIZAČNÍ LOGIKA ---
     def init_mixins(self) -> None:
@@ -31,3 +34,5 @@ class SimpleMixinProtocol(
         předá řízení dalšímu mixinu nebo bázové třídě v MRO řetězci.
         """
         ...
+
+    __name__: str

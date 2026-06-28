@@ -1,17 +1,20 @@
+from typing import TYPE_CHECKING
 # Outers
-from .......exceptions import SimpleMetadataError
-from .......protocols import SimpleClassType
+from ........exceptions import SimpleMetadataError
 from .._exceptions_helpers import exception_info_for_inners
 # Inners
 from .utils import get_collision_path
+# Annotations
+if TYPE_CHECKING:
+    from ........protocols.classes import SimpleClassLike
 
 
 def validate_collision_within_inners(
     collision_name: str,
     owner_snake_name: str,
-    raw_inners: tuple[SimpleClassType, ...],
-    current_inner: SimpleClassType,
-    owner_class: SimpleClassType
+    raw_inners: tuple["SimpleClassLike", ...],
+    current_inner: "SimpleClassLike",
+    owner_class: "SimpleClassLike"
 ) -> None:
     """
     Identifikuje zdroj kolize mezi vnitřními prvky a vyvolá detailní výjimku

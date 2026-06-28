@@ -2,7 +2,9 @@
 from .....exceptions import SimpleMetadataError
 
 
-def validate_class_name_is_identifier(class_name: str) -> None:
+def validate_class_name_is_identifier(
+    class_name: str
+) -> None:
     """
     Validuje, že jméno třídy je platným identifikátorem Pythonu.
 

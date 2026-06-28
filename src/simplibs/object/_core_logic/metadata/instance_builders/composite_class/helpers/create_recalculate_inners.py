@@ -1,10 +1,13 @@
-from typing import Callable
-# Outers
-from .....protocols import SimpleMetadataType
+from typing import TYPE_CHECKING
+from collections.abc import Callable
+# Annotations
+if TYPE_CHECKING:
+    from ......protocols.metadata import SimpleMetadataLike
+    from ......protocols.instance.core_classes import CompositeInstanceProtocol
 
 
 def create_recalculate_inners(
-    meta: SimpleMetadataType,
+    meta: "SimpleMetadataLike",
     base_class_name: str
 )-> Callable:
     """
@@ -12,7 +15,9 @@ def create_recalculate_inners(
     Při změně vnitřního prvku přepočítá hodnotu kompozice a bublá směrem nahoru.
     """
 
-    def _recalculate_inners(self) -> None:
+    def _recalculate_inners(
+        self: "CompositeInstanceProtocol"
+    ) -> None:
 
         # 1. Rozložení hodnoty na hodnoty inners
         decomposed_values = self.decompose_value(self._value)

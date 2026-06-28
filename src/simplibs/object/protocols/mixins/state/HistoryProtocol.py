@@ -1,7 +1,10 @@
-from typing import Protocol, runtime_checkable, Any
+from typing import Protocol, runtime_checkable, TYPE_CHECKING, Any
 from datetime import datetime
 # Outers
 from ..core_mixins import SerializationProtocol
+# Annotations
+if TYPE_CHECKING:
+    from .DirtyTrackingProtocol import DirtyPathsTuple
 
 
 @runtime_checkable
@@ -18,7 +21,7 @@ class HistoryProtocol(
     """
 
     # --- TECHNICKÉ ATRIBUTY (Inicializované v init_mixins) ---
-    _history: list[dict[str, Any]]  # Vnitřní úložiště časových záznamů
+    _history: list[dict[str, Any]]    # Vnitřní úložiště časových záznamů
     _history_index: int | None       # Ukazatel na aktuální pozici v historii
     _history_limit: int | None       # Maximální počet povolených záznamů
     _history_count: int              # Celkový počet reálně uložených záznamů
@@ -49,10 +52,6 @@ class HistoryProtocol(
     @history_limit.setter
     def history_limit(self, value: int) -> None:
         """Nastaví maximální limit velikosti (kapacitu) pro ukládání historie."""
-        ...
-
-    def remove_history_limit(self) -> None:
-        """Kompletně odebere limit velikosti historie (neomezená časová osa)."""
         ...
 
     # --- NAVIGAČNÍ API (Undo & Redo & GoTo) ---
@@ -93,6 +92,10 @@ class HistoryProtocol(
         """Importuje a kompletně zrekonstruuje celou časovou osu z předaného slovníku."""
         ...
 
+    def remove_history_limit(self) -> None:
+        """Kompletně odebere limit velikosti historie (neomezená časová osa)."""
+        ...
+
     # --- ANALÝZA ROZDÍLŮ (Diff) ---
 
     def diff(
@@ -101,7 +104,7 @@ class HistoryProtocol(
         snap2: int | datetime,
         *,
         constants_only: bool = False
-    ) -> tuple[tuple[str, Any, Any], ...]:
+    ) -> "DirtyPathsTuple":
         """
         Porovná dva libovolné body v historii (zadané indexem nebo timestampem).
         Vrací n-tici trojic změn: (cesta_k_prvku, stará_hodnota, nová_hodnota).

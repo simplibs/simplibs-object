@@ -1,7 +1,13 @@
+from typing import TYPE_CHECKING, Any
 from datetime import datetime
+# Annotations
+if TYPE_CHECKING:
+    from ......protocols.mixins.state import HistoryProtocol
+    from ......protocols.mixins.state.internal_types import HistoryEntry
 
-
-def record_state(self) -> datetime:
+def record_state(
+    self: "HistoryProtocol"
+) -> "HistoryEntry":
     """Vytvoří snapshot aktuálního stavu a uloží ho do historie."""
 
     # 1. Vytvoření timestamp a snapshotu
@@ -13,9 +19,10 @@ def record_state(self) -> datetime:
         self._history.pop(0)
 
     # 3. Zápis do historie
-    self._history.append((timestamp, snapshot))
+    history_entry = (timestamp, snapshot)
+    self._history.append(history_entry)
     self._history_count = len(self._history)
     self._history_index = self._history_count - 1
 
     # 4. Navrácení záznamu
-    return timestamp
+    return history_entry

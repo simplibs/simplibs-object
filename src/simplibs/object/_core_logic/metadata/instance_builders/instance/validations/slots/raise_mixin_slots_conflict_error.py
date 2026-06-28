@@ -1,9 +1,15 @@
-from ......exceptions import SimpleObjectMixinError
+from typing import TYPE_CHECKING
+# Outers
+from .......exceptions import SimpleObjectMixinError
+# Annotations
+if TYPE_CHECKING:
+    from .......protocols.classes import SimpleClassLike
+    from .......protocols.mixins.base_class import SimpleMixinProtocol
 
 
 def raise_mixin_slots_conflict_error(
-    cls: type,
-    mixins: tuple[type, ...],
+    cls: "SimpleClassLike",
+    mixins: tuple["SimpleMixinProtocol", ...],
     error: TypeError
 ) -> None:
     """

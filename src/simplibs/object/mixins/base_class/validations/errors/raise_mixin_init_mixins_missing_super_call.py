@@ -1,4 +1,12 @@
-def raise_mixin_init_mixins_missing_super_call(cls: type) -> None:
+from typing import TYPE_CHECKING
+# Annotations
+if TYPE_CHECKING:
+    from .....protocols.mixins.base_class import SimpleMixinProtocol
+
+
+def raise_mixin_init_mixins_missing_super_call(
+    cls: "SimpleMixinProtocol"
+) -> None:
     """
     Validuje, že metoda init_mixins obsahuje volání super().init_mixins().
     """

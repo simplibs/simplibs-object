@@ -2,6 +2,7 @@ from typing import Protocol, runtime_checkable, TYPE_CHECKING
 # Annotations
 if TYPE_CHECKING:
     from ..classes import SimpleClassLike
+    from ..alias_typings import NamesTuple, NamesSet
 
 
 @runtime_checkable
@@ -14,12 +15,12 @@ class SimpleBaseMetadataProtocol(
 
     # 2. Názvová identita
     class_name: str
-    name_tuple: tuple[str, ...]
+    name_tuple: "NamesTuple"
     name_snake: str
     name_private: str
 
     # 3. Správa jmenného prostoru
-    node_names_set: set[str]
+    node_names_set: "NamesSet"
 
     # 4. Pomocný předvýpočet pro __repr__
     blueprint_path: str

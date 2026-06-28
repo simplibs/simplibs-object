@@ -1,4 +1,8 @@
-from .....protocols import SimpleMetadataType, SimpleObjectMetadataProtocol
+from typing import TYPE_CHECKING
+# Annotations
+if TYPE_CHECKING:
+    from .....protocols.metadata import SimpleMetadataLike
+    from .....protocols.instance.core_classes import InstanceBaseProtocol
 
 
 class InstanceBase:
@@ -8,14 +12,18 @@ class InstanceBase:
     __slots__ = ("__weakref__",)
 
     # 2. Definice pomocné metody pro mixiny skrze kterou mají přístup do initu třídy
-    def init_mixins(self) -> None:
+    def init_mixins(
+        self: "InstanceBaseProtocol"
+    ) -> None:
         """Výchozí prázdná kotva pro reaktivní inicializaci mixinů."""
         pass
 
     # 3. Definice protperty zpřístupňující meta
     # (pro přímí přístup bez procházení MRO)
     @property
-    def meta(self: SimpleObjectMetadataProtocol) -> SimpleMetadataType:
+    def meta(
+        self: "InstanceBaseProtocol"
+    ) -> "SimpleMetadataLike":
         """
         Veřejný přístup k metadatům třídy.
         metadata jsou uložena ve slotech pro maximální výkon a ochranu.
@@ -24,7 +32,9 @@ class InstanceBase:
 
     # 4. Definice __repr__ (reprezentačního řetězce objektu)
     # (univerzální definice společná všem potomkům)
-    def __repr__(self) -> str:
+    def __repr__(
+        self: "InstanceBaseProtocol"
+    ) -> str:
         """
         Unifikovaná technická reprezentace pro všechny prvky systému Simple.
         Nenaznačuje možnost předávání parametrů do initu, ale transparentně
@@ -39,7 +49,9 @@ class InstanceBase:
 
     # 5. Definice __str__ (řetězec reprezentující jméno třídy)
     # (univerzální definice společná všem potomkům)
-    def __str__(self) -> str:
+    def __str__(
+        self: "InstanceBaseProtocol"
+    ) -> str:
         """
         Uživatelská reprezentace.
         Příklad: Auto

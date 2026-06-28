@@ -6,7 +6,8 @@ from .init_processors.others import calculate_blueprint_path
 from .validations import raise_metadata_is_immutable
 # Annotations
 if TYPE_CHECKING:
-    from ..protocols import SimpleClassType
+    from ...protocols.metadata import SimpleBaseMetadataProtocol
+    from ...protocols.classes import SimpleClassLike
 
 
 class SimpleBaseMetadata:
@@ -36,7 +37,10 @@ class SimpleBaseMetadata:
 
     #--- Definice __init__ pro linicializaci hodnot ze slotů ---#
     # (přidává metodu skrze kterou se budou iniicalizovat potomci)
-    def __init__(self, owner_class: "SimpleClassType"):
+    def __init__(
+        self: "SimpleBaseMetadataProtocol",
+        owner_class: "SimpleClassLike"
+    ) -> None:
         """
         Inicializuje základní metadata.
         Pokud je bypass=True, vytvoří pouze prázdnou schránku pro systémové báze.
@@ -61,7 +65,9 @@ class SimpleBaseMetadata:
 
     #--- Definice metody pro inicializaci potomků ---#
     # (potomci nemají vlastní init a používají tuto metodu)
-    def _process_user_data(self) -> None:
+    def _process_user_data(
+        self: "SimpleBaseMetadataProtocol"
+    ) -> None:
         """
         Hook pro procesy specifické pro daný typ metadata.
 
@@ -72,7 +78,11 @@ class SimpleBaseMetadata:
 
     #--- Metoda pro zápis atributů metadatové třídy ---#
     # (zamezuje přepisu již zadaných dat)
-    def __setattr__(self, attr_name: str, new_value: Any) -> None:
+    def __setattr__(
+        self: "SimpleBaseMetadataProtocol",
+        attr_name: str,
+        new_value: Any
+    ) -> None:
         """Povolí zápis pouze pokud je pole UNSET nebo patří do cache."""
 
         # 1. Získání aktuální hodnoty

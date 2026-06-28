@@ -1,19 +1,24 @@
+from typing import TYPE_CHECKING
 from simplibs.sentinels import UNSET
-
 # Inners
-from .constants import FORBIDDEN_NAMES
+from ..._common.constants import FORBIDDEN_NAMES
 from .errors import (
     raise_mixin_slots_is_not_defined,
     raise_mixin_slots_unsuport_type,
     raise_mixin_slots_contains_forbidden_slot_names,
     raise_mixin_dict_contains_forbidden_attributes,
     raise_mixin_slots_contain_unvalid_type,
-    raise_mixin_composite_only_flag_is_not_bool,
     raise_mixin_init_mixins_missing_super_call
 )
+# Annotations
+if TYPE_CHECKING:
+    from ....protocols.mixins.base_class import SimpleMixinProtocol
 
 
-def verify_mixin_definition(cls):
+
+def verify_mixin_definition(
+    cls: "SimpleMixinProtocol"
+) -> None:
 
     # 1. Validace přístomnosti slotu
     if "__slots__" not in cls.__dict__:

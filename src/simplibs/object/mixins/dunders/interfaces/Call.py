@@ -1,9 +1,13 @@
+from typing import TYPE_CHECKING,Any
 # Outers
-from ..._shared_logic.immutability import with_any
-from ...core_mixins import NodesDicts, Snapshot
+from ..._common.immutability import with_any
+from ...core_mixins import Infrastructure
+# Annotations
+if TYPE_CHECKING:
+    from ....protocols.mixins.dunders.interfaces import CallProtocol
 
 
-class Call(NodesDicts, Snapshot):
+class Call(Infrastructure):
     """
     Mixin poskytující podporu pro volání instance jako funkce (`obj(...)`).
 
@@ -20,9 +24,22 @@ class Call(NodesDicts, Snapshot):
     - Je univerzální pro mutable i immutable objekty.
     """
 
+    # ----------------------------------------
+    # Základní rozhraní
+    # ----------------------------------------
+
+    # Definice slotů
     __slots__ = ()
 
-    def __call__(self, *changes, **kwargs):
+    # ----------------------------------------
+    # Methods - CALL
+    # ----------------------------------------
+
+    def __call__(
+        self: "CallProtocol",
+        *changes: Any,
+        **kwargs: Any
+    ) -> "CallProtocol":
         """
         Umožňuje volat instanci jako funkci.
 
@@ -35,14 +52,14 @@ class Call(NodesDicts, Snapshot):
         Pokud jsou použity keyword argumenty, převedou se na tuple formu.
         """
 
-        # 1) Pokud jsou použity keyword argumenty → převedeme je na tuple
+        # 1. Pokud jsou použity keyword argumenty → převedeme je na tuple
         if kwargs:
             # kwargs mají vždy formu konstant
             changes = tuple(kwargs.items())
 
-        # 2) Pokud je předán jediný tuple → sjednotíme formu
+        # 2. Pokud je předán jediný tuple → sjednotíme formu
         elif len(changes) == 1 and isinstance(changes[0], tuple):
             changes = changes[0]
 
-        # 3) Delegace na engine
+        # 3. Delegace na engine
         return with_any(self, changes)

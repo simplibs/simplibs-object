@@ -15,9 +15,9 @@ class ConversionProtocol(
     které převádějí vnitřní hodnotu objektu na nativní Python typy.
     """
 
-    # ---------------------------------------------------------
+    # ----------------------------------------
     # Základní typové konverze
-    # ---------------------------------------------------------
+    # ----------------------------------------
     def __int__(self) -> int:
         """Vrací nativní int vyvozený z hodnoty objektu."""
         ...
@@ -37,9 +37,9 @@ class ConversionProtocol(
         """
         ...
 
-    # ---------------------------------------------------------
+    # ----------------------------------------
     # Matematické ořezy a zaokrouhlování
-    # ---------------------------------------------------------
+    # ----------------------------------------
     def __round__(self, n: int | None = None) -> int | float:
         """Vrací nativní zaokrouhlenou hodnotu na 'n' desetinných míst."""
         ...

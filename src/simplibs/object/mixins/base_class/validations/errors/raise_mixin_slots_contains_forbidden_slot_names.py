@@ -1,4 +1,14 @@
-def raise_mixin_slots_contains_forbidden_slot_names(cls: type) -> None:
+from typing import TYPE_CHECKING
+# Outers
+from ...._common.constants import FORBIDDEN_NAMES
+# Annotations
+if TYPE_CHECKING:
+    from .....protocols.mixins.base_class import SimpleMixinProtocol
+
+
+def raise_mixin_slots_contains_forbidden_slot_names(
+    cls: "SimpleMixinProtocol"
+) -> None:
         """
         Validuje, že mixin nedefinuje zakázané názvy slotů.
         """
@@ -12,23 +22,8 @@ def raise_mixin_slots_contains_forbidden_slot_names(cls: type) -> None:
             # Tohle by mělo být ošetřeno v jiné validaci
             return
 
-        # 2. Zakázané názvy slotů
-        forbidden = {
-            "_value",
-            "_owner",
-            "_inners",
-            "_logic",
-            "_decompose",
-            "_recalculate_self",
-            "_recalculate_inners",
-            "value",
-            "owner",
-            "meta",
-            "__metadata__",
-        }
-
-        # 3. Průnik
-        forbidden_found = forbidden & slots_set
+        # Průnik
+        forbidden_found = FORBIDDEN_NAMES & slots_set
 
         if forbidden_found:
             name = next(iter(forbidden_found))

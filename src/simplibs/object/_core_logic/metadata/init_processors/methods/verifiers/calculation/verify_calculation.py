@@ -1,18 +1,21 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
+from types import UnionType
 from simplibs.sentinels import UNSET
-# Outers
-from ......protocols import SimpleClassType, ClassMethodProtocol
 # Inners
 from .decompose_method import verify_decompose_outcome
 from .validations import raise_method_raised_exceptions, raise_method_return_unvalide_outcome_type
+# Annotations
+if TYPE_CHECKING:
+    from .......protocols.classes import SimpleClassLike
+    from .......protocols.methods import ClassMethodProtocol
 
 
 def verify_calculation(
-    bound_method: ClassMethodProtocol,
+    bound_method: "ClassMethodProtocol",
     test_value: Any,
-    expected_return_type: type,
-    owner_class: SimpleClassType,
-):
+    expected_return_type: type | UnionType,
+    owner_class: "SimpleClassLike",
+) -> Any:
     # 1. Definice výstupní proměné
     calculate_result = UNSET
 
@@ -28,6 +31,7 @@ def verify_calculation(
 
     # 4. Kontrola vnitřních položek pro _decompose
     if bound_method.__func__.__name__ == "_decompose":
+        calculate_result: tuple[Any, ...]
         verify_decompose_outcome(calculate_result, owner_class, bound_method)
 
     # 5. Navrácen vypočítené hodnoty

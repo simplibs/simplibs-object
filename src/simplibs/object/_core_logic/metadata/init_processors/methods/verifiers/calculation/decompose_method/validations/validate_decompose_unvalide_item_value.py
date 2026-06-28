@@ -1,15 +1,18 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 # Outers
-from ........protocols import ClassMethodProtocol, SimpleClassType
-from ........exceptions import SimpleMetadataError
+from .........exceptions import SimpleMetadataError
 from ...._exceptions_helpers import exception_context_for_classmethod
+# Annotations
+if TYPE_CHECKING:
+    from .........protocols.methods import ClassMethodProtocol
+    from .........protocols.classes import SimpleClassLike
 
 
 def validate_decompose_unvalide_item_value(
     value: Any,
-    inner: SimpleClassType,
-    inners: tuple[SimpleClassType, ...],
-    bound_method: ClassMethodProtocol,
+    inner: "SimpleClassLike",
+    inners: tuple["SimpleClassLike", ...],
+    bound_method: "ClassMethodProtocol",
 ) -> None:
     """
     Vytváří výjimku, když metoda _decompose vrátila prvek,

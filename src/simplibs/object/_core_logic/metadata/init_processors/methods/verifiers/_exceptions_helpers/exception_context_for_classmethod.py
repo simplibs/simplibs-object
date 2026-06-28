@@ -1,9 +1,11 @@
-# Outers
-from ......protocols import ClassMethodProtocol
+from typing import TYPE_CHECKING
+# Annotations
+if TYPE_CHECKING:
+    from .......protocols.methods import ClassMethodProtocol
 
 
 def exception_context_for_classmethod(
-    bound_method: ClassMethodProtocol,
+    bound_method: "ClassMethodProtocol",
 ):
 
     # 1. Jméno třídy a metody

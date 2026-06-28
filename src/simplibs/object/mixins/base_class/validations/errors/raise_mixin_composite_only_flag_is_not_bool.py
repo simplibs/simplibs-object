@@ -1,4 +1,12 @@
-def raise_mixin_composite_only_flag_is_not_bool(cls):
+from typing import TYPE_CHECKING
+# Annotations
+if TYPE_CHECKING:
+    from .....protocols.mixins.base_class import SimpleMixinProtocol
+
+
+def raise_mixin_composite_only_flag_is_not_bool(
+    cls: "SimpleMixinProtocol"
+) -> None:
     """
     Validuje, že mixin definuje _composite_only správně (pokud jej definuje).
     """

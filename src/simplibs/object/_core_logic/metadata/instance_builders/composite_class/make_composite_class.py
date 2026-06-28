@@ -1,6 +1,6 @@
+from typing import TYPE_CHECKING
 # Outers
-from ....protocols import SimpleMetadataType
-from ...._utils.properties.helpers import create_composite_property
+from ....base_utils.properties import create_composite_property
 # Inners
 from .helpers import (
     create_composite_init,
@@ -8,13 +8,17 @@ from .helpers import (
     create_recalculate_inners,
     create_properties_for_inners
 )
+# Annotations
+if TYPE_CHECKING:
+    from .....protocols.metadata import SimpleMetadataLike
+    from .....protocols.instance.core_classes import CompositeInstanceProtocol
 
 
 def make_composite_class(
-    meta: SimpleMetadataType,
+    meta: "SimpleMetadataLike",
     *,
     mutable: bool = True
-) -> type:
+) -> "CompositeInstanceProtocol":
     """
     Orchestrátor pro tvorbu kompozitní instanční třídy (Node).
     Vytváří mutable nebo immutable variantu podle parametru `mutable`.
@@ -48,6 +52,7 @@ def make_composite_class(
         class_dict["_recalculate_inners"] = create_recalculate_inners(meta, base_class_name)
 
     # 6. Vytvoření třídy
+    # noinspection PyTypeChecker
     composite_class = type(
         base_class_name,
         class_parents,
@@ -60,4 +65,5 @@ def make_composite_class(
             delattr(composite_class, name)
 
     # 8. Navrácení třídy
+    composite_class: "CompositeInstanceProtocol"
     return composite_class

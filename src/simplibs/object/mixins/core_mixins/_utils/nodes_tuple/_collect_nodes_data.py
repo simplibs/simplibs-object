@@ -1,13 +1,17 @@
+from typing import TYPE_CHECKING
 # Outers
-from ......protocols import SimpleInstanceType
-from ....._constants import VALUE
+from ...._common.constants import VALUE
+# Annotations
+if TYPE_CHECKING:
+    from .....protocols.instance import SimpleInstanceLike
+    from .....protocols.alias_typings import PathTuple, NodeItem
 
 
 def _collect_nodes_data(
-    instance: SimpleInstanceType,
-    path: tuple[str, ...],
-    nodes_list: list[tuple[SimpleInstanceType, tuple[str, ...]]]
-):
+    instance: "SimpleInstanceLike",
+    path: "PathTuple",
+    nodes_list: list["NodeItem"]
+) -> None:
     """
     Rekurzivně projde celou strukturu a vytvoří
     seznam dvojic:

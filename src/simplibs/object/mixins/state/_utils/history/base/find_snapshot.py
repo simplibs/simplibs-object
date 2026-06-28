@@ -1,3 +1,4 @@
+from typing import TYPE_CHECKING, Any
 from datetime import datetime
 # Outers
 from .._validations import (
@@ -6,9 +7,15 @@ from .._validations import (
     raise_unvalide_snopshot_timestamp,
     raise_unvalide_snopshot_reference
 )
+# Annotations
+if TYPE_CHECKING:
+    from ......protocols.mixins.state import HistoryProtocol
 
 
-def find_snapshot(self, ref) -> tuple:
+def find_snapshot(
+    self: "HistoryProtocol",
+    ref: int | datetime
+) -> tuple:
         """Převede index nebo timestamp na snapshot."""
 
         # 1. Zpracování int hodnoty

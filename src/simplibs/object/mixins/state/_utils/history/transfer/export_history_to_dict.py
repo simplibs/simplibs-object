@@ -1,8 +1,20 @@
+from typing import TYPE_CHECKING, Any
 # Outers
-from ......_constants import OWNER_CLASS, HISTORY, MIXINS, IS_MUTABLE, IS_CONSTANT
+from ....._common.constants import (
+    OWNER_CLASS,
+    HISTORY,
+    MIXINS,
+    IS_MUTABLE,
+    IS_CONSTANT
+)
+# Annotations
+if TYPE_CHECKING:
+    from ......protocols.mixins.state import HistoryProtocol
 
 
-def export_history_to_dict(self) -> dict:
+def export_history_to_dict(
+    self: "HistoryProtocol"
+) -> dict[str, Any]:
     """
     Exportuje historii do přenositelného formátu:
         { _owner_class: ..., history: [ (timestamp, [values...]) ] }

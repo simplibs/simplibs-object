@@ -1,12 +1,15 @@
+from typing import TYPE_CHECKING
 # Outers
-from .......protocols import ClassMethodProtocol
-from .......exceptions import SimpleMetadataError
+from ........exceptions import SimpleMetadataError
 from ..._exceptions_helpers import exception_context_for_classmethod
+# Annotations
+if TYPE_CHECKING:
+    from ........protocols.methods import ClassMethodProtocol
 
 
 def raise_method_raised_exceptions(
     intercepted_exception: Exception,
-    bound_method: ClassMethodProtocol,
+    bound_method: "ClassMethodProtocol",
 ) -> None:
     """
     Vytváří výjimku, když zkušební výpočet metody vyvolal výjimku.

@@ -1,10 +1,13 @@
-from typing import Any, Callable
-# Outers
-from .....protocols import SimpleMetadataType
+from typing import Any, TYPE_CHECKING
+from collections.abc import Callable
+# Annotations
+if TYPE_CHECKING:
+    from ......protocols.metadata import SimpleMetadataLike
+    from ......protocols.instance import SimpleInstanceLike
 
 
 def create_root_value_setter(
-    meta: SimpleMetadataType,
+    meta: "SimpleMetadataLike",
     base_class_name: str
 ) -> Callable:
     """
@@ -13,7 +16,7 @@ def create_root_value_setter(
     """
 
     def _root_value_setter(
-        self,
+        self: "SimpleInstanceLike",
         value: Any,
         recalculate_up: bool = True
     ) -> None:
@@ -23,6 +26,7 @@ def create_root_value_setter(
         new_value = self.normalize(value, process_none=True)
 
         # 2. Kontrola, zda hodnota není shodná s aktuální
+        # noinspection PyBroadException
         try:
             if self._value == new_value:
                 return

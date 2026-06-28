@@ -1,7 +1,5 @@
-from typing import Any, Union
+from typing import Any, TYPE_CHECKING
 from types import UnionType
-# Outers
-from ....protocols import SimpleClassType, ClassMethodProtocol
 # Inners
 from .verifiers import (
     verify_classmethod,
@@ -9,6 +7,9 @@ from .verifiers import (
     verify_calculation,
     verify_annotations_and_defaults
 )
+# Annotations
+if TYPE_CHECKING:
+    from .....protocols.classes import SimpleClassLike
 
 
 def process_classmethod(
@@ -17,12 +18,12 @@ def process_classmethod(
     expected_args_params_count: int,
     expected_args_defaults: tuple | None,
     expected_kwargs_defaults: dict[str, Any],
-    expected_param_types: dict[str, Union[type, UnionType]],
+    expected_param_types: dict[str, type | UnionType],
     expected_return_type: type | UnionType,
-    owner_class: SimpleClassType,
+    owner_class: "SimpleClassLike",
     test_value:tuple = (),
     return_calculated_value: bool = False,
-) -> ClassMethodProtocol | tuple[ClassMethodProtocol, Any]:
+) -> Any:
 
     # 1. Základní ověření uživatelem definované metody
     need_validations, bound_method = verify_classmethod(

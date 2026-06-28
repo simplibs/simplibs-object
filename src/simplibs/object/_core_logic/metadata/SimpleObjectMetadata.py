@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 from functools import reduce
 from operator import or_
 from simplibs.sentinels import EMPTY, UNSET
@@ -9,6 +9,10 @@ from .init_processors.methods import process_classmethod
 from .init_processors.attributes import (
     process_type, process_inners, raise_default_is_defined_in_composition
 )
+# Annotations
+if TYPE_CHECKING:
+    from ...protocols.metadata import SimpleObjectMetadataProtocol
+    from ...protocols.instance.core_classes import CompositeInstanceProtocol
 
 
 # noinspection PyAttributeOutsideInit
@@ -42,7 +46,9 @@ class SimpleObjectMetadata(SimpleConstantMetadata):
 
     #--- Definice logiky pro inicializaci dat ---#
     # (metoda je spuštěna v initu základní třídy)
-    def _process_user_data(self):
+    def _process_user_data(
+        self: SimpleObjectMetadataProtocol
+    ) -> None:
 
         # 1. Deklarace že třída není konstanta
         self.is_constant = False
@@ -132,14 +138,18 @@ class SimpleObjectMetadata(SimpleConstantMetadata):
     #--- Definice property pro výpočet a cache ---#
     # (vrací atomický základ pro třídu na instance)
     @property
-    def composite_class_mutable(self):
+    def composite_class_mutable(
+        self: "SimpleObjectMetadataProtocol"
+    ) -> "CompositeInstanceProtocol":
         """Lazy brána k atomické instanci parametru."""
         if self._composite_class_mutable is EMPTY:
             self._composite_class_mutable = make_composite_class(self.owner_class.__metadata__)
         return self._composite_class_mutable
 
     @property
-    def composite_class_immutable(self):
+    def composite_class_immutable(
+        self: "SimpleObjectMetadataProtocol"
+    ) -> "CompositeInstanceProtocol":
         """Lazy brána k atomické instanci parametru."""
         if self._composite_class_immutable is EMPTY:
             self._composite_class_immutable = make_composite_class(self.owner_class.__metadata__, mutable=False)

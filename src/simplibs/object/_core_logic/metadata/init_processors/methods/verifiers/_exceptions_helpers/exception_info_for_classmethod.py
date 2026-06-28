@@ -1,11 +1,12 @@
-# Outers
-from ......protocols import ClassMethodProtocol
+from typing import TYPE_CHECKING
 # Inners
 from .exception_context_for_classmethod import exception_context_for_classmethod
+if TYPE_CHECKING:
+    from .......protocols.methods import ClassMethodProtocol
 
 
 def exception_info_for_classmethod(
-    bound_method: ClassMethodProtocol,
+    bound_method: "ClassMethodProtocol",
     expected_params: tuple[str, ...],
     expected_args_params_count: int
 ):

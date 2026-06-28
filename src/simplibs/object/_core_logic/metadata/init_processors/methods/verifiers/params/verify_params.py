@@ -1,5 +1,5 @@
+from typing import Any, TYPE_CHECKING
 # Outers
-from ......protocols import ClassMethodProtocol
 from .._exceptions_helpers import exception_info_for_classmethod
 # Inners
 from .validations import (
@@ -7,12 +7,15 @@ from .validations import (
     validate_method_not_use_param_placeholders,
     validate_method_param_match_expected
 )
+# Annotations
+if TYPE_CHECKING:
+    from .......protocols.methods import ClassMethodProtocol
 
 
 def verify_params(
     expected_params: tuple[str, ...],
     expected_args_params_count: int,
-    bound_method: ClassMethodProtocol,
+    bound_method: "ClassMethodProtocol",
 ) -> None:
 
     # 1. Příprava dat

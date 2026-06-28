@@ -1,6 +1,6 @@
 from typing import TypeVar, ParamSpec, Protocol
 # Outers
-from ..classes.SimpleBaseProtocol import SimpleBaseProtocol
+from ..classes import SimpleObjectProtocol
 
 
 # Typové proměnné pro magii s přenosem signatury
@@ -9,7 +9,7 @@ P = ParamSpec("P")
 R = TypeVar("R")
 
 
-class LogicSignature(SimpleBaseProtocol, Protocol[P, R]):
+class LogicSignature(SimpleObjectProtocol, Protocol[P, R]):
     """
     Protokol říkající: Jsem třída, která má metodu _logic s parametry P a návratem R.
     Slouží jako typová kotva pro dekorátory a kalkulační metody přenášející signaturu.

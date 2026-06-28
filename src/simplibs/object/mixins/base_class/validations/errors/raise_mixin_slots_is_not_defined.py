@@ -1,7 +1,13 @@
-from ........exceptions import SimpleMixinError
+from typing import TYPE_CHECKING
+# Outers
+from .....exceptions import SimpleMixinError
+# Annotations
+if TYPE_CHECKING:
+    from .....protocols.mixins.base_class import SimpleMixinProtocol
 
-
-def raise_mixin_slots_is_not_defined(cls: type) -> None:
+def raise_mixin_slots_is_not_defined(
+    cls: "SimpleMixinProtocol"
+) -> None:
     """
     Validuje, že mixin definuje vlastní __slots__ a nezdědil je.
     """

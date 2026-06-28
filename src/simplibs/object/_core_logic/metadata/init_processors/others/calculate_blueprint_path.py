@@ -1,10 +1,13 @@
+from typing import TYPE_CHECKING
 # Outers
-from ..constants import BASE_CLASS_NAMES
-from ...protocols import SimpleClassType
+from ...constants import BASE_CLASS_NAMES
+# Annotations
+if TYPE_CHECKING:
+    from .....protocols.classes import SimpleClassLike
 
 
 def calculate_blueprint_path(
-    cls: SimpleClassType
+    cls: "SimpleClassLike"
 ) -> str:
     """
     Pomocná metoda, která projde MRO a sestaví řetězec MojeTrida(Rodic).
@@ -12,7 +15,7 @@ def calculate_blueprint_path(
     """
 
     # 1. Vnitřní impor na základní třídu
-    from ...SimpleBase import SimpleBase
+    from .....SimpleBase import SimpleBase
 
     # 2. Kontrola předků
     # Vezmeme všechny předky z MRO, kteří jsou potomky SimpleBase,

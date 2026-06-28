@@ -1,6 +1,9 @@
-from typing import Protocol, runtime_checkable, Any
+from typing import Protocol, runtime_checkable, TYPE_CHECKING
 # Outers
 from ..core_mixins.SnapshotProtocol import SnapshotProtocol
+# Annotations
+if TYPE_CHECKING:
+    from ...alias_typings import SnapshotTuple, SnapshotDiffTuple
 
 
 @runtime_checkable
@@ -18,7 +21,7 @@ class DirtyTrackingProtocol(
     # --- TECHNICKÉ ATRIBUTY (Inicializované v init_mixins) ---
 
     # Uchovává otisk stavu, který je považován za výchozí "čistý" (nezměněný)
-    _clean_snapshot: tuple[Any, ...]
+    _clean_snapshot: "SnapshotTuple"
 
     # --- ERGONOMICKÉ PROPERTIES ---
 
@@ -28,7 +31,7 @@ class DirtyTrackingProtocol(
         ...
 
     @property
-    def dirty_paths(self) -> tuple[tuple[str, Any, Any], ...]:
+    def dirty_paths(self) -> "SnapshotDiffTuple":
         """
         Vrací n-tici změněných cest atomických prvků.
         Každý prvek v n-tici tvoří trojice: (cesta_k_prvku, stará_hodnota, nová_hodnota).
@@ -36,13 +39,13 @@ class DirtyTrackingProtocol(
         ...
 
     @property
-    def clean_snapshot(self) -> tuple[Any, ...]:
+    def clean_snapshot(self) -> "SnapshotTuple":
         """Přístup k aktuálně uloženému čistému snapshotu."""
         ...
 
     # --- VEŘEJNÉ API PRO SLEDOVÁNÍ ZMĚN ---
 
-    def get_dirty_paths(self, *, constants_only: bool = True) -> tuple[tuple[str, Any, Any], ...]:
+    def get_dirty_paths(self, *, constants_only: bool = True) -> "SnapshotDiffTuple":
         """
         Vrací n-tici detekovaných změn v hierarchii.
         Umožňuje zvolit, zda sledovat pouze konstanty (atomy), nebo i kompozitní uzly.

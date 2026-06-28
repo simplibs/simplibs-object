@@ -1,10 +1,14 @@
-from typing import Callable
+from typing import TYPE_CHECKING
+from collections.abc import Callable
 from types import FunctionType
-# Outers
-from .......protocols import ClassMethodProtocol
+# Annotations
+if TYPE_CHECKING:
+    from ........protocols.methods import ClassMethodProtocol
 
 
-def clone_classmethod(cm: ClassMethodProtocol) -> classmethod:
+def clone_classmethod(
+    cm: "ClassMethodProtocol"
+) -> classmethod:
     """
     Přijme classmethod (např. výstup getattr(owner_class, name))
     a vrátí nový, plně oddělený classmethod objekt.

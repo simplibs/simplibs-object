@@ -1,7 +1,9 @@
 from ......exceptions import SimpleObjectInstanceError
 
 
-def validate_param_is_bool(as_atom: object) -> None:
+def validate_param_is_bool(
+    as_atom: bool
+) -> None:
     """
     Validuje, že parametr as_atom je typu bool.
     """

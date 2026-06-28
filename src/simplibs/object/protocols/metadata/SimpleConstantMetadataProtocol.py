@@ -1,6 +1,11 @@
-from typing import Protocol, Any, Callable, runtime_checkable, Union
+from typing import Protocol, Any, runtime_checkable, TYPE_CHECKING
+from collections.abc import Callable
 # Inners
 from .SimpleBaseMetadataProtocol import SimpleBaseMetadataProtocol
+# Annotations
+if TYPE_CHECKING:
+    from ..instance.core_classes import AtomInstanceProtocol
+    from ..alias_typings import ValidTypes
 
 
 @runtime_checkable
@@ -10,7 +15,7 @@ class SimpleConstantMetadataProtocol(
 ):
 
     # 1. Data předaná uživatelem
-    value_type: type | Union
+    value_type: "ValidTypes"
     default: Any
     validate: Callable
 
@@ -18,13 +23,17 @@ class SimpleConstantMetadataProtocol(
     value_type_name: str
     is_constant: bool
 
-    # 3. Cache pro instanční třídy (definováno jako read-only property)
+    # 3. Chache rozhraní
+    _atom_class_mutable: "AtomInstanceProtocol"
+    _atom_class_immutable: "AtomInstanceProtocol"
+
+    # 4. Cache pro instanční třídy (definováno jako read-only property)
     @property
-    def atom_class_mutable(self) -> type:
+    def atom_class_mutable(self) -> "AtomInstanceProtocol":
         """Lazy brána k core instanci parametru."""
         ...
 
     @property
-    def atom_class_immutable(self) -> type:
+    def atom_class_immutable(self) -> "AtomInstanceProtocol":
         """Lazy brána k core instanci parametru."""
         ...

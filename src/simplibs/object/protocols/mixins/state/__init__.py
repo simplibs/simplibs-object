@@ -1,5 +1,4 @@
 from .DefaultStateProtocol import DefaultStateProtocol
 from .DirtyTrackingProtocol import DirtyTrackingProtocol
 from .PermissionProtocol import PermissionProtocol
-from .MutableSerializationProtocol import MutableSerializationProtocol
 from .HistoryProtocol import HistoryProtocol

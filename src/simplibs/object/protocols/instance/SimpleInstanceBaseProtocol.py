@@ -1,4 +1,6 @@
-from typing import Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable, TYPE_CHECKING
+if TYPE_CHECKING:
+    from ..alias_typings import MixinsTuple
 
 
 @runtime_checkable
@@ -19,5 +21,4 @@ class SimpleInstanceBaseProtocol(
     # --- TECHNICKÉ ATRIBUTY (Vštěpované továrnou create_instance) ---
     __is_constant__: bool
     __is_mutable__: bool
-    __mixins__: tuple[type, ...]
-
+    __mixins__: "MixinsTuple"

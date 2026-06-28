@@ -1,9 +1,14 @@
+from typing import TYPE_CHECKING
 # Outers
 from ..core_mixins import Snapshot
-from .._shared_logic.immutability import create_new_instance
+from .._common.immutability import create_new_instance
+# Annotations
+if TYPE_CHECKING:
+    from ...protocols.mixins.state import DefaultStateProtocol
+    from ...protocols.alias_typings import SnapshotTuple
 
 
-# noinspection PyAttributeOutsideInit
+
 # noinspection PyProtectedMember
 class DefaultState(Snapshot):
     """
@@ -12,37 +17,56 @@ class DefaultState(Snapshot):
     - metody clone_instance(), reset_to_default_values(), create_new_default_instance()
     """
 
+    # ----------------------------------------
+    # Základní rozhraní
+    # ----------------------------------------
+
     # Definice určení
     _mutable_only = True
 
     # Definice slotů
     __slots__ = ("_default_state_snapshot",)
 
-    # Inicializace mixinu
-    def init_mixins(self):
-        super().init_mixins()
-        self._default_state_snapshot = self._build_snapshot()
+    # ----------------------------------------
+    # Hook pro inicializaci
+    # ----------------------------------------
 
-    # ---------------------------------------------------------
-    # Klonování aktuální instance
-    # ---------------------------------------------------------
-    def clone_instance(self):
+    # noinspection PyAttributeOutsideInit
+    def init_mixins(
+        self: "DefaultStateProtocol"
+    ) -> None:
+        """
+        Metoda, předávající svojí logiku do inicializačního procesu instance.
+        """
+
+        # 1. Inicializace předků
+        super().init_mixins()
+
+        # 2. Vytvoření snapshotu defaultního stavu
+        self._default_state_snapshot: "SnapshotTuple" = self._build_snapshot()
+
+    # ----------------------------------------
+    # Metods - CLONE / RESET / NEW
+    # ----------------------------------------
+
+    def clone_instance(
+        self: "DefaultStateProtocol"
+    ) -> "DefaultStateProtocol":
         """Vytvoří novou instanci se stejným stavem jako tato instance."""
         new_instance = self.create_new_default_instance()
         new_instance._restore_snapshot(self._build_snapshot())
         return new_instance
 
-    # ---------------------------------------------------------
-    # Reset hodnot do výchoz podoby
-    # ---------------------------------------------------------
-    def reset_to_default_values(self):
+    def reset_to_default_values(
+        self: "DefaultStateProtocol"
+    ) -> None:
         """Resetuje instanci do výchozího stavu (_default_state)."""
         self._restore_snapshot(self._default_state_snapshot)
 
-    # ---------------------------------------------------------
-    # Vrátí novou instanci s defaultními hodnotami
-    # ---------------------------------------------------------
-    def create_new_default_instance(self):
+    # noinspection PyTypeChecker
+    def create_new_default_instance(
+        self: "DefaultStateProtocol"
+    ) -> "DefaultStateProtocol":
         """
         Vrátí novou instanci stejného typu se stejným výchozím stavem,
         jaký měla tato instance při svém vzniku.

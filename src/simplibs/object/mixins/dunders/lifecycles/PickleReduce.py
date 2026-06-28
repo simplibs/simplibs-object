@@ -1,5 +1,10 @@
+from typing import TYPE_CHECKING
 # Inners
 from .PickleState import PickleState
+# Annotations
+if TYPE_CHECKING:
+    from ....protocols.mixins.dunders.lifecycles import PickleReduceProtocol
+    from ....protocols.mixins.dunders.lifecycles.internal_types import PicklePlan
 
 
 class PicleReduce(PickleState):
@@ -20,9 +25,20 @@ class PicleReduce(PickleState):
     který se v MRO umístí nad tento mixin a tím původní implementaci nahradí.
     """
 
+    # ----------------------------------------
+    # Základní rozhraní
+    # ----------------------------------------
+
+    # Definice slotů
     __slots__ = ()
 
-    def __reduce__(self):
+    # ----------------------------------------
+    # Metody - REDUCE
+    # ----------------------------------------
+
+    def __reduce__(
+        self: "PickleReduceProtocol"
+    ) -> "PicklePlan":
         """
         Pickle protokol:
         - callable: třída instance

@@ -1,7 +1,17 @@
-from ......exceptions import SimpleObjectMixinError
+from typing import TYPE_CHECKING
+# Outers
+from .......exceptions import SimpleMixinError
+# Annotations
+if TYPE_CHECKING:
+    from .......protocols.classes import SimpleClassLike
+    from .......protocols.mixins.base_class import SimpleMixinProtocol
 
 
-def validate_mixin_is_compatible(cls: type, mixin: type, is_atom: bool) -> None:
+def validate_mixin_is_compatible(
+    cls: "SimpleClassLike",
+    mixin: "SimpleMixinProtocol",
+    is_atom: bool
+) -> None:
     """
     Validuje, že mixin je kompatibilní s režimem Atom/Composite.
     """
@@ -11,7 +21,7 @@ def validate_mixin_is_compatible(cls: type, mixin: type, is_atom: bool) -> None:
 
     if is_atom and getattr(mixin, "_composite_only", False):
 
-        raise SimpleObjectMixinError(
+        raise SimpleMixinError(
             error_name="INCOMPATIBLE MIXIN",
             value_label="Mixin incompatible with Atom mode",
             expected="Mixin, který lze použít i v Atom režimu.",

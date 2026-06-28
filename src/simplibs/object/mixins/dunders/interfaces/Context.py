@@ -1,5 +1,10 @@
+from typing import Literal, TYPE_CHECKING
+from types import TracebackType
 # Outers
 from ...base_class import SimpleMixin
+# Annotations
+if TYPE_CHECKING:
+    from ....protocols.mixins.dunders.interfaces import ContextProtocol
 
 
 class ContextManager(SimpleMixin):
@@ -20,9 +25,20 @@ class ContextManager(SimpleMixin):
     do logiky hodnot, snapshotů, mutability ani immutable režimu.
     """
 
+    # ----------------------------------------
+    # Základní rozhraní
+    # ----------------------------------------
+
+    # Definice slotů
     __slots__ = ()
 
-    def __enter__(self):
+    # ----------------------------------------
+    # Methods - ENTER / EXIT
+    # ----------------------------------------
+
+    def __enter__(
+        self: "ContextProtocol"
+    ) -> "ContextProtocol":
         """
         Vrací instanci při vstupu do kontextu.
 
@@ -34,7 +50,12 @@ class ContextManager(SimpleMixin):
         """
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(
+        self: "ContextProtocol",
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None
+    ) -> Literal[False]:
         """
         Ukončuje kontextový blok.
 

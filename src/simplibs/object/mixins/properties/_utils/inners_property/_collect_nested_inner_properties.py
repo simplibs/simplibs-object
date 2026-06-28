@@ -1,13 +1,16 @@
-# Outers
-from ......protocols import SimpleMetadataType
+from typing import TYPE_CHECKING
 # Inners
 from ....._core_logic.base_utils.properties import create_properties_for_inner
+# Annotations
+if TYPE_CHECKING:
+    from .....protocols.metadata import SimpleMetadataLike
+    from .....protocols.alias_typings import PathTuple
 
 
 def _collect_nested_inner_properties(
-    meta: SimpleMetadataType,
-    path: tuple[str, ...],
-    result: dict
+    meta: "SimpleMetadataLike",
+    path: "PathTuple",
+    result: dict[str, property]
 ) -> None:
     """
     Rekurzivně projde všechny vnitřní (nested) inners

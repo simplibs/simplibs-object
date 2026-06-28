@@ -1,18 +1,20 @@
-from datetime import datetime
+from typing import TYPE_CHECKING
 # Outers
-from ....._constants import VALUE
+from ...._common.constants import VALUE
+# Annotations
+if TYPE_CHECKING:
+    from .....protocols.alias_typings import SnapshotTuple, NodesTuple, SnapshotDiffTuple
 
 
 def compare_snapshots(
-    nodes_tuple: tuple,
-    snapshot1: tuple,
-    snapshot2: tuple,
+    nodes_tuple: "NodesTuple",
+    snapshot1: "SnapshotTuple",
+    snapshot2: "SnapshotTuple",
     *,
     constants_only: bool = False
-) -> tuple:
+) -> "SnapshotDiffTuple":
 
     # 1. Vtyvoření proměných
-
     diffs = []
 
     # 2. Procházení snapshotů

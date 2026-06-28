@@ -1,13 +1,13 @@
-from typing import Any, Optional
+from typing import Any, Optional, TYPE_CHECKING
 from operator import attrgetter
-# Outers
-from ....protocols import SimpleMetadataType
 # Inners
 from .validations import raise_class_not_decomposeable
-
+# Anotations
+if TYPE_CHECKING:
+    from ....protocols.metadata import SimpleMetadataLike
 
 def create_composite_property(
-    meta: SimpleMetadataType,
+    meta: "SimpleMetadataLike",
     *,
     mutable: bool = True,
     path: Optional[tuple[str, ...]] = None

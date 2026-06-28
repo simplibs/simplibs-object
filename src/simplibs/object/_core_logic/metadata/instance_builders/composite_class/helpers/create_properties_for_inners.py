@@ -1,10 +1,13 @@
+from typing import TYPE_CHECKING
 # Outers
-from .....protocols import SimpleMetadataType
-from ....._utils.properties import create_properties_for_inner
+from .....base_utils.properties import create_properties_for_inner
+# Annotations
+if TYPE_CHECKING:
+    from ......protocols.metadata import SimpleMetadataLike
 
 
 def create_properties_for_inners(
-    meta: SimpleMetadataType,
+    meta: "SimpleMetadataLike",
     *,
     mutable: bool = True
 ) -> dict:

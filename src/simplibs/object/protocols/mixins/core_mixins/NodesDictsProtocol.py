@@ -1,9 +1,15 @@
-from typing import Protocol, runtime_checkable, Mapping, TYPE_CHECKING
+from typing import Protocol, runtime_checkable, TYPE_CHECKING
 # Inners
 from .NodesTupleProtocol import NodesTupleProtocol
 # Annotations
 if TYPE_CHECKING:
-    from ...instance import SimpleInstanceLike
+    from ...alias_typings import (
+        NodesDict,
+        NodesInstanceDict,
+        NodesPathDict,
+        NodesIndexMap
+    )
+
 
 @runtime_checkable
 class NodesDictsProtocol(
@@ -20,13 +26,13 @@ class NodesDictsProtocol(
     # --- TECHNICKÉ ATRIBUTY (Inicializované v init_mixins) ---
 
     # Mapuje name_snake na dvojici (živá_instance, její_relativní_cesta)
-    _nodes_dict: Mapping[str, tuple["SimpleInstanceLike", tuple[str, ...]]]
+    _nodes_dict: NodesDict
 
     # Mapuje name_snake čistě na živou instanci sub-node prvku
-    _nodes_instance_dict: Mapping[str, "SimpleInstanceLike"]
+    _nodes_instance_dict: "NodesInstanceDict"
 
     # Mapuje name_snake čistě na relativní cestu k prvku
-    _nodes_path_dict: Mapping[str, str]
+    _nodes_path_dict: "NodesPathDict"
 
     # Mapuje name_snake na celočíselný index pozice uvnitř původního _nodes_tuple
-    _nodes_index_map: Mapping[str, int]
+    _nodes_index_map: "NodesIndexMap"

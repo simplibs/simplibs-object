@@ -1,6 +1,6 @@
-from typing import Callable
+from collections.abc import Callable
 # Outers
-from .......exceptions import SimpleMetadataError
+from ........exceptions import SimpleMetadataError
 
 
 def validate_method_is_callable(

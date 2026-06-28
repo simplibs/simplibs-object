@@ -1,7 +1,5 @@
-from typing import Any, Dict, Tuple, Self, TYPE_CHECKING
+from typing import Any, Dict, Tuple, TYPE_CHECKING
 from simplibs.sentinels import UNSET
-# Outers
-from ..protocols import SimpleMetadataType, SimpleClassType
 # Inners
 from .SimpleConstantMetadata import SimpleConstantMetadata
 from .SimpleObjectMetadata import SimpleObjectMetadata
@@ -10,7 +8,10 @@ from .validations import raise_attribut_allready_set
 from .instance_builders import create_instance
 # Annotations
 if TYPE_CHECKING:
-    from ..protocols import SimpleClassType, SimpleInstanceType, SimpleMetadataType
+    from ...protocols.classes import SimpleClassLike
+    from ...protocols.instance import SimpleInstanceLike
+    from ...protocols.metadata import SimpleMetadataLike, SimpleMetaProtocol
+
 
 class SimpleMeta(type):
     """
@@ -21,28 +22,30 @@ class SimpleMeta(type):
     #--- Metoda pro vytvoření třídy ---#
     # (u defiičních tříd vytváří metadata)
     def __new__(
-        mcls: "SimpleClassType",
+        mcls,
         name: str,
         bases: Tuple[type, ...],
         namespace: Dict[str, Any]
-    ) -> "SimpleClassType":
+    ) -> "SimpleClassLike":
         """
         Analyzuje vznikající třídu a rozhoduje o jejím zařazení (Kořen/Konstanta/Kompozice).
         """
         # 1. Vytvoření objektu třídy
         cls = super().__new__(mcls, name, bases, namespace)
-        cls: "SimpleClassType"
+        cls: "SimpleClassLike"
 
         # 2. Přeskočení vytváření metadata pro základní a instanční třídy
         if hasattr(cls, "_is_instance_class") or name in BASE_CLASS_NAMES:
             return cls
 
         # 3. Výpočet metadat (pro deklarativní třídy)
-        cls.__metadata__ = (
+        calculated_metadata = (
             SimpleObjectMetadata(owner_class=cls)
             if hasattr(cls, "_inners")
             else SimpleConstantMetadata(owner_class=cls)
         )
+        calculated_metadata: SimpleMetadataLike
+        cls.__metadata__ = calculated_metadata
 
         # 4. Navrácení třídy
         return cls
@@ -51,7 +54,7 @@ class SimpleMeta(type):
     #--- Metoda pro zápis atributů hlavní třídy ---#
     # (zamezuje přepisu již zadaných dat)
     def __setattr__(
-        cls,
+        cls: "SimpleMetaProtocol",
         attr_name: str,
         new_value: Any
     ) -> None:
@@ -68,12 +71,12 @@ class SimpleMeta(type):
     #--- Metoda pro vytváření instancí ---#
     # (dopočítá instanční třídu a vrátí instanci)
     def __call__(
-        cls: "SimpleClassType",
+        cls: "SimpleMetaProtocol",
         mixins: tuple = (),
         *,
         as_atom: bool = False,
         mutable: bool = True
-    ) -> "SimpleInstanceType":
+    ) -> "SimpleInstanceLike":
         """
         Metoda pro vytváření instancí, dopočítá instanční třídu a vrátí instanci.
         """
@@ -85,7 +88,9 @@ class SimpleMeta(type):
         )
 
     # --- Definice __repr__ pro definiční třídy ---#
-    def __repr__(cls) -> str:
+    def __repr__(
+        cls: "SimpleMetaProtocol"
+    ) -> str:
         """
         Technická reprezentace samotné definiční třídy (šablony).
         Ukazuje typ blueprintu a informaci, zda jde o Konstantu nebo Kompozici.
@@ -98,7 +103,9 @@ class SimpleMeta(type):
 
 
     # --- Definice __str__ pro definiční třídy ---#
-    def __str__(cls) -> str:
+    def __str__(
+        cls: "SimpleMetaProtocol"
+    ) -> str:
         """
         Uživatelská reprezentace třídy.
         Vrací čisté byznysové jméno třídy.
@@ -108,7 +115,9 @@ class SimpleMeta(type):
 
     #--- Property usnadňující přístup k metadatům ---#
     @property
-    def meta(cls) -> "SimpleMetadataType":
+    def meta(
+        cls: "SimpleMetaProtocol"
+    ) -> "SimpleMetadataLike":
         """Veřejné rozhraní pro přístup k metadatům třídy."""
         # noinspection PyUnresolvedReferences
         return cls.__metadata__

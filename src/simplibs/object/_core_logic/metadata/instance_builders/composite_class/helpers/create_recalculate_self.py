@@ -1,10 +1,13 @@
-from typing import Callable
-# Outers
-from .....protocols import SimpleMetadataType
+from typing import TYPE_CHECKING
+from collections.abc import Callable
+# Annotations
+if TYPE_CHECKING:
+    from ......protocols.metadata import SimpleMetadataLike
+    from ......protocols.instance.core_classes import CompositeInstanceProtocol
 
 
 def create_recalculate_self(
-    meta: SimpleMetadataType,
+    meta: "SimpleMetadataLike",
     base_class_name: str
 ) -> Callable:
     """
@@ -12,7 +15,9 @@ def create_recalculate_self(
     Při změně vnitřního prvku přepočítá hodnotu kompozice a bublá směrem nahoru.
     """
 
-    def _recalculate_self(self) -> None:
+    def _recalculate_self(
+        self: "CompositeInstanceProtocol"
+    ) -> None:
 
         # 1. Získání slovníku s hodnotami inners
         current_values = {
@@ -24,6 +29,7 @@ def create_recalculate_self(
         new_value = self.calculate_value(**current_values)
 
         # 3. Zápis a propagace pouze při reálné změně hodnoty
+        # noinspection PyBroadException
         try:
             if self._value == new_value:
                 return

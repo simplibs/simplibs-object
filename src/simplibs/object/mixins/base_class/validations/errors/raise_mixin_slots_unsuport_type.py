@@ -1,4 +1,12 @@
-def raise_mixin_slots_unsuport_type(cls: type) -> None:
+from typing import TYPE_CHECKING
+# Annotations
+if TYPE_CHECKING:
+    from .....protocols.mixins.base_class import SimpleMixinProtocol
+
+
+def raise_mixin_slots_unsuport_type(
+    cls: "SimpleMixinProtocol"
+) -> None:
     """
     Validuje, že __slots__ je typu tuple nebo str.
     """

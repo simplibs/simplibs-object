@@ -7,7 +7,9 @@ from .validations import (
 
 
 
-def class_name_splitter(class_name: str) -> tuple[str, ...]:
+def class_name_splitter(
+    class_name: str
+) -> tuple[str, ...]:
     """
     Rozdělí název třídy SimpleObject na sémantické jednotky (slova).
 

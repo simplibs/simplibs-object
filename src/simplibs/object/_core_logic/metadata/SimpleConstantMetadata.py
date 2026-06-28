@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 from simplibs.sentinels import UNSET
 # Inners
 from .SimpleBaseMetadata import SimpleBaseMetadata
@@ -7,6 +7,10 @@ from .init_processors.methods import process_classmethod
 from .init_processors.attributes import (
     process_type, process_default_for_constant
 )
+# Annotations
+if TYPE_CHECKING:
+    from ...protocols.metadata import SimpleConstantMetadataProtocol
+    from ...protocols.instance.core_classes import AtomInstanceProtocol
 
 
 # noinspection PyAttributeOutsideInit
@@ -37,7 +41,9 @@ class SimpleConstantMetadata(SimpleBaseMetadata):
 
     #--- Definice logiky pro inicializaci dat ---#
     # (metoda je spuštěna v initu základní třídy)
-    def _process_user_data(self):
+    def _process_user_data(
+        self: "SimpleConstantMetadataProtocol"
+    ) -> None:
 
         # 1. Deklarace že třída je konstanta
         self.is_constant = True
@@ -74,14 +80,18 @@ class SimpleConstantMetadata(SimpleBaseMetadata):
     #--- Definice property pro výpočet a cache ---#
     # (vrací atomický základ pro třídu na instance)
     @property
-    def atom_class_mutable(self):
+    def atom_class_mutable(
+        self: "SimpleConstantMetadataProtocol"
+    ) -> "AtomInstanceProtocol":
         """Lazy brána k core instanci parametru."""
         if self._atom_class_mutable is UNSET:
             self._atom_class_mutable = make_atom_class(self.owner_class.__metadata__)
         return self._atom_class_mutable
 
     @property
-    def atom_class_immutable(self):
+    def atom_class_immutable(
+        self: "SimpleConstantMetadataProtocol"
+    ) -> "AtomInstanceProtocol":
         """Lazy brána k core instanci parametru."""
         if self._atom_class_immutable is UNSET:
             self._atom_class_immutable = make_atom_class(self.owner_class.__metadata__, mutable=False)

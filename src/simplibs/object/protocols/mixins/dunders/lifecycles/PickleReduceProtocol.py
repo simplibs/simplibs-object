@@ -1,6 +1,9 @@
-from typing import Protocol, runtime_checkable, Any
+from typing import Protocol, runtime_checkable, TYPE_CHECKING
 # Inners
 from .PickleStateProtocol import PickleStateProtocol
+# Annotations
+if TYPE_CHECKING:
+    from .internal_types import PicklePlan
 
 
 @runtime_checkable
@@ -11,11 +14,11 @@ class PickleReduceProtocol(
     """
     Protokol pro mixin PickleReduce.
 
-    Garantuje integraci s nízkoúrovňovým protokolem pickle pomocí 
+    Garantuje integraci s nízkoúrovňovým protokolem pickle pomocí
     metody __reduce__, která definuje tovární rekonstrukční plán objektu.
     """
 
-    def __reduce__(self) -> tuple[type, tuple[()], dict[str, Any]]:
+    def __reduce__(self) -> "PicklePlan":
         """
         Nativní Python pickle protokol.
 

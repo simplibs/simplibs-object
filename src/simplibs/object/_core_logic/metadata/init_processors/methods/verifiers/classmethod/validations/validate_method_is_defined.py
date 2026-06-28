@@ -1,11 +1,14 @@
+from typing import TYPE_CHECKING
 # Outers
-from .......exceptions import SimpleMetadataError
-from .......protocols import SimpleClassType
+from ........exceptions import SimpleMetadataError
+# Annotations
+if TYPE_CHECKING:
+    from ........protocols.classes import SimpleClassLike
 
 
 def validate_method_is_defined(
     method_name: str,
-    owner_class: SimpleClassType,
+    owner_class: "SimpleClassLike",
     base_info: dict[str, str | tuple[str, ...]],
 ) -> None:
     """

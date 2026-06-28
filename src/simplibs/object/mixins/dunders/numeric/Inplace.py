@@ -1,9 +1,13 @@
 import operator
+from typing import TYPE_CHECKING, Any
 from numbers import Number
 # Outers
 from ...base_class import SimpleMixin
 #Inners
-from ._utils.inplace import execute_inplace_op
+from ._utils import execute_inplace_op
+# Annotations
+if TYPE_CHECKING:
+    from ....protocols.mixins.dunders.numeric import InplaceProtocol
 
 
 class Inplace(SimpleMixin):
@@ -17,41 +21,65 @@ class Inplace(SimpleMixin):
     - vrací self
     """
 
-    __slots__ = ()
+    # ----------------------------------------
+    # Základní rozhraní
+    # ----------------------------------------
 
-    # Pouze pro číselné typy
+    # Definice určení
+    _mutable_only = True
     _only_types = Number
 
-    # Pouze pro mutable objekty
-    _mutable_only = True
+    # Definice slotů
+    __slots__ = ()
 
-    # ---------------------------------------------------------
-    # Operátory (+=, -=, *=, /=, //=, %=, **=)
-    # ---------------------------------------------------------
-    def __iadd__(self, other):
+    # ----------------------------------------
+    # Methods - Operátory (+=, -=, *=, /=, //=, %=, **=)
+    # ----------------------------------------
+    def __iadd__(
+        self: "InplaceProtocol",
+        other: Any
+    ) -> "InplaceProtocol":
         """In‑place: self.value += other."""
         return execute_inplace_op(self, operator.add, other)
 
-    def __isub__(self, other):
+    def __isub__(
+        self: "InplaceProtocol",
+        other: Any
+    ) -> "InplaceProtocol":
         """In‑place: self.value -= other."""
         return execute_inplace_op(self, operator.sub, other)
 
-    def __imul__(self, other):
+    def __imul__(
+        self: "InplaceProtocol",
+        other: Any
+    ) -> "InplaceProtocol":
         """In‑place: self.value *= other."""
         return execute_inplace_op(self, operator.mul, other)
 
-    def __itruediv__(self, other):
+    def __itruediv__(
+        self: "InplaceProtocol",
+        other: Any
+    ) -> "InplaceProtocol":
         """In‑place: self.value /= other."""
         return execute_inplace_op(self, operator.truediv, other)
 
-    def __ifloordiv__(self, other):
+    def __ifloordiv__(
+        self: "InplaceProtocol",
+        other: Any
+    ) -> "InplaceProtocol":
         """In‑place: self.value //= other."""
         return execute_inplace_op(self, operator.floordiv, other)
 
-    def __imod__(self, other):
+    def __imod__(
+        self: "InplaceProtocol",
+        other: Any
+    ) -> "InplaceProtocol":
         """In‑place: self.value %= other."""
         return execute_inplace_op(self, operator.mod, other)
 
-    def __ipow__(self, other):
+    def __ipow__(
+        self: "InplaceProtocol",
+        other: Any
+    ) -> "InplaceProtocol":
         """In‑place: self.value **= other."""
         return execute_inplace_op(self, operator.pow, other)

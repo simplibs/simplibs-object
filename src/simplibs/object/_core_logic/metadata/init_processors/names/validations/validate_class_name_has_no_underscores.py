@@ -2,7 +2,9 @@
 from .....exceptions import SimpleMetadataError
 
 
-def validate_class_name_has_no_underscores(class_name: str) -> None:
+def validate_class_name_has_no_underscores(
+    class_name: str
+) -> None:
     """
     Validuje, že jméno třídy neobsahuje podtržítko (_).
     

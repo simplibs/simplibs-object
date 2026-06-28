@@ -1,12 +1,18 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 from simplibs.sentinels import UNSET
 # Outers
-from ....._constants import VALUE
-from .helpers import with_constants  # uprav import podle nové struktury
+from ...._common.constants import VALUE
+from ...._common.immutability import with_constants
+# Annotations
+if TYPE_CHECKING:
+    from .....protocols.mixins.core_mixins import SerializationProtocol
+    from .....protocols.alias_typings import StateDict
 
 
-# noinspection PyProtectedMember
-def from_dict_constants(self, user_dict: dict) -> Any:
+def from_dict_constants(
+    self: "SerializationProtocol",
+    user_dict: "StateDict"
+) -> "SerializationProtocol":
     """
     Aktualizuje konstanty (atomy) objektu z částečného nebo úplného slovníku.
 

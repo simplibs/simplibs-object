@@ -1,9 +1,13 @@
-from typing import Any, Optional
+from typing import Any, Optional, TYPE_CHECKING
 from operator import attrgetter
+# Anotations
+if TYPE_CHECKING:
+    from ....protocols.metadata import SimpleMetadataLike
+    from ....protocols.instance import SimpleInstanceLike
 
 
 def create_constant_property(
-    meta: SimpleMetadataType,
+    meta: "SimpleMetadataLike",
     *,
     mutable: bool = True,
     path: Optional[tuple[str, ...]] = None
@@ -30,13 +34,13 @@ def create_constant_property(
     # -----------------------------
     if path is None:
         # Atomická property
-        def getter(self) -> Any:
+        def getter(self: "SimpleInstanceLike") -> Any:
             return self._value
     else:
         # Inner atom property
         get_inner_instance = attrgetter(*path)
 
-        def getter(self) -> Any:
+        def getter(self: "SimpleInstanceLike") -> Any:
             return get_inner_instance(self).value
 
     getter.__annotations__ = {"return": meta.value_type}
@@ -52,7 +56,7 @@ def create_constant_property(
     # -----------------------------
     if path is None:
         # Atomická property → zapisujeme do self
-        def setter(self, value: Any) -> None:
+        def setter(self: "SimpleInstanceLike", value: Any) -> None:
             if self._locked:
                 raise ValueError(f"{self.__class__.__name__} is locked.")
             self._root_value_setter(value, recalculate_up=True)
@@ -61,8 +65,9 @@ def create_constant_property(
         # Inner atom property → zapisujeme do inner instance
         get_inner_instance = attrgetter(*path)
 
-        def setter(self, value: Any) -> None:
-            inner_instance = get_inner_instance(self)
+        # noinspection PyProtectedMember
+        def setter(self: "SimpleInstanceLike", value: Any) -> None:
+            inner_instance: "SimpleInstanceLike" = get_inner_instance(self)
             inner_instance._root_value_setter(value, recalculate_up=True)
 
     setter.__annotations__ = {"value": meta.value_type, "return": None}

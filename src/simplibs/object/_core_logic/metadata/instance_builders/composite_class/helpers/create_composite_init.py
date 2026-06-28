@@ -1,24 +1,15 @@
-from typing import Callable
-# Outers
-from .....protocols import SimpleMetadataType
-
-
-def _get_inner_instance_class(inner_meta, mutable: bool):
-    if mutable:
-        return (
-            inner_meta.atom_class_mutable
-            if inner_meta.is_constant
-            else inner_meta.composite_class_mutable
-        )
-    return (
-        inner_meta.atom_class_immutable
-        if inner_meta.is_constant
-        else inner_meta.composite_class_immutable
-    )
+from typing import TYPE_CHECKING
+from collections.abc import Callable
+# Inners
+from ._get_inner_instance_class import _get_inner_instance_class
+# Annotations
+if TYPE_CHECKING:
+    from ......protocols.metadata import SimpleMetadataLike
+    from ......protocols.instance.core_classes import CompositeInstanceProtocol
 
 
 def create_composite_init(
-    meta: SimpleMetadataType,
+    meta: "SimpleMetadataLike",
     base_class_name: str,
     *,
     mutable: bool = True
@@ -28,12 +19,17 @@ def create_composite_init(
     Zrodí všechny přímé vnitřní prvky (inners) a prováže je s touto kompozicí.
     """
 
-    def __init__(self):
+
+    def __init__(
+        self: "CompositeInstanceProtocol"
+    ) -> None:
         # 1. Zavoláme init předka (AtomBase)
         # Ten nastaví základní self._value a self._owner = None
         if mutable:
+            # noinspection PyArgumentList
             meta.atom_class_mutable.__init__(self)
         else:
+            # noinspection PyArgumentList
             meta.atom_class_immutable.__init__(self)
 
         # 2. Projdeme všechny přímé inners definované v metadatech

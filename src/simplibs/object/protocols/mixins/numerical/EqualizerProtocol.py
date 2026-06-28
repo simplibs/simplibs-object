@@ -4,6 +4,7 @@ from ..core_mixins import NodesTupleProtocol
 # Annotations
 if TYPE_CHECKING:
     from .stepper import StepperProtocol
+    from .internal_types import SteppersMap
 
 
 @runtime_checkable
@@ -22,7 +23,7 @@ class EqualizerProtocol(
     # --- TECHNICKÉ ATRIBUTY (Inicializované v init_mixins) ---
 
     # Mapuje vnitřní name_snake klíče prvků přímo na jejich příslušné instanční Steppery
-    _steppers: dict[str, "StepperProtocol"]
+    _steppers: "SteppersMap"
 
     # --- DYNAMICKÝ PŘÍSTUP K PROPERTIES ---
 

@@ -1,12 +1,14 @@
-from typing import Any
+from typing import TYPE_CHECKING
 # Outers
-from .......exceptions import SimpleMetadataError
-from .......protocols import SimpleClassType
+from ........exceptions import SimpleMetadataError
 from .._exceptions_helpers import exception_info_for_default
+# Annotations
+if TYPE_CHECKING:
+    from ........protocols.classes import SimpleClassLike
 
 
 def raise_default_is_defined_in_composition(
-    owner_class: SimpleClassType
+    owner_class: "SimpleClassLike"
 ) -> None:
     """
     Vyvolá výjimku, pokud je u kompozice (SimpleObject) definován atribut '_default'.

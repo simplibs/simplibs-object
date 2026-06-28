@@ -1,17 +1,32 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 from simplibs.sentinels import UNSET
 # Outers
-from ....protocols import SimpleClassType
+from .....mixins.base_class import SimpleMixin
 from ...constants import BASE_CLASS_NAMES
 # Inners
 from .validations.parameters import validate_param_is_bool, validate_class_is_not_base_class
-from .validations.mixins import validate_mixin_is_simple_base_subclass, validate_mixin_is_compatible, validate_mixin_is_class
+from .validations.mixins import (
+    validate_mixin_is_simple_base_subclass,
+    validate_mixin_is_class,
+    raise_mixin_not_allowed_for_mutable,
+    raise_mixin_not_allowed_for_immutable,
+    raise_mixin_not_allowed_for_constant,
+    raise_mixin_not_support_default_value_type,
+    raise_mixin_not_allowed_for_composite
+)
 from .validations.slots import raise_mixin_slots_conflict_error
+# Annotations
+if TYPE_CHECKING:
+    from .....protocols.classes import SimpleClassLike
+    from .....protocols.metadata import SimpleMetaProtocol
+    from .....protocols.instance import SimpleInstanceLike
+    from .....protocols.mixins.base_class import SimpleMixinProtocol
+    from .....protocols.alias_typings import MixinsTuple
 
 
 def create_instance(
-    cls: SimpleClassType,
-    mixins: tuple,
+    cls: "SimpleClassLike",
+    mixins: "MixinsTuple",
     *,
     as_atom: bool,
     mutable: bool = True,
@@ -53,25 +68,33 @@ def create_instance(
 
     # 4. Kontrola mixinů
     if validate:
-        from ....mixins.base_class import SimpleMixin
+
         for mixin in mixins:
+
             if (not isinstance(mixin, type) or
                 not issubclass(mixin, SimpleMixin)):
                 validate_mixin_is_class(cls, mixin)
                 validate_mixin_is_simple_base_subclass(cls, mixin)
 
+            mixin: SimpleMixinProtocol
+
+            # noinspection PyProtectedMember
             if mixin._constant_only and not is_atom:
                 raise_mixin_not_allowed_for_composite(cls, mixin)
 
+            # noinspection PyProtectedMember
             if mixin._composite_only and is_atom:
                 raise_mixin_not_allowed_for_constant(cls, mixin)
 
+            # noinspection PyProtectedMember
             if mixin._mutable_only and not mutable:
                 raise_mixin_not_allowed_for_immutable(cls, mixin)
 
+            # noinspection PyProtectedMember
             if mixin._immutable_only and mutable:
                 raise_mixin_not_allowed_for_mutable(cls, mixin)
 
+            # noinspection PyProtectedMember
             if mixin._only_types is not UNSET and not isinstance(cls.meta.default, mixin._only_types):
                 raise_mixin_not_support_default_value_type(cls, mixin)
 
@@ -87,7 +110,12 @@ def create_instance(
 
     # 6. Sestavení instanční třídy (Chráněno před konflikty slotů)
     try:
-        _instance_cls = type(class_name, class_parents, class_dict)
+        # noinspection PyTypeChecker
+        _instance_cls = type(
+            class_name,
+            class_parents,
+            class_dict
+        )
     except TypeError as error:
         raise_mixin_slots_conflict_error(cls, mixins, error)
 
@@ -108,4 +136,5 @@ def create_instance(
     instance.__init__()
 
     # 11. Navrácení vytvořené instance
+    instance: "SimpleInstanceLike"
     return instance

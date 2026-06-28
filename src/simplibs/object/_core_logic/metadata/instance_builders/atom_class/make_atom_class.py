@@ -1,20 +1,20 @@
+from typing import TYPE_CHECKING
 # Outers
-from ....protocols import SimpleMetadataType
-from ....protocols.metadata.SimpleConstantMetadataProtocol import SimpleConstantMetadataProtocol
-from ...._utils.properties.helpers import create_constant_property
+from ....base_utils.properties import create_constant_property
 # Inners
 from .InstanceBase import InstanceBase
-from .helpers import (
-    create_atom_init,
-    create_root_value_setter
-)
+from .helpers import create_atom_init, create_root_value_setter
+# Annotations
+if TYPE_CHECKING:
+    from .....protocols.metadata import SimpleMetadataLike
+    from .....protocols.instance.core_classes import AtomInstanceProtocol
 
 
 def make_atom_class(
-    meta: SimpleConstantMetadataProtocol,
+    meta: SimpleMetadataLike,
     *,
     mutable:bool = True
-) -> type:
+) -> "AtomInstanceProtocol":
 
     # 1. Defnice jména třídy
     base_class_name = (
@@ -40,6 +40,7 @@ def make_atom_class(
         class_dict["_root_value_setter"] = create_root_value_setter(meta, base_class_name)
 
     # 5. Vytvoření třídy
+    # noinspection PyTypeChecker
     atom_class = type(
         base_class_name,
         class_parents,
@@ -52,6 +53,7 @@ def make_atom_class(
             delattr(atom_class, name)
 
     # 7. Navrácení třídy
+    atom_class: "AtomInstanceProtocol"
     return atom_class
 
 

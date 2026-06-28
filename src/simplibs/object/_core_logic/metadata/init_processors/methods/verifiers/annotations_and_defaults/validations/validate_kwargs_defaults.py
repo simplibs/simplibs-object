@@ -1,12 +1,14 @@
-from typing import Any
+from typing import TYPE_CHECKING, Any
 # Outers
-from .......protocols import ClassMethodProtocol
-from .......exceptions import SimpleMetadataError
+from ........exceptions import SimpleMetadataError
+# Annotations
+if TYPE_CHECKING:
+    from ........protocols.methods import ClassMethodProtocol
 
 
 def validate_kwargs_defaults(
     expected_kwargs_defaults: dict[str, Any],
-    bound_method: ClassMethodProtocol,
+    bound_method: "ClassMethodProtocol",
     base_info: dict[str, str | tuple[str, ...]],
 ) -> None:
     """

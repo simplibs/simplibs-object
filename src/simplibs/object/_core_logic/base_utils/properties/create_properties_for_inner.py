@@ -1,18 +1,21 @@
-# Outers
-from ...protocols import SimpleMetadataType
+from typing import TYPE_CHECKING
 # Inners
 from .create_constant_property import create_constant_property
 from .create_composite_property import create_composite_property
 from .create_instance_property import create_instance_property
+# Anotations
+if TYPE_CHECKING:
+    from ....protocols.metadata import SimpleMetadataLike
+    from ....protocols.alias_typings import PathDict
 
 
 
 def create_properties_for_inner(
-    inner_meta: SimpleMetadataType,
-    path: tuple[str, ...] = (),
+    inner_meta: "SimpleMetadataLike",
+    path: "PathDict | ()" = (),
     *,
     mutable: bool = True
-) -> dict:
+) -> dict[str, property]:
     """
     Generuje dvojici properties pro jeden inner:
 

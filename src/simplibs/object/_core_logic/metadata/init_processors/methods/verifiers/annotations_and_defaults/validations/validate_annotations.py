@@ -1,14 +1,17 @@
+from typing import TYPE_CHECKING
 # Outers
-from .......protocols import ClassMethodProtocol
-from .......exceptions import SimpleMetadataError
+from ........exceptions import SimpleMetadataError
 # Inners
 from .utils import convert_annotation_to_type_set
+# Annotations
+if TYPE_CHECKING:
+    from ........protocols.methods import ClassMethodProtocol
 
 
 
 def validate_annotations(
     bound_method_annotations: dict[str, type],
-    bound_method: ClassMethodProtocol,
+    bound_method: "ClassMethodProtocol",
     base_info: dict[str, str | tuple[str, ...]],
 ) -> None:
     """

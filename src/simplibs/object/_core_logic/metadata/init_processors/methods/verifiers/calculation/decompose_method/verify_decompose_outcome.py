@@ -1,19 +1,21 @@
-from typing import Any
-# Outers
-from .......protocols import SimpleClassType, ClassMethodProtocol
+from typing import Any, TYPE_CHECKING
 # Inners
 from .validations import (
     raise_decompose_unvalide_outcome_length,
     validate_decompose_unvalide_item_type,
     validate_decompose_unvalide_item_value
 )
+# Annotations
+if TYPE_CHECKING:
+    from ........protocols.methods import ClassMethodProtocol
+    from ........protocols.classes import SimpleClassLike
 
 
 def verify_decompose_outcome(
     calculate_default: tuple[Any, ...],
-    owner_class: SimpleClassType,
-    bound_method: ClassMethodProtocol,
-):
+    owner_class: "SimpleClassLike",
+    bound_method: "ClassMethodProtocol",
+) -> None:
 
     # 1. Získání inners
     # noinspection PyProtectedMember
@@ -25,7 +27,7 @@ def verify_decompose_outcome(
 
     # 3. Kontrola typů jednotlivých prvků
     for i, inner in enumerate(inners):
-        inner: SimpleClassType  # Přetypování pro PyCharm
+        inner: "SimpleClassLike"
 
         # 3.1 Získání hodnot
         value = calculate_default[i]

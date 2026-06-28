@@ -5,6 +5,17 @@ from ._utils.inners_property import collect_all_nested_properties
 
 
 class InnersProperty(SimpleMixin):
+    """
+    Mixin přidávající property na vnitřní prvky.
+
+    Dynamicky rozšiřuje kompozitní instance o properties
+    pro přímý komfortní přístup k jejím vnitřním prvkům (inners)
+    na základě definice blueprintu.
+    """
+
+    # ----------------------------------------
+    # Základní rozhraní
+    # ----------------------------------------
 
     # Definice určení
     _composite_only = True
@@ -12,12 +23,15 @@ class InnersProperty(SimpleMixin):
     # Definice slotů
     __slots__ = ()
 
-    # ---------------------------------------------------------
-    # 1) Hook volaný z create_instance
-    # ---------------------------------------------------------
+    # ----------------------------------------
+    # Hook pro úpravu instanční třídy
+    # ----------------------------------------
 
     @staticmethod
     def __extend_instance_class__(instance_cls):
+        """
+        Interní metoda pro připojení prvků k třídě, před inicializačním procesem.
+        """
 
         # 1. Vytvoření potřebných properties
         nested_props = collect_all_nested_properties(instance_cls.meta)

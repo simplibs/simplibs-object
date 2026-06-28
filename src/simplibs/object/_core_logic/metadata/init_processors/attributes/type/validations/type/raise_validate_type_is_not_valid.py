@@ -1,13 +1,14 @@
-from typing import Any, NoReturn
+from typing import Any, NoReturn, TYPE_CHECKING
 # Outers
-from .......exceptions import SimpleMetadataError
-from .......protocols import SimpleClassType
+from ........exceptions import SimpleMetadataError
 from .._exceptions_helpers import exception_info_for_type
-
+# Annotations
+if TYPE_CHECKING:
+    from ........protocols.classes import SimpleClassLike
 
 def raise_validate_type_is_not_valid(
     value_type: Any,
-    owner_class: SimpleClassType
+    owner_class: "SimpleClassLike"
 ) -> NoReturn:
     """
     Validuje, že atribut _type je validním typem.

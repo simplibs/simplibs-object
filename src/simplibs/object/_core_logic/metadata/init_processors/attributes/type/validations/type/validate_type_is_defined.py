@@ -1,14 +1,16 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 from simplibs.sentinels import UNSET
 # Outers
-from .......exceptions import SimpleMetadataError
-from .......protocols import SimpleClassType
+from ........exceptions import SimpleMetadataError
 from .._exceptions_helpers import exception_info_for_type
+# Annotations
+if TYPE_CHECKING:
+    from ........protocols.classes import SimpleClassLike
 
 
 def validate_type_is_defined(
     atrribut_value: Any,
-    owner_class: SimpleClassType
+    owner_class: "SimpleClassLike"
 ) -> None:
     """
     Validuje, že atribut _type je na třídě definovaný.

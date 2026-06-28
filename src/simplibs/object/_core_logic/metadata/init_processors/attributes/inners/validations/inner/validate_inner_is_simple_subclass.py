@@ -1,12 +1,15 @@
+from typing import TYPE_CHECKING
 # Outers
-from .......exceptions import SimpleMetadataError
-from .......protocols import SimpleClassType
+from ........exceptions import SimpleMetadataError
 from .._exceptions_helpers import exception_info_for_inners
+# Annotations
+if TYPE_CHECKING:
+    from ........protocols.classes import SimpleClassLike
 
 
 def validate_inner_is_simple_subclass(
-    inner: SimpleClassType,
-    owner_class: SimpleClassType
+    inner: "SimpleClassLike",
+    owner_class: "SimpleClassLike"
 ) -> None:
     """
     Validuje, že vnitřní prvek je potomkem požadovaných základních tříd.

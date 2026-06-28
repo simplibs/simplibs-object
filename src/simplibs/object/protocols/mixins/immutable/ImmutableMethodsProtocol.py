@@ -1,12 +1,15 @@
-from typing import Protocol, runtime_checkable, Any, Self
+from typing import Protocol, runtime_checkable, Any, Self, TYPE_CHECKING
 # outers
-from ..core_mixins import NodesDictsProtocol, SnapshotProtocol
+from ..core_mixins import InfrastructureProtocol
+# Annotations
+if TYPE_CHECKING:
+    from ...alias_typings import ChangesTuple, ChangesDict
+
 
 
 @runtime_checkable
 class ImmutableMethodsProtocol(
-    NodesDictsProtocol,
-    SnapshotProtocol,
+    InfrastructureProtocol,
     Protocol
 ):
     """
@@ -20,13 +23,13 @@ class ImmutableMethodsProtocol(
     # --- TECHNICKÉ ATRIBUTY (Inicializované v init_mixins) ---
 
     # Množina snake_case názvů všech vnitřních konstantních (atomických) prvků
-    _constant_names: set[str]
+    _constant_names_tuple: set[str]
 
     # --- IMMUTABLE API - CORE ---
 
     def with_constants(
         self,
-        changes_tuple: tuple[str, Any] | tuple[tuple[str, Any], ...] | None = None
+        changes_tuple: "ChangesTuple" = None
     ) -> Self:
         """
         Vytvoří a vrátí novou imutabilní instanci na základě jedné nebo více
@@ -50,7 +53,7 @@ class ImmutableMethodsProtocol(
 
     # --- IMMUTABLE API - EXTENDED ---
 
-    def with_changes(self, changes_dict: dict[str, Any]) -> Self:
+    def with_changes(self, changes_dict: "ChangesDict") -> Self:
         """
         Ergonomická metoda umožňující zadat mapování více změn pro konstanty
         ve formě standardního slovníku. Vrací novou imutabilní instanci.

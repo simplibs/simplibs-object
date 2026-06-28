@@ -5,7 +5,8 @@ from ..methods import LogicSignature, P, R
 from .SimpleConstantProtocol import SimpleConstantProtocol
 # Annotations
 if TYPE_CHECKING:
-    from ..classes import SimpleClassLike
+    from ..metadata import SimpleMetadataLike
+    from ..alias_typings import InnersTuple
 
 
 @runtime_checkable
@@ -19,7 +20,7 @@ class SimpleObjectProtocol(
     """
 
     # --- VNITŘNÍ ROZHRANÍ (Definuje uživatel při zakládání kompozice) ---
-    _inners: tuple["SimpleClassLike", ...]
+    _inners: "InnersTuple"
 
     @classmethod
     def _logic(cls, *args: P.args, **kwargs: P.kwargs) -> R:
@@ -44,3 +45,6 @@ class SimpleObjectProtocol(
     def decompose_value(cls, value: Any) -> Any:
         """Rozloží hlavní hodnotu na vnitřní komponenty."""
         ...
+
+    __mro__: Any
+    meta: "SimpleMetadataLike"

@@ -1,15 +1,18 @@
+from typing import TYPE_CHECKING
+from types import UnionType
 import random
 import string
 from datetime import datetime, date, timedelta
 from pathlib import Path
 from enum import Enum
+# Anotations
+if TYPE_CHECKING:
+    from ....protocols.instance import SimpleInstanceLike
 
-from ..core.snapshot import build_snapshot, restore_snapshot
 
-
-# ---------------------------------------------------------
+# ----------------------------------------
 # Registr generátorů (uživatel může přidávat vlastní)
-# ---------------------------------------------------------
+# ----------------------------------------
 
 TYPE_GENERATORS = {}
 
@@ -19,11 +22,11 @@ def register_generator(type_, func):
     TYPE_GENERATORS[type_] = func
 
 
-# ---------------------------------------------------------
+# ----------------------------------------
 # Hlavní API
-# ---------------------------------------------------------
+# ----------------------------------------
 
-def fill_random(obj, *, retries=5):
+def fill_random(obj: "SimpleInstanceLike", *, retries=5):
     """
     Naplní Simple objekt náhodnými daty.
     Rekurzivně projde celý strom (inners).
@@ -33,7 +36,7 @@ def fill_random(obj, *, retries=5):
     # 1) Pokud má inners → rekurze
     if obj.meta.inners:
         for inner in obj.meta.inners:
-            fill_random(getattr(obj, inner.name_private), retries=retries)
+            fill_random(getattr(obj, inner.meta.name_private), retries=retries)
         return obj
 
     # 2) Atomická hodnota → generujeme
@@ -53,7 +56,7 @@ def fill_random(obj, *, retries=5):
     )
 
 
-def generate_random_value(type_):
+def generate_random_value(type_: type | UnionType):
     """
     Vygeneruje náhodnou hodnotu podle typu.
     Respektuje registr TYPE_GENERATORS.

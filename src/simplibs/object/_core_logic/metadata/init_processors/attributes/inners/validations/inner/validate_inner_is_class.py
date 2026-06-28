@@ -1,14 +1,16 @@
-from typing import Any
+from typing import TYPE_CHECKING
 # Outers
-from .......exceptions import SimpleMetadataError
-from .......protocols import SimpleClassType
+from ........exceptions import SimpleMetadataError
 from .._exceptions_helpers import exception_info_for_inners
+# Annotations
+if TYPE_CHECKING:
+    from ........protocols.classes import SimpleClassLike
 
 
 def validate_inner_is_class(
-    inner: SimpleClassType,
-    inners: tuple[SimpleClassType, ...],
-    owner_class: SimpleClassType
+    inner: "SimpleClassLike",
+    inners: tuple["SimpleClassLike", ...],
+    owner_class: "SimpleClassLike"
 ) -> None:
     """
     Validuje, zda je prvek v '_inners' skutečně datovým typem (třídou).

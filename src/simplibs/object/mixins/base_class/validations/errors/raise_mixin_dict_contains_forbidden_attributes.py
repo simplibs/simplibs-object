@@ -1,4 +1,12 @@
-def raise_mixin_dict_contains_forbidden_attributes(cls: type) -> None:
+from typing import TYPE_CHECKING
+# Annotations
+if TYPE_CHECKING:
+    from .....protocols.mixins.base_class import SimpleMixinProtocol
+
+
+def raise_mixin_dict_contains_forbidden_attributes(
+    cls: "SimpleMixinProtocol"
+) -> None:
     """
     Validuje, že mixin nepřepisuje zakázané atributy.
     """

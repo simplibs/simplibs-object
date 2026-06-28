@@ -1,13 +1,16 @@
+from typing import TYPE_CHECKING
 # Outers
-from ........protocols import ClassMethodProtocol
-from ........exceptions import SimpleMetadataError
+from .........exceptions import SimpleMetadataError
 from ...._exceptions_helpers import exception_context_for_classmethod
+# Annotations
+if TYPE_CHECKING:
+    from .........protocols.methods import ClassMethodProtocol
 
 
 def raise_decompose_unvalide_outcome_length(
     calculate_default: tuple,
     inners: tuple,
-    bound_method: ClassMethodProtocol,
+    bound_method: "ClassMethodProtocol",
 ) -> None:
     """
     Vytváří výjimku, když metoda _decompose vrátila nesprávnyý počet hodnot.

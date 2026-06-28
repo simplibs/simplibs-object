@@ -1,6 +1,5 @@
+from typing import TYPE_CHECKING, Any
 from simplibs.sentinels import UNSET
-# Outers
-from .....protocols import SimpleClassType
 # Inners
 from .validations.inners import (
     validate_inners_is_not_empty,
@@ -16,12 +15,15 @@ from .validations.name_collisions import (
     validate_collision_within_inners,
     validate_if_collision_with_owner_class
 )
+# Annotations
+if TYPE_CHECKING:
+    from ......protocols.classes import SimpleClassLike
 
 
 def process_inners(
     node_names_set: set,
     name_snake: str,
-    owner_class: SimpleClassType,
+    owner_class: "SimpleClassLike",
 ) -> tuple:
     """
     Validates and processes the list of inner elements (inners) of a composite class.
@@ -59,16 +61,17 @@ def process_inners(
             validate_inners_is_tuple(raw_inners, owner_class)
             validate_inners_is_not_empty(raw_inners, owner_class)
 
-        # 3.2 Vnitřní oimport na základní třídy, které jsou potřeba v for cyklu
-        from .....SimpleConstant import SimpleConstant
-        from .....SimpleObject import SimpleObject
+        # 3.2 Vnitřní import na základní třídy, které jsou potřeba v for cyklu
+        from ......SimpleConstant import SimpleConstant
+        from ......SimpleObject import SimpleObject
 
     # 4. Prepare data containers
     new_node_names_set = node_names_set.copy()
 
     # 5. Main iteration through inners
+    raw_inners: tuple["SimpleClassLike", ...]
     for inner in raw_inners:
-        inner: SimpleClassType  # Přetypování pro PyCharm
+        inner: type["SimpleClassLike"]
 
         # 5.1 Base validations: type, subclass, and not base class
         if need_validations:

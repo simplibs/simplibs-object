@@ -1,11 +1,11 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 from operator import attrgetter
-# Outers
-from ....protocols import SimpleMetadataType
-
+# Anotations
+if TYPE_CHECKING:
+    from ....protocols.metadata import SimpleMetadataLike
 
 def create_instance_property(
-    inner_meta: SimpleMetadataType,
+    inner_meta: "SimpleMetadataLike",
     path: tuple[str, ...]
 ) -> property:
     """

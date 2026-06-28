@@ -1,7 +1,14 @@
-from ......exceptions import SimpleObjectMixinError
+from typing import TYPE_CHECKING
+# Outers
+from .......exceptions import SimpleObjectMixinError
+# Annotations
+if TYPE_CHECKING:
+    from .......protocols.classes import SimpleClassLike
 
-
-def validate_mixin_is_class(cls: type, mixin: object) -> None:
+def validate_mixin_is_class(
+    cls: "SimpleClassLike",
+    mixin: object
+) -> None:
     """
     Validuje, že mixin je třída (nikoli instance, funkce, modul, atd.).
     """

@@ -1,6 +1,6 @@
+from typing import TYPE_CHECKING
 from simplibs.sentinels import UNSET
 # Outers
-from ......protocols import SimpleClassType, ClassMethodProtocol
 from .._exceptions_helpers import exception_info_for_classmethod
 # Inners
 from .utils import clone_classmethod
@@ -9,14 +9,18 @@ from .validations import (
     validate_method_is_callable,
     validate_method_is_classmethod
 )
+# Annotations
+if TYPE_CHECKING:
+    from .......protocols.classes import SimpleClassLike
+    from .......protocols.methods import ClassMethodProtocol
 
 
 def verify_classmethod(
     method_name: str,
-    owner_class: SimpleClassType,
+    owner_class: "SimpleClassLike",
     expected_params: tuple[str, ...],
     expected_args_params_count: int,
-) -> tuple[bool, ClassMethodProtocol]:  # tuple[bool(má se validovat), návratový objekt]
+) -> tuple[bool, "ClassMethodProtocol"]:  # tuple[bool(má se validovat), návratový objekt]
 
     # 1. Příprava dat
     row_method = owner_class.__dict__.get(method_name, UNSET)
@@ -35,7 +39,7 @@ def verify_classmethod(
             return False, bound_method
 
         # 2.3 Kontrola zda se jedná o přímého potomka SimpleObject třídy
-        from ......SimpleObject import SimpleObject
+        from .......SimpleObject import SimpleObject
         is_direct_descendant = SimpleObject in owner_class.__bases__
 
         # 2.4 Vyřízení pro _logic a _decompose (když se nejedná o přímého potomka)

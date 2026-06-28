@@ -1,17 +1,19 @@
-from typing import Any, Union
+from typing import Any, TYPE_CHECKING
+from types import UnionType
 from simplibs.sentinels import UNSET
-# Outers
-from .....protocols import SimpleClassType
 # Inners
 from .validations.constant import (
     validate_default_matches_annotation,
     validate_default_is_defined,
 )
+# Annotations
+if TYPE_CHECKING:
+    from ......protocols.classes import SimpleClassLike
 
 
 def process_default_for_constant(
-    default_type: type | Union,
-    owner_class: SimpleClassType,
+    default_type: type | UnionType,
+    owner_class: "SimpleClassLike",
 ) -> Any:
 
     # 1. Natažení defaultu

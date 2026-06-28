@@ -2,7 +2,9 @@
 from .....exceptions import SimpleMetadataError
 
 
-def validate_class_name_is_ascii(class_name: str) -> None:
+def validate_class_name_is_ascii(
+    class_name: str
+) -> None:
     """
     Validuje, že jméno třídy obsahuje pouze ASCII znaky (bez diakritiky).
     

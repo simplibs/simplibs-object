@@ -1,7 +1,16 @@
+from typing import TYPE_CHECKING
+# Outers
 from ......exceptions import SimpleObjectMixinError
+# Annotations
+if TYPE_CHECKING:
+    from .......protocols.classes import SimpleClassLike
+    from .......protocols.mixins.base_class import SimpleMixinProtocol
 
 
-def validate_mixin_is_simple_base_subclass(cls: type, mixin: type) -> None:
+def validate_mixin_is_simple_base_subclass(
+    cls: "SimpleClassLike",
+    mixin: "SimpleMixinProtocol"
+) -> None:
     """
     Validuje, že mixin je potomek SimpleMixin.
     """

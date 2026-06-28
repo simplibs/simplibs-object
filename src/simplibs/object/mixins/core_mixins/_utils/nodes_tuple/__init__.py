@@ -1,2 +1,1 @@
 from .build_nodes_tuple import build_nodes_tuple
-from .collect_nodes_data import collect_nodes_data

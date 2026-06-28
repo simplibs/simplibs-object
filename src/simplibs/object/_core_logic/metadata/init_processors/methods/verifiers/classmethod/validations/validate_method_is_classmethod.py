@@ -1,10 +1,13 @@
+from typing import TYPE_CHECKING
 # Outers
-from .......protocols import ClassMethodProtocol
-from .......exceptions import SimpleMetadataError
+from ........exceptions import SimpleMetadataError
+# Annotations
+if TYPE_CHECKING:
+    from ........protocols.methods import ClassMethodProtocol
 
 
 def validate_method_is_classmethod(
-    row_method: ClassMethodProtocol,
+    row_method: "ClassMethodProtocol",
     base_info: dict[str, str | tuple[str, ...]],
 ) -> None:
     """

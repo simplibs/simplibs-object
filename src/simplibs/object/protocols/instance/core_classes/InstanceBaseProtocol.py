@@ -1,7 +1,8 @@
 from typing import Protocol, runtime_checkable, TYPE_CHECKING
 # Annotations
 if TYPE_CHECKING:
-    from ...metadata import SimpleBaseMetadataProtocol
+    from ...metadata import SimpleMetadataLike
+    from ...classes import SimpleClassLike
 
 
 @runtime_checkable
@@ -18,6 +19,8 @@ class InstanceBaseProtocol(
         ...
 
     @property
-    def meta(self) -> "SimpleBaseMetadataProtocol":
+    def meta(self) -> "SimpleMetadataLike":
         """Veřejný přístup k metadatům třídy napřímo bez procházení MRO."""
         ...
+
+    __class__: "SimpleClassLike"

@@ -1,7 +1,7 @@
 from .collections import (
     CollectionBaseProtocol,
-    CollectionIterableProtocol,
-    CollectionMappingProtocol,
+    IterableProtocol,
+    MappingProtocol,
     CollectionProtocol
 )
 from .comparison import (

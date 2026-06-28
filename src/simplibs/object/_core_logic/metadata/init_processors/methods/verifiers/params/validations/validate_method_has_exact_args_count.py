@@ -1,5 +1,5 @@
 # Outers
-from .......exceptions import SimpleMetadataError
+from ........exceptions import SimpleMetadataError
 
 
 def validate_method_has_exact_args_count(

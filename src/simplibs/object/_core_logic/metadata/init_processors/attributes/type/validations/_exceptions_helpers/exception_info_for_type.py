@@ -1,9 +1,11 @@
-# Outers
-from .......protocols import SimpleClassType
+from typing import TYPE_CHECKING
+# Annotations
+if TYPE_CHECKING:
+    from ........protocols.classes import SimpleClassLike
 
 
 def exception_info_for_type(
-    owner_class: SimpleClassType,
+    owner_class: "SimpleClassLike",
 ):
     attribute_name = "_type"
     class_name = owner_class.__name__

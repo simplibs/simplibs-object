@@ -1,10 +1,8 @@
-from simplibs.sentinels import UNSET
+from typing import TYPE_CHECKING
 from types import NoneType, UnionType
 from functools import reduce
 from operator import or_
 from simplibs.sentinels import UNSET
-# Outers
-from .....protocols import SimpleClassType
 # Inners
 from .validations.type import (
     validate_type_is_defined,
@@ -17,10 +15,13 @@ from .validations.tuple import (
     validate_type_tuple_is_not_nested
 )
 from .validations.union import raise_union_type_contain_none
+# Annotations
+if TYPE_CHECKING:
+    from ......protocols.classes import SimpleClassLike
 
 
 def process_type(
-    owner_class: SimpleClassType,
+    owner_class: "SimpleClassLike",
 ) -> tuple[type | UnionType, str]:
     """
     Validuje integritu definice typu a transformuje tuple na moderní UnionType.

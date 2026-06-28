@@ -1,7 +1,14 @@
-from ......exceptions import SimpleObjectInstanceError
+from typing import Any, TYPE_CHECKING
+# Outers
+from .......exceptions import SimpleObjectInstanceError
+# Annotations
+if TYPE_CHECKING:
+    from .......protocols.classes import SimpleClassLike
 
 
-def validate_class_is_not_base_class(cls: type) -> None:
+def validate_class_is_not_base_class(
+    cls: "SimpleClassLike"
+) -> None:
     """
     Validuje, že uživatel nepředal základní třídu Simple systému.
     """
