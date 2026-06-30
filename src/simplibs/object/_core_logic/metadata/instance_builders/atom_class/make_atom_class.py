@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 # Outers
-from ....base_utils.properties import create_constant_property
+from ....base_utils.properties import create_value_property
 # Inners
 from .InstanceBase import InstanceBase
 from .helpers import create_atom_init, create_root_value_setter
@@ -31,7 +31,7 @@ def make_atom_class(
         "__doc__": f"Atomický instanční objekt pro {meta.class_name}",
         "__slots__": ("_value", "_owner", "_locked"),
         "__init__": create_atom_init(meta, base_class_name),
-        "value": create_constant_property(meta, mutable=mutable),
+        "value": create_value_property(meta, mutable=mutable),
         "owner": property(lambda self: self._owner, doc="Reference na nadřazenou kompozici.")
     }
 

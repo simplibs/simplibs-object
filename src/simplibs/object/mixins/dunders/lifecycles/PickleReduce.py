@@ -33,7 +33,7 @@ class PicleReduce(PickleState):
     __slots__ = ()
 
     # ----------------------------------------
-    # Metody - REDUCE
+    # Methods - REDUCE
     # ----------------------------------------
 
     def __reduce__(

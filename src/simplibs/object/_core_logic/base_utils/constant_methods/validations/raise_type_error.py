@@ -1,7 +1,7 @@
 from typing import Any, NoReturn, TYPE_CHECKING
 # Outers
 from .....exceptions import SimpleLogicError
-# Anotations
+# Annotations
 if TYPE_CHECKING:
     from .....protocols.classes import SimpleConstantProtocol
 

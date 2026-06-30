@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 # Outers
-from ....base_utils.properties import create_composite_property
+from ....base_utils.properties import create_value_property
 # Inners
 from .helpers import (
     create_composite_init,
@@ -40,7 +40,7 @@ def make_composite_class(
         "__doc__": f"Kompozitní instanční objekt pro {meta.class_name}",
         "__slots__": tuple(inner.meta.name_private for inner in meta.inners),
         "__init__": create_composite_init(meta, base_class_name, mutable=mutable),
-        "value": create_composite_property(meta, mutable=mutable),
+        "value": create_value_property(meta, is_constant=False, mutable=mutable),
     }
 
     # 4. Přidání property pro přímé inners

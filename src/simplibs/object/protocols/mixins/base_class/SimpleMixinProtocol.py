@@ -35,4 +35,12 @@ class SimpleMixinProtocol(
         """
         ...
 
+    @staticmethod
+    def __extend_instance_class__(instance_cls: "SimpleInstanceLike") -> "SimpleInstanceLike":
+        """
+        Volitelný hook umožňující mixinu upravit instanční třídu
+        před vytvořením runtime instance (např. přidat dynamické properties).
+        """
+        ...
+
     __name__: str

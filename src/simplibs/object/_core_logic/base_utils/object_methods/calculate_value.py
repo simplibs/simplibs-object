@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING, Any
 #Inners
 from .validations import process_calculate_value_params
-# Anotations
+# Annotations
 if TYPE_CHECKING:
     from ....protocols.classes import SimpleObjectProtocol
 
@@ -23,8 +23,5 @@ def calculate_value(
     # 2. Výpočet hodnoty
     outcome = cls.meta.logic(cls, **params_dict)
 
-    # 3. Případné logování (je-li nastaveno)
-    cls._log_outcome(outcome)
-
-    # 4. Navrácení výsledku
+    # 3. Navrácení výsledku
     return outcome

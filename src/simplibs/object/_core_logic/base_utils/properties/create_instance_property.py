@@ -1,6 +1,6 @@
 from typing import Any, TYPE_CHECKING
 from operator import attrgetter
-# Anotations
+# Annotations
 if TYPE_CHECKING:
     from ....protocols.metadata import SimpleMetadataLike
 

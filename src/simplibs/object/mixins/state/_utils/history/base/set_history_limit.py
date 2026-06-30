@@ -1,8 +1,15 @@
+from typing import TYPE_CHECKING
 # Outers
 from .._validations import raise_history_limit_not_positive_integer
+# Annotations
+if TYPE_CHECKING:
+    from ......protocols.mixins.state import HistoryProtocol
 
 
-def set_history_limit(self, value: int) -> None:
+def set_history_limit(
+    self: "HistoryProtocol",
+    value: int
+) -> None:
     """Nastaví hodnotu limitu velikosti historie"""
 
     # 1. Validace hodnoty

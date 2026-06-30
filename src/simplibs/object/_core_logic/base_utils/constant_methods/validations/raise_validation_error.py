@@ -3,7 +3,7 @@ from typing import Any, NoReturn, TYPE_CHECKING
 from .....exceptions import SimpleLogicError
 # Inners
 from .utils.extract_clean_code_lines import extract_clean_code_lines
-# Anotations
+# Annotations
 if TYPE_CHECKING:
     from .....protocols.classes import SimpleConstantProtocol
 

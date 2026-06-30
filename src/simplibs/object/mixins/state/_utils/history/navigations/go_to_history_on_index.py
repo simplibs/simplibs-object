@@ -1,8 +1,15 @@
+from typing import TYPE_CHECKING
 # Outers
 from .._validations import raise_unvalide_snapshot_index
+# Annotations
+if TYPE_CHECKING:
+    from ......protocols.mixins.state import HistoryProtocol
 
 
-def go_to_history_on_index(self, index: int):
+def go_to_history_on_index(
+    self: "HistoryProtocol",
+    index: int
+) -> None:
     """Metoda pro přechod na konkrétní index"""
 
     # 1. Validace zadané hodnoty
@@ -13,4 +20,3 @@ def go_to_history_on_index(self, index: int):
     self._history_index = index
     _, snapshot = self._history[self._history_index]
     self._restore_snapshot(snapshot)
-    return True

@@ -1,4 +1,12 @@
-def history_redo(self) -> bool:
+from typing import TYPE_CHECKING
+# Annotations
+if TYPE_CHECKING:
+    from ......protocols.mixins.state import HistoryProtocol
+
+
+def history_redo(
+    self: "HistoryProtocol"
+) -> bool:
     """Metodea pro přechod na následující záznam (pokud existuje)."""
 
     # 1. Kontrola zda je kam jít

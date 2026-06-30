@@ -1,7 +1,7 @@
 from typing import Any, NoReturn, TYPE_CHECKING
 # Inners
 from .validations import raise_type_error
-# Anotations
+# Annotations
 if TYPE_CHECKING:
     from ....protocols.classes import SimpleConstantProtocol
 

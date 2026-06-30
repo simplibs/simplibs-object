@@ -1,31 +1,23 @@
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 # Outers
 from ....._common.constants import (
     OWNER_CLASS,
     HISTORY,
-    MIXINS,
-    IS_MUTABLE,
-    IS_CONSTANT
 )
 # Annotations
 if TYPE_CHECKING:
     from ......protocols.mixins.state import HistoryProtocol
+    from ......protocols.alias_typings import HistoryDict
 
 
 def export_history_to_dict(
     self: "HistoryProtocol"
-) -> dict[str, Any]:
+) -> "HistoryDict":
     """
     Exportuje historii do přenositelného formátu:
-        { _owner_class: ..., history: [ (timestamp, [values...]) ] }
+        { _owner_class: ..., history: ( (timestamp, [values...])... ) }
     """
     return {
         OWNER_CLASS: self.meta.owner_class,
-        MIXINS: self.__class__.__mixins__,
-        IS_CONSTANT: self.__class__.__is_constant__,
-        IS_MUTABLE: self.__class__.__is_mutable__,
-        HISTORY: {
-            timestamp: snapshot
-            for timestamp, snapshot in self._history
-        }
+        HISTORY: self.history
     }

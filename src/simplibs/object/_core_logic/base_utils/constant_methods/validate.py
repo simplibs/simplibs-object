@@ -3,7 +3,7 @@ from typing import Any, NoReturn, TYPE_CHECKING
 from ....exceptions import SimpleError
 # inners
 from .validations import raise_unexpected_validation_error, raise_validation_error
-# Anotations
+# Annotations
 if TYPE_CHECKING:
     from ....protocols.classes import SimpleConstantProtocol
 
@@ -49,29 +49,3 @@ def validate(
 
     # 4. Navrácen bool odpovědi
     return result
-
-
-_DESIGN_NOTES = """
-# Validate
-
-## Účel
-Tento mixin je hlavním orchestrátorem validace. Zajišťuje, že žádná hodnota 
-nevstoupí do systému, aniž by prošla oběma úrovněmi kontroly (typ i obsah).
-
-## Logika Try-Except bloku
-Blok `try-except` kolem `_validate` je zde ze dvou kritických důvodů:
-1. **Unifikace výstupu**: Uživatelé mohou psát `_validate` různými způsoby. 
-   Někdo vrací `bool`, někdo jen vyhazuje výjimky. Tento blok garantuje, 
-   že pokud je nastaveno `return_bool=True`, metoda `validate` vždy vrátí 
-   čisté `False`, i kdyby v `_validate` nastala fatální chyba.
-2. **Obalení "cizích" chyb**: Pokud v uživatelské validaci dojde k chybě, 
-   kterou autor neošetřil (např. indexace mimo rozsah), systém ji zachytí 
-   a prezentuje ji v rámci standardního `SimpleLogicError` formátu, 
-   což udržuje konzistenci tracebacku a UI hlášení.
-
-## Pořadí operací
-Typová kontrola (`validate_type`) běží vždy jako první. Je to "levná" operace 
-v porovnání s potenciálně složitou logikou v `_validate` a slouží jako 
-nezbytný předpoklad pro to, aby uživatelský kód v `_validate` mohl 
-s hodnotou bezpečně pracovat.
-"""

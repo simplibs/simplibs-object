@@ -3,13 +3,6 @@ import copy as _copy
 # Outers
 from ...core_mixins import NodesDicts, Snapshot
 from ..._common.immutability import create_new_instance
-# Inners
-from ._utils.copyable import (
-    mutable_copy,
-    mutable_deepcopy,
-    immutable_copy,
-    immutable_deepcopy
-)
 # Annotations
 if TYPE_CHECKING:
     from ....protocols.mixins.dunders.lifecycles import CopyableProtocol
@@ -36,7 +29,7 @@ class Copyable(NodesDicts, Snapshot):
     __slots__ = ()
 
     # ----------------------------------------
-    # Metody - COPY / DEEPCOPY
+    # Methods - COPY / DEEPCOPY
     # ----------------------------------------
 
     def __copy__(

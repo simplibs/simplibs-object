@@ -15,8 +15,7 @@ from ._utils.history.navigations import (
 # Annotations
 if TYPE_CHECKING:
     from ...protocols.mixins.state import HistoryProtocol
-    from ...protocols.mixins.state.internal_types import HistoryEntry
-    from ...protocols.alias_typings import SnapshotDiffTuple, SnapshotTuple
+    from ...protocols.alias_typings import HistoryEntry, HistoryDict, SnapshotDiffTuple
 
 
 class History(Snapshot, Serialization):
@@ -57,8 +56,8 @@ class History(Snapshot, Serialization):
 
         # 2. Vytvoření vnitřních prvků
         self._history: list["HistoryEntry"] = []
-        self._history_index: int | None  = None
         self._history_limit: int | None  = None
+        self._history_index: int = 0
         self._history_count: int = 0
 
         # 3. Vytvření prvního záznamu
@@ -112,7 +111,7 @@ class History(Snapshot, Serialization):
         set_history_limit(self, value)
 
     # ----------------------------------------
-    # Metody - UNDO / REDO
+    # Methods - UNDO / REDO
     # ----------------------------------------
 
     def undo(
@@ -128,48 +127,48 @@ class History(Snapshot, Serialization):
         return history_redo(self)
 
     # ----------------------------------------
-    # Metody - GOTO
+    # Methods - GOTO
     # ----------------------------------------
 
     def go_to_last(
         self: "HistoryProtocol"
     ) -> None:
         """Metodea pro přechod na poslední záznam historie."""
-        return go_to_last_history(self)
+        go_to_last_history(self)
 
     def go_to_index(
         self: "HistoryProtocol",
         index: int
     ) -> None:
         """Metoda pro přechod na konkrétní index"""
-        return go_to_history_on_index(self, index)
+        go_to_history_on_index(self, index)
 
     def go_to_timestamp(
         self: "HistoryProtocol",
         timestamp: datetime
     ) -> None:
         """Metoda pro přechod na konkrétní timestamp"""
-        return go_to_history_on_timestamp(self, timestamp)
+        go_to_history_on_timestamp(self, timestamp)
 
     # ----------------------------------------
-    # Metody - EXPORT / IMPORT
+    # Methods - EXPORT / IMPORT
     # ----------------------------------------
 
     def export_history_to_dict(
         self: "HistoryProtocol"
-    ) -> dict[str, Any]:
+    ) -> "HistoryDict":
         """Exportuje historii do slovníku"""
         return export_history_to_dict(self)
 
     def import_history_from_dict(
         self: "HistoryProtocol",
-        history_dict: dict[str, Any]
+        history_dict: "HistoryDict"
     ) -> None:
         """Importuje historii ze slovníku"""
         import_history_from_dict(self, history_dict)
 
     # ----------------------------------------
-    # Metody - REMOVE / DIFF
+    # Methods - REMOVE / DIFF
     # ----------------------------------------
 
     def remove_history_limit(

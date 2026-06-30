@@ -29,7 +29,7 @@ class ImmutableMethodsProtocol(
 
     def with_constants(
         self,
-        changes_tuple: "ChangesTuple" = None
+        changes_tuple: "ChangesTuple | None" = None
     ) -> Self:
         """
         Vytvoří a vrátí novou imutabilní instanci na základě jedné nebo více

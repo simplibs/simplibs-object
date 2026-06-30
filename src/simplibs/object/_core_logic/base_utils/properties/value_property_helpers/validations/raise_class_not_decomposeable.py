@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 # Outers
 from .....exceptions import SimpleLogicError
-# Anotations
+# Annotations
 if TYPE_CHECKING:
     from .....protocols.metadata import SimpleMetadataLike
 

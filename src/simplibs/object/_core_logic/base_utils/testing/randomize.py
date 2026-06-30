@@ -5,7 +5,7 @@ import string
 from datetime import datetime, date, timedelta
 from pathlib import Path
 from enum import Enum
-# Anotations
+# Annotations
 if TYPE_CHECKING:
     from ....protocols.instance import SimpleInstanceLike
 

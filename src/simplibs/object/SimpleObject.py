@@ -4,7 +4,7 @@ from simplibs.sentinels import UNSET
 from .SimpleConstant import SimpleConstant
 from .protocols.methods import LogicSignature, P, R
 from ._core_logic.base_utils.object_methods import calculate_value, decompose_value
-# Anotations
+# Annotations
 if TYPE_CHECKING:
     from .protocols.classes import SimpleObjectProtocol
     from .protocols.alias_typings import ValidTypes, InnersTuple

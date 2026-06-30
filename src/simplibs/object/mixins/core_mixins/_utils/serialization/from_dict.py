@@ -1,4 +1,4 @@
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING
 from simplibs.sentinels import UNSET
 # Outers
 from ...._common.constants import OWNER_CLASS, VALUE

@@ -1,7 +1,7 @@
 from typing import Any, TYPE_CHECKING
 # Inners
 from .validations import raise_missing_value_error
-# Anotations
+# Annotations
 if TYPE_CHECKING:
     from ....protocols.classes import SimpleConstantProtocol
 
@@ -47,36 +47,6 @@ def normalize(
     # 3. Validace
     cls.validate(value)
 
-    # 4. Případné logování (je-li nastaveno)
-    cls._log_outcome(value)
-
-    # 5. Navrácení zvalidvoané hodnoty
+    # 4. Navrácení zvalidvoané hodnoty
     return value
 
-
-_DESIGN_NOTES = """
-# Normalize
-
-## Účel
-Tento mixin je "vstupním filtrem" pro data. Jeho úkolem je zajistit, aby zbytek 
-systému pracoval již jen s prověřenými a kanonickými daty.
-
-## Logika porovnávání (Equality vs Identity)
-V kódu používáme `value == default_val` uvnitř `try-except` bloku. 
-Toto řešení jsme zvolili proto, že:
-1. **Optimalizace paměti**: Pokud uživatel zadá hodnotu, která je logicky stejná 
-   jako default, vrátíme mu přímo referenci na `meta.default`. 
-2. **Robustnost**: Obalení do `try-except` chrání systém před pádem v případě, 
-   že `value` je objekt, který při pokusu o porovnání vyvolá chybu (např. 
-   nekompatibilní typy u některých knihoven). V takovém případě prostě 
-   bezpečně pokračujeme k validaci.
-
-## Parametr process_none
-Tento parametr dává vývojáři explicitní kontrolu nad tím, jak se má systém 
-chovat k `None`. Defaultně je `None` nepřípustné (striktní režim), což 
-předchází mnoha chybám v runtime.
-
-## Návaznost
-Metoda `normalize` interně volá `cls.validate()`, čímž uzavírá řetězec 
-bezpečnostních kontrol předtím, než je hodnota uložena do instance.
-"""

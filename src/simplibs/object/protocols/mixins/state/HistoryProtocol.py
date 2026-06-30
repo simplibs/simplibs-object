@@ -4,7 +4,7 @@ from datetime import datetime
 from ..core_mixins import SerializationProtocol
 # Annotations
 if TYPE_CHECKING:
-    from .DirtyTrackingProtocol import DirtyPathsTuple
+    from ...alias_typings import HistoryEntry, HistoryDict, SnapshotDiffTuple
 
 
 @runtime_checkable
@@ -21,21 +21,21 @@ class HistoryProtocol(
     """
 
     # --- TECHNICKÉ ATRIBUTY (Inicializované v init_mixins) ---
-    _history: list[dict[str, Any]]    # Vnitřní úložiště časových záznamů
-    _history_index: int | None       # Ukazatel na aktuální pozici v historii
+    _history: list["HistoryEntry"]    # Vnitřní úložiště časových záznamů
     _history_limit: int | None       # Maximální počet povolených záznamů
+    _history_index: int              # Ukazatel na aktuální pozici v historii
     _history_count: int              # Celkový počet reálně uložených záznamů
 
     # --- INICIALIZAČNÍ A ZÁPISOVÁ LOGIKA ---
 
-    def record_state(self) -> datetime:
+    def record_state(self) -> "HistoryEntry":
         """Vytvoří snapshot aktuálního stavu a zapíše jej na časovou osu historie."""
         ...
 
     # --- PROPERTIES ---
 
     @property
-    def history(self) -> tuple[dict[str, Any], ...]:
+    def history(self) -> tuple["HistoryEntry", ...]:
         """Vrací kompletní časovou osu historie jako neměnné tuple záznamů."""
         ...
 
@@ -84,11 +84,11 @@ class HistoryProtocol(
 
     # --- EXPORT & IMPORT HISTORIE ---
 
-    def export_history_to_dict(self) -> dict[str, Any]:
+    def export_history_to_dict(self) -> "HistoryDict":
         """Exportuje kompletní strukturu a data časové osy do slovníku."""
         ...
 
-    def import_history_from_dict(self, history_dict: dict[str, Any]) -> None:
+    def import_history_from_dict(self, history_dict: "HistoryDict") -> None:
         """Importuje a kompletně zrekonstruuje celou časovou osu z předaného slovníku."""
         ...
 
@@ -104,7 +104,7 @@ class HistoryProtocol(
         snap2: int | datetime,
         *,
         constants_only: bool = False
-    ) -> "DirtyPathsTuple":
+    ) -> "SnapshotDiffTuple":
         """
         Porovná dva libovolné body v historii (zadané indexem nebo timestampem).
         Vrací n-tici trojic změn: (cesta_k_prvku, stará_hodnota, nová_hodnota).

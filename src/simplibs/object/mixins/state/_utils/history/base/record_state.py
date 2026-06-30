@@ -1,9 +1,9 @@
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 from datetime import datetime
 # Annotations
 if TYPE_CHECKING:
     from ......protocols.mixins.state import HistoryProtocol
-    from ......protocols.mixins.state.internal_types import HistoryEntry
+    from ......protocols.alias_typings import HistoryEntry
 
 def record_state(
     self: "HistoryProtocol"

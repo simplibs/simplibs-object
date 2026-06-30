@@ -32,7 +32,7 @@ class PickleState(Serialization):
     __slots__ = ()
 
     # ----------------------------------------
-    # Metody - GETSTATE / SETSTATE
+    # Methods - GETSTATE / SETSTATE
     # ----------------------------------------
 
     def __getstate__(

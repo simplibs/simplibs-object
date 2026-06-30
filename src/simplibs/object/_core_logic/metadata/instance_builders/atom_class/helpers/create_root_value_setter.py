@@ -36,6 +36,10 @@ def create_root_value_setter(
         # 3. Zápis hodnoty
         self._value = new_value
 
+        # 4. Logování změny (všechny instance včetně inners)
+        from simplibs.object.settings.logging import log_value_event
+        log_value_event(self.__class__, new_value, event="change")
+
         # 4. Spuštění přepočtu pro vnější prvky
         if self._owner and recalculate_up:
             # noinspection PyProtectedMember

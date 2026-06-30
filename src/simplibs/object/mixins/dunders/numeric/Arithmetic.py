@@ -34,7 +34,7 @@ class Arithmetic(NodesDicts, Snapshot):
     __slots__ = ()
 
     # -------------------------
-    # Metody - Sčítání (+)
+    # Methods - Sčítání (+)
     # -------------------------
     def __add__(
         self: "ArithmeticProtocol",
@@ -51,7 +51,7 @@ class Arithmetic(NodesDicts, Snapshot):
         return execute_arithmetic_op(self, operator.add, other, is_reversed=True)
 
     # -------------------------
-    # Metody - Odčítání (-)
+    # Methods - Odčítání (-)
     # -------------------------
     def __sub__(
         self: "ArithmeticProtocol",
@@ -68,7 +68,7 @@ class Arithmetic(NodesDicts, Snapshot):
         return execute_arithmetic_op(self, operator.sub, other, is_reversed=True)
 
     # -------------------------
-    # Metody - Násobení (*)
+    # Methods - Násobení (*)
     # -------------------------
     def __mul__(
         self: "ArithmeticProtocol",
@@ -85,7 +85,7 @@ class Arithmetic(NodesDicts, Snapshot):
         return execute_arithmetic_op(self, operator.mul, other, is_reversed=True)
 
     # -------------------------
-    # Metody - Dělení (/)
+    # Methods - Dělení (/)
     # -------------------------
     def __truediv__(
         self: "ArithmeticProtocol",
@@ -102,7 +102,7 @@ class Arithmetic(NodesDicts, Snapshot):
         return execute_arithmetic_op(self, operator.truediv, other, is_reversed=True)
 
     # -------------------------
-    # Metody - Celočíselné dělení (//)
+    # Methods - Celočíselné dělení (//)
     # -------------------------
     def __floordiv__(
         self: "ArithmeticProtocol",
@@ -119,7 +119,7 @@ class Arithmetic(NodesDicts, Snapshot):
         return execute_arithmetic_op(self, operator.floordiv, other, is_reversed=True)
 
     # -------------------------
-    # Metody - Modulo (%)
+    # Methods - Modulo (%)
     # -------------------------
     def __mod__(
         self: "ArithmeticProtocol",
@@ -136,7 +136,7 @@ class Arithmetic(NodesDicts, Snapshot):
         return execute_arithmetic_op(self, operator.mod, other, is_reversed=True)
 
     # -------------------------
-    # Metody - Mocnina (**)
+    # Methods - Mocnina (**)
     # -------------------------
     def __pow__(
         self: "ArithmeticProtocol",

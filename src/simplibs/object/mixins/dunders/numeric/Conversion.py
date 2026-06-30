@@ -32,7 +32,7 @@ class Conversion(SimpleMixin):
     __slots__ = ()
 
     # ----------------------------------------
-    # Methods - int(x), float(x), complex(x)
+    # Methods - INT / FLOAT / COMPLEX
     # ----------------------------------------
     def __int__(
         self: "ConversionProtocol"
@@ -53,7 +53,7 @@ class Conversion(SimpleMixin):
         return execute_conversion(self, complex)
 
     # ----------------------------------------
-    # Methods - index(x) — pro použití v slice, range, atd.
+    # Methods - INDEX (pro použití v slice, range, atd.)
     # ----------------------------------------
     def __index__(
         self: "ConversionProtocol"
@@ -71,7 +71,7 @@ class Conversion(SimpleMixin):
         return value
 
     # ----------------------------------------
-    # Methods - round(x, n)
+    # Methods - ROUND
     # ----------------------------------------
     def __round__(
         self: "ConversionProtocol",
@@ -85,7 +85,7 @@ class Conversion(SimpleMixin):
         )
 
     # ----------------------------------------
-    # Methods - floor(x), ceil(x), trunc(x)
+    # Methods - FLOOR / CEIL / TRUNC
     # ----------------------------------------
     def __floor__(
         self: "ConversionProtocol"

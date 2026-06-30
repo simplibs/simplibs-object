@@ -1,4 +1,12 @@
-def history_undo(self) -> bool:
+from typing import TYPE_CHECKING
+# Annotations
+if TYPE_CHECKING:
+    from ......protocols.mixins.state import HistoryProtocol
+
+
+def history_undo(
+    self: "HistoryProtocol"
+) -> bool:
     """Metodea pro přechod na předchozí záznam (pokud existuje)."""
 
     # 1. Kontrola zda je kam jít

@@ -1,19 +1,10 @@
 from typing import TYPE_CHECKING, Any
-from datetime import datetime
+from simplibs.sentinels import UNSET
 # Outers
 from ....._common.constants import (
     OWNER_CLASS,
     HISTORY,
-    MIXINS,
-    IS_MUTABLE,
-    IS_CONSTANT
 )
-from .._validations import (
-    raise_unvalid_snapshot_structure,
-    raise_unvalide_history_import_file
-)
-# Inners
-from ._import_history import _import_history
 # Annotations
 if TYPE_CHECKING:
     from ......protocols.mixins.state import HistoryProtocol
@@ -25,21 +16,37 @@ def import_history_from_dict(
 ) -> None:
     """Importuje historii z přenositelného formátu s kontrolou owner_class."""
 
-    # 1. Validace kontejneru
-    if (not isinstance(history_dict, dict)
-        or len(history_dict) != 2
-        or set(history_dict.keys()) == {OWNER_CLASS, HISTORY, MIXINS, IS_MUTABLE, IS_CONSTANT}
-        or self.meta.owner_class != history_dict[OWNER_CLASS]):
-        raise_unvalide_history_import_file()
+    # 1. Validace vstupu
+    if not isinstance(history_dict, dict):
+        raise TypeError("Input must be a dictionary.")
 
-    # 2. Validace historie
-    history_list = history_dict[HISTORY]
-    for snapshot in history_list:
-        if (not isinstance(snapshot, tuple)
-            or len(snapshot) != 2
-            or isinstance(snapshot[0], datetime)
-            or isinstance(snapshot[1], tuple)):
-            raise_unvalid_snapshot_structure()
+    # 2. Validace owner class
+    owner_class = history_dict.get(OWNER_CLASS, UNSET)
+    if self.meta.owner_class != owner_class:
+        raise ValueError(
+            f"Owner class mismatch. Expected: {self.meta.owner_class}, Got: {owner_class}"
+        )
 
-    # 3. Přepis historie
-    _import_history(self, history_list)
+    # 3. Záloha předchozího stavu
+    backup = self._history
+
+    # 4. Převod historie
+    try:
+
+        # 4.1 Nahrazení historie
+        self._history = list(history_dict[HISTORY])
+        self.go_to_last()
+
+        # 4.1 Případné oříznutí historie (dle limitu, je-li nastaven)
+        if self.history_limit:
+            self.history_limit = self.history_limit
+
+    # 5. Zachycení výjimek (návrat do původního stavu)
+    except Exception as e:
+
+        # 5.1 Obnovení stavu
+        self._history = backup
+        self.go_to_last()
+
+        # 5.2 Vyvolání zachycené výjimky
+        raise e

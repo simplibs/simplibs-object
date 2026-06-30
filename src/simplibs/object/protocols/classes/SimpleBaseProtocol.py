@@ -23,12 +23,3 @@ class SimpleBaseProtocol(
     def meta(self) -> "SimpleMetadataLike":
         """Veřejný přístup k základním metadatům třídy."""
         ...
-
-    # --- Vnitřní rozhraní třídy ---
-    @classmethod
-    def _log_outcome(cls, outcome: Any) -> None:
-        """
-        Třídní hook pro případný loger výsledků metod.
-        Volá se z vnitřních procesů.
-        """
-        ...

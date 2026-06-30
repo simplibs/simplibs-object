@@ -1,5 +1,5 @@
 from typing import TYPE_CHECKING, Any
-# Anotations
+# Annotations
 if TYPE_CHECKING:
     from ....protocols.classes import SimpleObjectProtocol
 
@@ -17,8 +17,5 @@ def decompose_value(
     # noinspection PyUnresolvedReferences
     outcome = cls.meta.decompose(cls, value)
 
-    # 3. Případné logování (je-li nastaveno)
-    cls._log_outcome(outcome)
-
-    # 4. Navrácení výsledku
+    # 3. Navrácení výsledku
     return outcome

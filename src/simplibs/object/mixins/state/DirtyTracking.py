@@ -72,7 +72,7 @@ class DirtyTracking(Snapshot):
         return self._clean_snapshot
 
     # ----------------------------------------
-    # Metody - GET DIRTY / RESET / MARK CLEAN
+    # Methods - GET DIRTY / RESET / MARK CLEAN
     # ----------------------------------------
 
     def get_dirty_paths(

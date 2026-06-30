@@ -37,7 +37,7 @@ class Permission(SimpleMixin):
         return self._locked
 
     # ----------------------------------------
-    # Metody - LOCK / UNLOCK
+    # Methods - LOCK / UNLOCK
     # ----------------------------------------
 
     def lock(

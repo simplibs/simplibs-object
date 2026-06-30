@@ -1,7 +1,11 @@
+from typing import TYPE_CHECKING
 # Outers
 from ..base_class import SimpleMixin
 # Inners
 from ._utils.inners_property import collect_all_nested_properties
+# Annotations
+if TYPE_CHECKING:
+    from ...protocols.instance import SimpleInstanceLike
 
 
 class InnersProperty(SimpleMixin):
@@ -28,7 +32,9 @@ class InnersProperty(SimpleMixin):
     # ----------------------------------------
 
     @staticmethod
-    def __extend_instance_class__(instance_cls):
+    def __extend_instance_class__(
+        instance_cls: "SimpleInstanceLike"
+    ) -> "SimpleInstanceLike":
         """
         Interní metoda pro připojení prvků k třídě, před inicializačním procesem.
         """

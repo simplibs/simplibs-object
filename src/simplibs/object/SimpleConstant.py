@@ -8,7 +8,7 @@ from ._core_logic.base_utils.constant_methods import (
     normalize,
     bool_or_raise_validate_error
 )
-# Anotations
+# Annotations
 if TYPE_CHECKING:
     from .protocols.classes import SimpleConstantProtocol
     from .protocols.alias_typings import ValidTypes

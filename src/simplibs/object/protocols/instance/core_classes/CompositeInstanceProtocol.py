@@ -24,7 +24,7 @@ class CompositeInstanceProtocol(
         """Spustí přepočet hodnoty této kompozice na základě jejích inners."""
         ...
 
-    def _recalculate_inners(self, decomposed_value: Any) -> None:
+    def _recalculate_inners(self) -> None:
         """Rozdistribuuje novou hodnotu do vnitřních prvků."""
         ...
 

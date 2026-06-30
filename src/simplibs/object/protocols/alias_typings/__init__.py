@@ -1,4 +1,10 @@
-from .Immutability import (
+from .history import (
+    HistoryEntry,
+    HistoryDict
+)
+
+
+from .changes import (
     ChangesDict,
     ChangesTuple,
     ChangeTuple,
@@ -48,6 +54,9 @@ from .types import (
 )
 
 __all__ = (
+    "HistoryEntry",
+    "HistoryDict",
+
     "ChangesDict",
     "ChangesTuple",
     "ChangeTuple",

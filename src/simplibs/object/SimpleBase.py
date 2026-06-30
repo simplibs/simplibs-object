@@ -3,7 +3,7 @@ from simplibs.sentinels import UNSET
 # Inners
 from ._core_logic.metadata import SimpleMeta
 from .settings import SimpleSettings
-# Anotations
+# Annotations
 if TYPE_CHECKING:
     from .protocols.classes import SimpleBaseProtocol
     from .protocols.metadata import SimpleMetadataLike
@@ -31,22 +31,3 @@ class SimpleBase(metaclass=SimpleMeta):
     # (pro základní třídy nastavuje hodnotu UNSET - vypočítává se pouze pro definiční třídy)
     __metadata__: "SimpleMetadataLike" = UNSET
 
-
-    # ===================================
-    # VNITŘNÍ ROZHRANÍ ZÁKLANÍ TŘÍDY
-    # (definuje uživatel zakládající třídu)
-    # ===================================
-
-    #--- Hook pro případný loger ---#
-    # (obsažen na konci každé vnější metody s přístupem k jejímu výsledku)
-    @classmethod
-    def _log_outcome(
-        cls: "SimpleBaseProtocol",
-        outcome: Any
-    ) -> None:
-        """
-        Třídní hook pro případný loger výsledků metod.
-        Volá se z třídních metod (validate, normalize atd.).
-        """
-        if SimpleSettings.logger:
-            SimpleSettings.logger(cls, outcome)

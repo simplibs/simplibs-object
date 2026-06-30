@@ -1,5 +1,5 @@
 from typing import Any, TYPE_CHECKING
-# Anotations
+# Annotations
 if TYPE_CHECKING:
     from .....protocols.classes import SimpleObjectProtocol
 
