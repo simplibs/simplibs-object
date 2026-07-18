@@ -38,7 +38,7 @@ def raise_metadata_is_immutable(
     # 2. Vyvolání výjimky
     raise SimpleMetadataError(
         error_name="METADATA IMMUTABILITY ERROR",
-        value_label="Field already initialized",
+        label="Field already initialized",
         expected="Jednou nastavená data již nejde přepisovat.",
         value=new_value,
         problem=f"Hodnota je již nastavena a nelze ji změnit: {repr(current_value)}.",

@@ -21,7 +21,7 @@ def bool_or_raise_validate_error(
     # 2. Vyvolání předpřipravené výjimky
     raise SimpleException(
         error_name="VALIDATION ERROR",
-        value_label="input_value",
+        label="input_value",
         value=value,
         expected=f"Valid configuration for {cls.__name__}",
         problem=problem,

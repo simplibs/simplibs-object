@@ -23,7 +23,7 @@ def validate_mixin_is_compatible(
 
         raise SimpleMixinError(
             error_name="INCOMPATIBLE MIXIN",
-            value_label="Mixin incompatible with Atom mode",
+            label="Mixin incompatible with Atom mode",
             expected="Mixin, který lze použít i v Atom režimu.",
             value=mixin,
             problem=(

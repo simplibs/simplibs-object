@@ -28,7 +28,7 @@ def raise_validation_error(
     # a požadované je vyvolání výjimky.
     raise SimpleLogicError(
         error_name="VALIDATION ERROR",
-        value_label="value",
+        label="value",
         value=value,
         expected="Hodnota splňující podmínky uživatelské validace.",
         problem=f"Hodnota nesplňuje podmínky validního objektu.",
@@ -45,7 +45,7 @@ def raise_validation_error(
 
     # raise SimpleLogicError(
     #     error_name="VALIDATION ERROR",
-    #     value_label="value",
+    #     label="value",
     #     value=value,
     #     expected="Hodnota splňující podmínky metody '_validate'",
     #     problem=f"Během interní validace třídy '{cls.__name__}' došlo k neočekávané chybě.",

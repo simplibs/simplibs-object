@@ -31,7 +31,7 @@ def validate_class_name_is_identifier(
     if not class_name.isidentifier():
         raise SimpleMetadataError(
             error_name="CLASS NAME NOT IDENTIFIER",
-            value_label="class_name",
+            label="class_name",
             value=class_name,
             problem=f"Název třídy '{class_name}' není platným identifikátorem.",
             expected="Název začínající písmenem, obsahující pouze alfanumerické znaky.",

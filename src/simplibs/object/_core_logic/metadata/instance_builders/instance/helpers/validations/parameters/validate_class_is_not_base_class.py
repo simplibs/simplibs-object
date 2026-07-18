@@ -20,7 +20,7 @@ def validate_class_is_not_base_class(
 
         raise SimpleObjectInstanceError(
             error_name="INVALID CLASS",
-            value_label="Base class used instead of declarative class",
+            label="Base class used instead of declarative class",
             expected="Deklarativní třídu odvozenou od SimpleBase, nikoli základní třídu.",
             value=cls,
             problem=(

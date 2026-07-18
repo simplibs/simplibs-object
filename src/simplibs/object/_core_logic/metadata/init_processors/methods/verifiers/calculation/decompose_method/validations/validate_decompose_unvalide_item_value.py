@@ -49,7 +49,7 @@ def validate_decompose_unvalide_item_value(
         # 3. Vyvolání výjimky
         raise SimpleMetadataError(
             error_name="METHOD LOGIC ERROR",
-            value_label="Neplatná hodnota prvku z návratové hodnoty",
+            label="Neplatná hodnota prvku z návratové hodnoty",
             expected=f"Hodnota '{meta.default!r}' (podle definice v '{meta.class_name}').",
             value=value,
             problem=f"Prvek '{meta.name_snake}' neodpovídá defaultní hodnotě definované v '_inners'.",

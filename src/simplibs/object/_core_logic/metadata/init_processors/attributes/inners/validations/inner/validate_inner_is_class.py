@@ -53,7 +53,7 @@ def validate_inner_is_class(
         # 3. Vyovlání výjimky
         raise SimpleMetadataError(
             error_name=error_name,
-            value_label="Prvek z _inners není platná třída",
+            label="Prvek z _inners není platná třída",
             value=inner,
             expected="Vnitřní prvek musí být třída (potomek SimpleObject/SimpleConstant).",
             problem=f"Vnitřní prvek '{inner}' z '{inners}' není validním objektem.",

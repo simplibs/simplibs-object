@@ -16,7 +16,7 @@ def raise_mixin_slots_is_not_defined(
 
         raise SimpleMixinError(
             error_name="MIXIN DEFINITION ERROR",
-            value_label="Missing __slots__ definition",
+            label="Missing __slots__ definition",
             expected="Mixin must define its own __slots__ (not inherited).",
             value=cls.__name__,
             problem=(

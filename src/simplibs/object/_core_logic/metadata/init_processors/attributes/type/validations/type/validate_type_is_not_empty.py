@@ -51,7 +51,7 @@ def validate_type_is_not_empty(
         # 3. Vyovlání výjimky
         raise SimpleMetadataError(
             error_name=error_name,
-            value_label=f"Empty definition is not allowed",
+            label=f"Empty definition is not allowed",
             value=processed_type,
             expected="Typ reprezentující výstupní objekt třídy.",
             problem="Třídní atribut '_type' nesmí být prázdným objektem.",

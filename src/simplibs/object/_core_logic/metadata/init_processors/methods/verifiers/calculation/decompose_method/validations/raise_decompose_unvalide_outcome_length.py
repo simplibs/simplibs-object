@@ -47,7 +47,7 @@ def raise_decompose_unvalide_outcome_length(
     # 2. Vyvolání výjimky
     raise SimpleMetadataError(
         error_name="METHOD LOGIC ERROR",
-        value_label="Vrácen nesprávný počet hodnot",
+        label="Vrácen nesprávný počet hodnot",
         expected=f"{repr(inner_names_tuple)} (tuple)",
         value=calculate_default,
         problem=f"Očekávaný počet položek:{expected_count}, obdržený počet položek: {got_count}.",

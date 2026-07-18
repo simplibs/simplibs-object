@@ -31,7 +31,7 @@ def validate_class_name_is_ascii(
     if not class_name.isascii():
         raise SimpleMetadataError(
             error_name="CLASS NAME NOT ASCII",
-            value_label="class_name",
+            label="class_name",
             value=class_name,
             problem="Název třídy obsahuje nepovolené znaky (diakritiku nebo symboly).",
             expected="Pouze základní ASCII znaky (A-Z, a-z, 0-9, _)",

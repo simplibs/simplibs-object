@@ -50,7 +50,7 @@ def validate_inners_is_not_empty(
         # 3. Vyovlání výjimky
         raise SimpleMetadataError(
             error_name=error_name,
-            value_label=f"{owner_class.__name__}._inners",
+            label=f"{owner_class.__name__}._inners",
             expected="N-tice (tuple) obsahující potomky tříd SimpleConstant a SimpleObject.",
             value=inners,
             problem=f"Atribut '_inners' odkazuje na prázdný objekt.",

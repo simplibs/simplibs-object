@@ -50,7 +50,7 @@ def raise_validate_type_is_not_valid(
     # 2. Vyovlání výjimky
     raise SimpleMetadataError(
         error_name=error_name,
-        value_label="Value not valid",
+        label="Value not valid",
         value=value_type,
         expected="Typ reprezentující výstupní objekt třídy.",
         problem="Třídní atribut '_type' není validní hodotu.",

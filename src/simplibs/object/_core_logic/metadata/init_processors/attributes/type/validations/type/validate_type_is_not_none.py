@@ -52,7 +52,7 @@ def validate_type_is_not_none(
         # 3. Vyovlání výjimky
         raise SimpleMetadataError(
             error_name=error_name,
-            value_label="Value 'None' detected",
+            label="Value 'None' detected",
             expected="Typ reprezentující výstupní objekt třídy.",
             problem="Třídní atribut '_type' je nastaven na hodnotu 'None'.",
             context=context,

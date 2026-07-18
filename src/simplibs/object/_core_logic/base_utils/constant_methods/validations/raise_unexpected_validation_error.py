@@ -15,7 +15,7 @@ def raise_unexpected_validation_error(
     # abychom zachovali jednotný formát chybových hlášení.
     raise SimpleLogicError(
         error_name="VALIDATION ERROR",
-        value_label="value",
+        label="value",
         value=value,
         expected="Hodnota splňující podmínky uživatelské validace.",
         problem=f"Během interní validace třídy '{cls.__name__}' došlo k neočekávané chybě.",
@@ -31,7 +31,7 @@ def raise_unexpected_validation_error(
 
     # raise SimpleLogicError(
     #     error_name="VALIDATION ERROR",
-    #     value_label="value",
+    #     label="value",
     #     value=value,
     #     expected="Hodnota splňující podmínky metody '_validate'",
     #     problem=f"Během interní validace třídy '{cls.__name__}' došlo k neočekávané chybě.",

@@ -67,7 +67,7 @@ def validate_kwargs_defaults(
             # 3.2.2 Vyvolání výjimky
             raise SimpleMetadataError(
                 error_name="METHOD SIGNATURE ERROR",
-                value_label="Nepovolená hodnota defaultního parametru",
+                label="Nepovolená hodnota defaultního parametru",
                 expected=f"Hodnota '{expected_value}' (podle definice v '_inners')",
                 value=value,
                 problem=f"Parametr '{name}' nevyhovuje očekávanému.",

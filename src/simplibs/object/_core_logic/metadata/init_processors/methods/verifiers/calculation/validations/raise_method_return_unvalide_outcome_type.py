@@ -52,7 +52,7 @@ def raise_method_return_unvalide_outcome_type(
     # 2. Vyvolání výjimky
     raise SimpleMetadataError(
         error_name="METHOD LOGIC ERROR",
-        value_label="Neplatný typ výsledku výpočtu",
+        label="Neplatný typ výsledku výpočtu",
         expected=f"Návratová hodnota typu '{expected_return_type.__name__}'.",
         value=calculated_value,
         problem=f"Výsledek metody '{method_name}' neodpovídá očekávanému typu.",

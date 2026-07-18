@@ -41,7 +41,7 @@ def raise_method_raised_exceptions(
     # 2. Vyvolání výjimky
     raise SimpleMetadataError(
         error_name="METHOD LOGIC ERROR",
-        value_label="Výjimka při zkušebním výpočtu",
+        label="Výjimka při zkušebním výpočtu",
         expected="Úspěšné dokončení výpočtu bez vyvolání výjimky.",
         problem="Během zkušebního výpočtu nastala chyba.",
         context=context,

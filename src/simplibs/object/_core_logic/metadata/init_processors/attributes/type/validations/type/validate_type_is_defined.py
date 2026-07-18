@@ -50,7 +50,7 @@ def validate_type_is_defined(
         # 3. Vyovlání výjimky
         raise SimpleMetadataError(
             error_name=error_name,
-            value_label="Attribut '_type' není definovaný",
+            label="Attribut '_type' není definovaný",
             expected="Třída musí deklarovat svůj datový typ pro zajištění integrity.",
             problem=f"Třída atribut '_type' vůbec nedefinuje.",
             context=context,

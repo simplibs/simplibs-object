@@ -24,7 +24,7 @@ def validate_mixin_is_simple_base_subclass(
 
         raise SimpleObjectMixinError(
             error_name="INVALID MIXIN",
-            value_label="Mixin must inherit from SimpleMixin",
+            label="Mixin must inherit from SimpleMixin",
             expected="Třídu odvozenou od SimpleMixin.",
             value=mixin,
             problem=(

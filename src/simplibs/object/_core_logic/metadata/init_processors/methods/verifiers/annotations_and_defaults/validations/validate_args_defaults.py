@@ -61,7 +61,7 @@ def validate_args_defaults(
 
             raise SimpleMetadataError(
                 error_name="METHOD SIGNATURE ERROR",
-                value_label=f"Nepovolená defaultní hodnota",
+                label=f"Nepovolená defaultní hodnota",
                 expected=f"Žádná hodnota a nebo hodnota dle definice v '_inners': '{expected_value}'",
                 value=value,
                 problem=f"Parametr '{param_name}' má nesprávnou defaultní hodnotu.",

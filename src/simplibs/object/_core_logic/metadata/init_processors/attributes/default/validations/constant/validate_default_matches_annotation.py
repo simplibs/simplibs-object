@@ -47,7 +47,7 @@ def validate_default_matches_annotation(
         # 3. Vyovlání výjimky
         raise SimpleMetadataError(
             error_name=error_name,
-            value_label="Hodnota neodpovídá anotaci",
+            label="Hodnota neodpovídá anotaci",
             expected=f"Hodnota typu: {expected_type}",
             value=default_value,
             problem="Definovaný default neodpovídá definovanému typu.",

@@ -54,7 +54,7 @@ def validate_if_collision_with_owner_class(
         # 3. Vyovlání výjimky
         raise SimpleMetadataError(
             error_name=error_name,
-            value_label="Name colision with owner",
+            label="Name colision with owner",
             expected="Unikátní názvy třídy v rámci celé hierarchie objektu.",
             problem="Vnitřní prvek kompozice má stejné jméno jako jeho vlastník.",
             context=context,

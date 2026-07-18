@@ -64,7 +64,7 @@ def validate_collision_within_inners(
         # 4. Vyvolání výjimky
         raise SimpleMetadataError(
             error_name=error_name,
-            value_label="Kolize jmen v _inners",
+            label="Kolize jmen v _inners",
             expected="Unikátní názvy tříd pro všechny prvky v hierarchii.",
             problem=f"Byla nalezena kolize jména mezi dvěma vnitřními prvky kompozice.",
             context=context,

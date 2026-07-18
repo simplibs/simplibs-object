@@ -42,7 +42,7 @@ def validate_method_param_match_expected(
         # 3. Vyvolání výjimky
         raise SimpleMetadataError(
             error_name="METHOD SIGNATURE ERROR",
-            value_label=f"Neshoda parametrů",
+            label=f"Neshoda parametrů",
             expected=f"{repr(expected_params)} (tuple)",
             value=method_params,
             problem="Zadané parametry neodpovídají očekávanému.",

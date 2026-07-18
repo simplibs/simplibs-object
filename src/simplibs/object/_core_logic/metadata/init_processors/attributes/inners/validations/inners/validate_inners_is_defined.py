@@ -51,7 +51,7 @@ def validate_inners_is_defined(
         # 3. Vyovlání výjimky
         raise SimpleMetadataError(
             error_name=error_name,
-            value_label="Attribut '_inners' není definovaný",
+            label="Attribut '_inners' není definovaný",
             expected=f"Attribut '_inners' obsahující vnitřní prvky kompozice.",
             problem=f"Attribut není na třídě nedefinovaný.",
             context=context,

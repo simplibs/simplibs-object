@@ -44,7 +44,7 @@ def validate_method_not_use_param_placeholders(
         # 3. Vyvolání výjimky
         raise SimpleMetadataError(
             error_name="METHOD SIGNATURE ERROR",
-            value_label="Zakázané variabilní parametry",
+            label="Zakázané variabilní parametry",
             expected="Explicitně pojmenované parametry.",
             problem=f"Metoda '{class_name}.{method_name}' používá {', '.join(problem_type)}.",
             context=context,

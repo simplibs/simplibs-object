@@ -40,7 +40,7 @@ def validate_method_has_exact_args_count(
         # 3. Vyvolání výjimky
         raise SimpleMetadataError(
             error_name="METHOD SIGNATURE ERROR",
-            value_label="Nesprávný počet pozičních parametrů",
+            label="Nesprávný počet pozičních parametrů",
             expected=f"Počet pozičních parametrů: {expected_args_count}",
             problem=f"Obdržený počet pozičních parametrů: {expected_args_count}",
             context=context,

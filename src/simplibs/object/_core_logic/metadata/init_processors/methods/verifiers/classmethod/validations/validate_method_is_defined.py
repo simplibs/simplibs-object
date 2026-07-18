@@ -50,7 +50,7 @@ def validate_method_is_defined(
         # 3. Vyovlání výjimky
         raise SimpleMetadataError(
             error_name="METHOD LOGIC ERROR",
-            value_label="Chybějící metoda",
+            label="Chybějící metoda",
             expected=f"Třídní metoda '{method_name}()'.",
             problem=f"Třídě '{class_name}' chybí tato metoda.",
             context=context,

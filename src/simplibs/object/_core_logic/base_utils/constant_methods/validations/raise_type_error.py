@@ -18,7 +18,7 @@ def raise_type_error(
 
     raise SimpleLogicError(
         error_name="TYPE ERROR",
-        value_label="value",
+        label="value",
         value=value,
         expected=f"Instance typu '{expected_types}'",
         problem=f"Předaná hodnota neodpovídá vyžadovanému typu pro třídu '{cls.__name__}'.",

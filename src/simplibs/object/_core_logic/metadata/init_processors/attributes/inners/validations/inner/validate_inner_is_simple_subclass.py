@@ -52,7 +52,7 @@ def validate_inner_is_simple_subclass(
         # 3. Vyovlání výjimky
         raise SimpleMetadataError(
             error_name=error_name,
-            value_label="Prvek z _inners má neplatnou hierarchii",
+            label="Prvek z _inners má neplatnou hierarchii",
             expected="Vnitřní prvek musí dědit ze SimpleObject nebo SimpleConstant.",
             value=inner,
             problem="Prvek není potomkem SimpleObject nebo SimpleConstant třídy.",

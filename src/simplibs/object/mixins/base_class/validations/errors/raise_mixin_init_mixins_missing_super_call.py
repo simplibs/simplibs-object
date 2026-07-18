@@ -24,7 +24,7 @@ def raise_mixin_init_mixins_missing_super_call(
 
         raise SimpleObjectMixinError(
             error_name="MIXIN DEFINITION ERROR",
-            value_label="Missing super() call in init_mixins",
+            label="Missing super() call in init_mixins",
             expected="Metoda init_mixins musí volat super().init_mixins().",
             value=func,
             problem=(

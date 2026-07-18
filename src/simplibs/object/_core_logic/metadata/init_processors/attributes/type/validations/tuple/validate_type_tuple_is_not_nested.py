@@ -54,7 +54,7 @@ def validate_type_tuple_is_not_nested(
         # 3. Vyovlání výjimky
         raise SimpleMetadataError(
             error_name=error_name,
-            value_label=f"{class_name}._type",
+            label=f"{class_name}._type",
             value=type_tuple,
             expected="Typ reprezentující výstupní objekt třídy.",
             problem=f"Třídní atribut '_type' je definován jako tuple obsahující vnitřní tuple.",

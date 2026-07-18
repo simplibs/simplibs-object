@@ -1,0 +1,1 @@
+OWNER_CLASS = "_owner_class"

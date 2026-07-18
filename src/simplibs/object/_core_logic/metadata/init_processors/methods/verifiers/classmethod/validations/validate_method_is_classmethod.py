@@ -49,7 +49,7 @@ def validate_method_is_classmethod(
         # 3. Vyovlání výjimky
         raise SimpleMetadataError(
             error_name="METHOD LOGIC ERROR",
-            value_label=f"Chybějící dekorátor",
+            label=f"Chybějící dekorátor",
             expected="Metoda s dekorátorem '@classmethod'.",
             problem=f"'{class_name}.{method_name}' chybí tento dekorátor.",
             context=context,

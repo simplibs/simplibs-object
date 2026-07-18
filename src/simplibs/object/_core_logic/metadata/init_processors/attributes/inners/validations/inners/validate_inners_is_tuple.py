@@ -51,7 +51,7 @@ def validate_inners_is_tuple(
         # 3. Vyovlání výjimky
         raise SimpleMetadataError(
             error_name=error_name,
-            value_label=f"Atribut neodkazuje na tuple",
+            label=f"Atribut neodkazuje na tuple",
             expected="N-tice (tuple) obsahující potomky tříd SimpleConstant a SimpleObject.",
             value=inners,
             problem=f"Atribut '_inners' musí být definován jako tuple.",

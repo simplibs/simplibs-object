@@ -30,7 +30,7 @@ def raise_mixin_slots_contains_forbidden_slot_names(
 
             raise SimpleObjectMixinError(
                 error_name="MIXIN DEFINITION ERROR",
-                value_label="Forbidden slot name",
+                label="Forbidden slot name",
                 expected="Mixin must not define slots that collide with internal Simple attributes.",
                 value=name,
                 problem=(

@@ -22,7 +22,7 @@ def raise_mixin_composite_only_flag_is_not_bool(
 
         raise SimpleObjectMixinError(
             error_name="MIXIN DEFINITION ERROR",
-            value_label="Invalid _composite_only flag",
+            label="Invalid _composite_only flag",
             expected="Hodnota _composite_only musí být typu bool (True/False).",
             value=composite_only,
             problem=(

@@ -56,7 +56,7 @@ def validate_inner_is_not_simple_class(
         # 3. Vyovlání výjimky
         raise SimpleMetadataError(
             error_name=error_name,
-            value_label="Prvek z _inners je abstraktní základ",
+            label="Prvek z _inners je abstraktní základ",
             expected="Konkrétní potomek třídy SimpleObject nebo SimpleConstant.",
             value=inner,
             problem=f"V definici '_inners' třídy '{class_name}' je přímo třída '{inner.__name__}'.",

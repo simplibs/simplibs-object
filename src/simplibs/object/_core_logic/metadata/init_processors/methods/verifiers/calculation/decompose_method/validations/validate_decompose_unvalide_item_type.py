@@ -50,7 +50,7 @@ def validate_decompose_unvalide_item_type(
         # 3. Vyvolání výjimky
         raise SimpleMetadataError(
             error_name="METHOD LOGIC ERROR",
-            value_label=f"Neplatný typu prvku z návratové hodnoty",
+            label=f"Neplatný typu prvku z návratové hodnoty",
             expected=f"Hodnota typu '{expected_type.__name__}'.' (podle definice v '{meta.class_name}').",
             value=value,
             problem=f"Prvek '{meta.name_snake}' není kompatibilní s definicí v '_inners'.",

@@ -43,7 +43,7 @@ def validate_method_is_callable(
         # 3. Vyovlání výjimky
         raise SimpleMetadataError(
             error_name="METHOD LOGIC ERROR",
-            value_label="Metoda není volatelný objekt",
+            label="Metoda není volatelný objekt",
             expected="Volatelná třídní metoda.",
             problem=f"'{class_name}.{method_name}' není volatelný objekt.",
             context=context,

@@ -21,7 +21,7 @@ def raise_class_not_decomposeable(
 
     # raise SimpleLogicError(
     #     error_name="INVALID MIXIN",
-    #     value_label="Mixin must inherit from SimpleMixin",
+    #     label="Mixin must inherit from SimpleMixin",
     #     expected="Třídu odvozenou od SimpleMixin.",
     #     value=mixin,
     #     problem=(

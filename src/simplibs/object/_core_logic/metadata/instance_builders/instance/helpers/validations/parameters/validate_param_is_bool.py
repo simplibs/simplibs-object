@@ -15,7 +15,7 @@ def validate_param_is_bool(
 
         raise SimpleObjectInstanceError(
             error_name="INVALID PARAMETER",
-            value_label="Parameter 'as_atom' must be bool",
+            label="Parameter 'as_atom' must be bool",
             expected="Hodnota typu bool (True nebo False).",
             value=as_atom,
             problem=(

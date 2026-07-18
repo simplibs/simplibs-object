@@ -14,7 +14,7 @@ def raise_missing_value_error(
     """
     raise SimpleLogicError(
         error_name="MISSING VALUE ERROR",
-        value_label="value",
+        label="value",
         value=None,
         expected=f"Platná instance typu {cls.meta.value_type_name} (nikoliv None)",
         problem=f"Třída '{cls.__name__}' vyžaduje konkrétní hodnotu, ale obdržela 'None'.",

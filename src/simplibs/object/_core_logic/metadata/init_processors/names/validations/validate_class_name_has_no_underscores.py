@@ -31,7 +31,7 @@ def validate_class_name_has_no_underscores(
     if "_" in class_name:
         raise SimpleMetadataError(
             error_name="CLASS NAME CONTAINS UNDERSCORE",
-            value_label="class_name",
+            label="class_name",
             value=class_name,
             problem="Název třídy obsahuje podtržítko (_), což není v SimpleObject povoleno.",
             expected="Pouze písmena a číslice (A-Z, a-z, 0-9)",

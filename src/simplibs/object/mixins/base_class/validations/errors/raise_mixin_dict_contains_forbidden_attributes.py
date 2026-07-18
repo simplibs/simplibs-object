@@ -18,7 +18,7 @@ def raise_mixin_dict_contains_forbidden_attributes(
 
             raise SimpleMixinError(
                 error_name="MIXIN DEFINITION ERROR",
-                value_label="Forbidden attribute override",
+                label="Forbidden attribute override",
                 expected="Mixin must not define or override internal Simple attributes.",
                 value=name,
                 problem=(

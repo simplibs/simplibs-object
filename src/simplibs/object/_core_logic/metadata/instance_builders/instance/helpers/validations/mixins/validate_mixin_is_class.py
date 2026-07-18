@@ -20,7 +20,7 @@ def validate_mixin_is_class(
 
         raise SimpleObjectMixinError(
             error_name="INVALID MIXIN",
-            value_label="Mixin must be a class",
+            label="Mixin must be a class",
             expected="Třídu odvozenou od SimpleMixin.",
             value=mixin,
             problem=(

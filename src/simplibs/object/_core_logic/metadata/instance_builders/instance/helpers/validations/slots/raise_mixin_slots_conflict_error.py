@@ -23,7 +23,7 @@ def raise_mixin_slots_conflict_error(
 
     raise SimpleObjectMixinError(
         error_name="MIXIN SLOTS CONFLICT",
-        value_label="Slot name collision between mixins",
+        label="Slot name collision between mixins",
         expected="Mixiny s nekolidujícími __slots__.",
         value=error,
         problem=(

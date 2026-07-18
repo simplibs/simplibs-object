@@ -16,7 +16,7 @@ def raise_mixin_slots_contain_unvalid_type(
 
             raise SimpleMixinError(
                 error_name="MIXIN DEFINITION ERROR",
-                value_label="Invalid __slots__ items",
+                label="Invalid __slots__ items",
                 expected="All items in __slots__ tuple must be strings.",
                 value=slots,
                 problem=(

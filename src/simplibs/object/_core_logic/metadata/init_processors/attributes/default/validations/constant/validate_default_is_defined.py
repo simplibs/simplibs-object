@@ -47,7 +47,7 @@ def validate_default_is_defined(
         # 3. Vyovlání výjimky
         raise SimpleMetadataError(
             error_name=error_name,
-            value_label="Attribut '_default' není definovaný",
+            label="Attribut '_default' není definovaný",
             expected=f"Attribut '_default' obsahující výchozí hodnotu konstanty.",
             problem=f"Attribut není na třídě nedefinovaný.",
             context=context,

@@ -72,7 +72,7 @@ def validate_annotations(
                 # 3. Vyvolání výjimky
                 raise SimpleMetadataError(
                     error_name="METHOD SIGNATURE ERROR",
-                    value_label="Neplatná anotace typu",
+                    label="Neplatná anotace typu",
                     expected=f"Anotace typu '{expected_names}'.",
                     problem=f"Definovaná anotace '{annotation_names}' nevyhovuje očekávanému.",
                     context=context,

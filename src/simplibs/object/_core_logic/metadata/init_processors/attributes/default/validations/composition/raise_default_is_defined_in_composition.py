@@ -46,7 +46,7 @@ def raise_default_is_defined_in_composition(
     # 2. Vyvolání výjimky
     raise SimpleMetadataError(
         error_name=error_name,
-        value_label="Atribut '_default' je u kompozice zakázán",
+        label="Atribut '_default' je u kompozice zakázán",
         expected="Výchozí hodnota kompozice musí být vypočtena dynamicky z vnitřních prvků.",
         problem=f"Třída '{class_name}' definuje '_default', což u objektů s '_inners' není dovoleno.",
         context=context,
