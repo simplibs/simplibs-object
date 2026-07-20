@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 # Inners
-from .class_name_splitter import class_name_splitter
+from ._class_name_splitter import _class_name_splitter
 # Annotations
 if TYPE_CHECKING:
     from .....protocols.classes import SimpleClassLike
@@ -10,27 +10,27 @@ def create_names(
     owner_class: "SimpleClassLike"
 ) -> tuple[tuple[str, ...], str, str]:
     """
-    Procesní pipeline pro generování deterministických názvů třídy.
+    Processing pipeline for generating deterministic class names.
 
-    Tato funkce transformuje název třídy do různých textových podob používaných
-    napříč systémem (od uživatelských popisů až po privátní atributy).
-    Validaci názvu třídy deleguje na `class_name_splitter`.
+    This function transforms a class name into various textual representations used
+    across the system (from user-facing descriptions to private attributes).
+    It delegates class name validation to `_class_name_splitter`.
     """
     class_name = owner_class.__name__
 
-    # 1. Dekompozice názvu na jednotlivá slova (provádí i validaci názvu třídy)
-    # Pipeline začíná rozkladem na sémantické jednotky (tuple slov).
-    name_tuple = class_name_splitter(class_name)
+    # 1. Decompose the name into individual words (also performs class name validation)
+    # The pipeline begins by breaking the name down into semantic units (a tuple of words).
+    name_tuple = _class_name_splitter(class_name)
 
-    # 2. Vytvoření snake_case verze pro parametry (např. v __init__)
-    # Standardní Python konvence pro proměnné a argumenty.
+    # 2. Create a snake_case version for parameters (e.g., in __init__)
+    # Standard Python convention for variables and arguments.
     name_snake = "_".join(name_tuple).lower()
 
-    # 3. Vytvoření privátní verze pro vnitřní sloty a atributy
-    # Technické jméno pro vnitřní integritu objektu.
+    # 3. Create a private version for internal slots and attributes
+    # The technical name used to ensure the object's internal integrity.
     name_private = "_" + name_snake
 
-    # 4. Navrácení tuple s vytvořenými názvy
+    # 4. Return the tuple containing the generated names
     return (
         name_tuple,
         name_snake,
@@ -41,44 +41,28 @@ def create_names(
 _DESIGN_NOTES = """
 # create_names
 
-## Účel
-Tato funkce funguje jako **procesní pipeline**, která definuje identitu `SimpleObject` 
-v různých kontextech. Jejím cílem je zajistit absolutní determinismus — každý název 
-v systému (od parametru v konstruktoru až po zprávu ve výjimce) je přímo a 
-předvídatelně odvozen od názvu třídy.
+## Purpose
+This function operates as a **processing pipeline** that establishes the identity of a `SimpleObject` across different operational contexts. Its objective is to guarantee absolute determinism — every representation of a name within the system (from a constructor parameter to an exception message token) is directly and predictably derived from the original class name.
 
-## Architektonický koncept (Pipeline)
-Funkce je záměrně navržena jako lineární tok transformací. 
-- **Delegace validace**: Pipeline neřeší, zda je jméno třídy správné. Tuto odpovědnost 
-  přenáší na `class_name_splitter`. Pokud splitter vrátí tuple slov, pipeline má 
-  zaručeno, že pracuje s čistými daty.
-- **Separace zájmů**: `create_names` se soustředí výhradně na formátování a sémantický 
-  význam jednotlivých podob jmen.
+## Architectural Concept (Pipeline)
+The function is intentionally structured as a linear sequence of transformations:
+- **Delegation of Validation**: The pipeline does not evaluate whether the class name is well-formed. It delegates this responsibility entirely to `_class_name_splitter`. If the splitter successfully returns a tuple of words, the pipeline is guaranteed to operate on clean, valid data.
+- **Separation of Concerns**: `create_names` focuses exclusively on formatting and assigning semantic meaning to the respective name variants.
 
-## Význam generovaných jmen
+## Significance of Generated Names
 
-| Název | Formát | Hlavní využití |
-|-------|--------|----------------|
-| `name_readable` | `moje slova` | Textové popisy, lidsky čitelný výstup ve výjimkách. |
-| `name_title` | `Moje slova` | Začátky vět v hlášeních, titulky v UI nebo dokumentaci. |
-| `name_snake` | `moje_slova` | Názvy parametrů v `__init__`, lokální proměnné, klíče v JSON. |
-| `name_private` | `_moje_slova` | Názvy vnitřních slotů a privátních atributů třídy. |
+| Name | Format | Primary Use Case |
+|---|---|---|
+| `name_tuple` | `tuple[str, ...]` | Tokenized semantic units; raw material for dynamic name transformations. |
+| `name_snake` | `snake_case` | Names of parameters in `__init__`, local variables, and JSON keys. |
+| `name_private` | `_snake_case` | Identifier for internal `__slots__` and private class attributes. |
 
-## Síla SimpleObject determinismu
-Hlavní předností tohoto přístupu je, že vývojář nemusí ručně definovat názvy 
-atributů nebo popisků. Tím, že systém vynutí správný název třídy (přes validace 
-v dekompozici), automaticky garantuje:
-1. **Konzistenci**: Parametr v API se bude vždy jmenovat stejně jako proměnná v kódu.
-2. **Bezchybnost**: Odpadají překlepy při ručním přepisování jmen.
-3. **Předvídatelnost**: Pohledem na název třídy lze okamžitě určit, jak vypadá 
-   její privátní úložiště nebo jak se bude tvářit navenek.
+## The Power of SimpleObject Determinism
+The primary advantage of this pipeline architecture is that the developer never needs to manually declare attribute names or string tags. By forcing strict class name rules at the decomposition boundary, the system automatically guarantees:
+1. **Consistency**: An API parameter will always match the internal variable representation in the codebase.
+2. **Error Elimination**: Typos caused by manual string copying and rewriting are completely eliminated.
+3. **Predictability**: By looking at the class name blueprint, you can instantly determine how its private registry is named and how it behaves interfaces-wise.
 
-## Technické detaily
-- **Zachování zkratek**: Při tvorbě `name_title` nepoužíváme standardní `capitalize()`, 
-  protože ta by převedla vše kromě prvního písmene na malá (HTTP -> Http). Naše 
-  implementace `name_readable[0].upper() + name_readable[1:]` respektuje akronymy 
-  vytvořené splitterem.
-- **Bezpečné spojování**: Pipeline počítá s tím, že splitter již odstranil 
-  veškerý syntaktický šum (podtržítka, diakritiku), takže operace jako `join` 
-  jsou bezpečné a předvídatelné.
+## Technical Details
+- **Safe Joining**: The pipeline relies on the guarantee that the upstream splitter has already removed all syntactic noise (such as underscores or localized diacritics), ensuring that the `join` operation remains safe, stable, and deterministic.
 """

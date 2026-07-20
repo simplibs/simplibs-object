@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 # Outers
 from ........exceptions import SimpleMetadataError
-from .._exceptions_helpers import exception_info_for_inners
+from .._exception_info_for_inners import _exception_info_for_inners
 # Annotations
 if TYPE_CHECKING:
     from ........protocols.classes import SimpleClassLike
@@ -12,57 +12,30 @@ def validate_inner_is_class(
     inners: tuple["SimpleClassLike", ...],
     owner_class: "SimpleClassLike"
 ) -> None:
-    """
-    Validuje, zda je prvek v '_inners' skutečně datovým typem (třídou).
+    """Validates that a specific element within the '_inners' collection is an actual data type (class)."""
 
-    Toto je nultý krok validace prvků kompozice, který zajišťuje,
-    že pracujeme s definicemi, nikoliv s jejich instancemi nebo daty.
-
-    ═════════════════════════════════════════════════════════════════
-    ⚠️ INVALID INNERS DEFINITION: Prvek z _inners není platná třída
-    ═════════════════════════════════════════════════════════════════
-    Expected:  Vnitřní prvek musí být třída (potomek SimpleObject/SimpleConstant).
-    Got:       repr(inner) (type)
-    Problem:   Vnitřní prvek '{inner}' z '{inners}' není validním objektem.
-    Context:   Kontrola a validace metadat pro: {class_name}.{attribute_name}
-    File info: File: ... | Line: ... | Function: ...
-    File path: ...
-    ─────────────────────────────────────────────────────────────────
-    🔧 How to fix:
-         • Vnitřní prvky atributu _inners mohou být pouze potomci třídy SimpleObject a SimpleConstant.
-         • Opravte uvedený prvek, tak aby byl validním prvkem.
-         • Do seznamu '_inners' vkládejte pouze odkazy na třídy, nikoliv jejich instance nebo jiné datové typy.
-         • Ujistěte se, že prvek není např. řetězec nebo výsledek volání funkce.
-         • Acceptable definitions:
-         • class {class_name}(class_parrent):
-         •     _inners: tuple = (PrvekA, PrvekB)
-         •     ...
-    ═════════════════════════════════════════════════════════════════
-    """
-
-    # 1. Podmínka výjimky
+    # 1. Exception condition
     if not isinstance(inner, type):
 
-        # 2. Vypočet proměných
+        # 2. Variable resolution
         (class_name,
          error_name,
          context,
          acceptable_definitions
-         ) = exception_info_for_inners(owner_class)
+         ) = _exception_info_for_inners(owner_class)
 
-        # 3. Vyovlání výjimky
+        # 3. Exception invocation
         raise SimpleMetadataError(
             error_name=error_name,
-            label="Prvek z _inners není platná třída",
+            label="Element inside _inners is not a valid class",
             value=inner,
-            expected="Vnitřní prvek musí být třída (potomek SimpleObject/SimpleConstant).",
-            problem=f"Vnitřní prvek '{inner}' z '{inners}' není validním objektem.",
+            expected="Every inner element must be a class definition inheriting from SimpleObject or SimpleConstant.",
+            problem=f"The inner element '{inner}' discovered within the collection '{inners}' is an instance or a raw data value, not a class type.",
             context=context,
             how_to_fix=(
-                "Vnitřní prvky atributu _inners mohou být pouze potomci třídy SimpleObject a SimpleConstant.",
-                "Opravte uvedený prvek, tak aby byl validním prvkem.",
-                "Do seznamu '_inners' vkládejte pouze odkazy na třídy, nikoliv jejich instance nebo jiné datové typy.",
-                "Ujistěte se, že prvek není např. řetězec nebo výsledek volání funkce.",
+                "Ensure that the '_inners' attribute contains only raw class references, not instantiated objects.",
+                "Remove trailing parentheses from the element definition (e.g., use 'MyElement' instead of 'MyElement()').",
+                "Verify that the provided item is not a string, primitive datatype, or the output of a function execution.",
             ) + acceptable_definitions,
             exception=TypeError
         )
@@ -71,22 +44,20 @@ def validate_inner_is_class(
 _DESIGN_NOTES = """
 # validate_inner_is_class
 
-## Účel
-Tato validace slouží jako "vstupní filtr" pro integritu kompozice. Jejím hlavním 
-úkolem je zajistit, že každý prvek v seznamu `_inners` je typem (`type`), 
-tedy popisem struktury, nikoliv strukturou samotnou (instancí).
+## Purpose
+Acts as the ultimate entry gatekeeper for composition integrity. Its primary role 
+is to ensure that every entry registered within the `_inners` container represents 
+a structural blueprint (`type`), rather than an active state instance.
 
-## Proč je tato kontrola nutná jako první?
-1. **Ochrana následných validací**: Funkce jako `issubclass` nebo přístup k 
-   atributům přes `.meta` (který očekáváme u SimpleObjectů) vyžadují, aby 
-   vstupem byla třída. Pokud by sem prošla instance, systém by havaroval na 
-   nepřehledné systémové chybě místo naší strukturované výjimky.
-2. **Prevence běžné chyby**: Uživatelé často píší závorky tam, kde nemají. 
-   Tato validace okamžitě odhalí záměnu `Vaha()` (instance) za `Vaha` (třída).
+## Crucial Execution Ordering
+1. **Downstream Safety**: Sub-sequence routines such as `issubclass` lookups or 
+   accessing the `.meta` descriptor namespace fail hard with unreadable runtime 
+   exceptions if executed against an instantiated object. This guard isolates the input.
+2. **Developer UX**: A common syntax pitfall is accidental instantiation during 
+   declaration. This validation explicitly identifies this mismatch immediately.
 
-## Explicitnost vs. Try-Except
-Zvolili jsme explicitní volání `isinstance(inner, type)` namísto odchytávání 
-výjimek v pozdějších krocích. Tento přístup umožňuje poskytnout uživateli 
-velmi specifickou nápovědu (`how_to_fix`) zaměřenou čistě na chybný datový 
-typ vstupu, což zvyšuje "vnitřní zen" při ladění kódu.
+## Explicit Verification Strategy
+Using an explicit `isinstance(inner, type)` check before any other processing 
+guarantees that formatting targets are completely valid. It keeps the framework 
+predetermined and ensures errors are captured precisely at initialization time.
 """

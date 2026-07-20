@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 # Outers
 from ........exceptions import SimpleMetadataError
-from .._exceptions_helpers import exception_info_for_inners
+from .._exception_info_for_inners import _exception_info_for_inners
 # Annotations
 if TYPE_CHECKING:
     from ........protocols.classes import SimpleClassLike
@@ -11,83 +11,60 @@ def validate_inner_is_simple_subclass(
     inner: "SimpleClassLike",
     owner_class: "SimpleClassLike"
 ) -> None:
-    """
-    Validuje, že vnitřní prvek je potomkem požadovaných základních tříd.
+    """Validates that the inner element correctly inherits from the required base framework classes."""
 
-    ═════════════════════════════════════════════════════════════════
-    ⚠️ INVALID INNERS DEFINITION: Prvek z _inners má neplatnou hierarchii
-    ═════════════════════════════════════════════════════════════════
-    Expected:  Vnitřní prvek musí dědit ze SimpleObject nebo SimpleConstant.
-    Got:       repr(inner) (type)
-    Problem:   Prvek není potomkem SimpleObject nebo SimpleConstant třídy.
-    Context:   Kontrola a validace metadat pro: {class_name}.{attribute_name}
-    File info: File: ... | Line: ... | Function: ...
-    File path: ...
-    ─────────────────────────────────────────────────────────────────
-    🔧 How to fix:
-         • Vnitřní prvky atributu _inners mohou být pouze potomci třídy SimpleObject a SimpleConstant.
-         • Opravte uvedený prvek, tak aby byl validním prvkem.
-         • Zajistěte, aby všechny třídy v '_inners' dědily z podporovaných základních tříd.
-         • Zkontrolujte, zda jste importovali správnou třídu.
-         • Acceptable definitions:
-         • class {class_name}(class_parrent):
-         •     _inners: tuple = (PrvekA, PrvekB)
-         •     ...
-    ═════════════════════════════════════════════════════════════════
-    """
+    # Internal import to prevent circular dependency bugs
+    from ........SimpleConstant import SimpleConstant
 
-    # Vnitřní import předcházející cilkulární chybě
-    from .......SimpleConstant import SimpleConstant
-
-    # 1. Podmínka výjimky
+    # 1. Exception condition
+    inner: type
     if not issubclass(inner, SimpleConstant):
 
-        # 2. Vypočet proměných
+        # 2. Variable resolution
         (class_name,
          error_name,
          context,
          acceptable_definitions
-         ) = exception_info_for_inners(owner_class)
+         ) = _exception_info_for_inners(owner_class)
 
-        # 3. Vyovlání výjimky
+        # 3. Exception invocation
         raise SimpleMetadataError(
             error_name=error_name,
-            label="Prvek z _inners má neplatnou hierarchii",
-            expected="Vnitřní prvek musí dědit ze SimpleObject nebo SimpleConstant.",
+            label="Invalid class hierarchy detected inside _inners",
+            expected="The inner element must inherit from SimpleObject or SimpleConstant.",
             value=inner,
-            problem="Prvek není potomkem SimpleObject nebo SimpleConstant třídy.",
+            problem="The provided element is not a recognized subclass of either SimpleObject or SimpleConstant.",
             context=context,
             how_to_fix=(
-                "Vnitřní prvky atributu _inners mohou být pouze potomci třídy SimpleObject a SimpleConstant.",
-                "Opravte uvedený prvek, tak aby byl validním prvkem.",
-                "Zajistěte, aby všechny třídy v '_inners' dědily z podporovaných základních tříd.",
-                "Zkontrolujte, zda jste importovali správnou třídu.",
+                "Elements declared inside the '_inners' attribute must belong to the SimpleObject/SimpleConstant family.",
+                "Verify the inheritance tree of the failing class to ensure it derives from a supported base class.",
+                "Check your import statements to confirm that you are referencing the correct class definition.",
             ) + acceptable_definitions,
             exception=TypeError
         )
 
+
 _DESIGN_NOTES = """
-# validate_inner_is_simple_object_subclass
+# validate_inner_is_simple_subclass
 
-## Účel
-Tato validace je pilířem integrity celého systému. Ověřuje, že vnořený prvek 
-implementuje standardní rozhraní SimpleObject. To je nezbytné, protože 
-následné procesory v pipeline budou přistupovat k atributům jako `.meta`, 
-které jsou dostupné pouze u tříd vzniklých pod touto metatřídou.
+## Purpose
+Acts as a core pillar of system runtime integrity. It verifies that every nested 
+element implements the standard contract of the framework. This guarantees that downstream 
+pipeline processors can confidently access properties like `.meta` or node names, 
+which only exist on classes created via this specific metaclass architecture.
 
-## Vztah k ostatním validacím
-Tato funkce je úzce specializovaná:
-1. Předpokládá, že prvek již prošel validací `validate_inner_is_class`.
-2. Zaměřuje se výhradně na **vztah dědičnosti**.
-3. **Důležitá poznámka**: Tato funkce propustí i samotnou základní třídu 
-   `SimpleObject` (protože je podtřídou sebe sama). Vyloučení samotné základní 
-   třídy je však delegováno na následující krok `validate_inner_is_not_simple_object_class`. 
-   Toto rozdělení udržuje každou funkci atomickou a snadno pochopitelnou.
+## Pipeline Relationships & Boundaries
+This validation is highly specialized and follows strict isolation rules:
+1. It operates under the safe assumption that the input has already passed the 
+   `validate_inner_is_class` barrier.
+2. It focuses exclusively on the **inheritance relationship**.
+3. **Behavioral Note**: The built-in `issubclass` function evaluates to `True` when a class 
+   is compared against itself. Therefore, this check allows raw base classes like `SimpleConstant` 
+   or `SimpleObject` to pass through. Excluding those raw roots is explicitly delegated 
+   to the adjacent `validate_inner_is_not_simple_class` step, keeping both components 
+   completely atomic.
 
-## Strategie Importu
-V rámci zachování "čistého zenu" a prevence kruhových importů (Circular Imports) 
-neprovádí tato funkce vlastní import `SimpleObject`. Místo toho očekává 
-referenci na základní třídu jako parametr `simple_object_base`. Tento parametr 
-je poskytnut řídící metodou `_process_composition_setup`, která provádí 
-tzv. Lazy Import.
+## Import Strategy
+To protect the runtime environment from circular dependency hazards, the core base class 
+reference is loaded lazily inside the local execution block right before the condition check.
 """

@@ -1,19 +1,34 @@
 from simplibs.exception import SimpleException
 
+
 class SimpleError(SimpleException):
-    """Základní výjimka pro celou knihovnu SimpleObject."""
+    """Base exception for the entire SimpleObject library."""
+
     _skip_locations = ("simplibs/object",)
+
 
 _DESIGN_NOTES = """
 # SimpleError
 
-## Účel
-Hlavní zastřešující výjimka pro celý ekosystém `SimpleObject`. 
-Neslouží k přímému vyvolávání, ale jako společný předek pro všechny chyby knihovny.
+## Purpose
+The main umbrella exception for the entire `SimpleObject` ecosystem. It is not intended to be raised directly, but serves as a common ancestor for all errors within the library.
 
-## Skupina
-Umožňuje uživateli zachytit jakýkoliv problém spojený s touto knihovnou:
+## Subclasses
+The following specific exceptions inherit from this base class:
+- `SimpleLogicError`
+- `SimpleMetadataError`
+- `SimpleMixinError`
+
+## Catch All Grouping
+It allows the user to catch any problem associated with this library using a single try-except block:
 ```python
+try:
+    # SimpleObject operations
+    ...
 except SimpleError:
-    # řešení jakékoliv chyby v SimpleObject
+    # Handle any error thrown by the SimpleObject library
+    ...
+
+```
+
 """

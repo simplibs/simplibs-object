@@ -2,7 +2,7 @@ from typing import Any, TYPE_CHECKING
 from simplibs.sentinels import UNSET
 # Inners
 from .SimpleBase import SimpleBase
-from ._core_logic.base_utils.constant_methods import (
+from ._core_logic.constant_methods import (
     validate_type,
     validate,
     normalize,

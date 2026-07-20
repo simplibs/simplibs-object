@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING, Any
 # Outers
 from ........exceptions import SimpleMetadataError
-from .._exceptions_helpers import exception_info_for_inners
+from .._exception_info_for_inners import _exception_info_for_inners
 # Annotations
 if TYPE_CHECKING:
     from ........protocols.classes import SimpleClassLike
@@ -11,55 +11,30 @@ def validate_inners_is_tuple(
     inners: Any,
     owner_class: "SimpleClassLike"
 ) -> None:
-    """
-    Validuje, že '_inners' jsou definovány jako 'tuple'.
+    """Validates that the '_inners' attribute is explicitly declared as a 'tuple'."""
 
-    Tato kontrola předchází chybám při iteraci a zajišťuje neměnnost 
-    definice struktury kompozitního objektu.
-
-    ═════════════════════════════════════════════════════════════════
-    ⚠️ INVALID INNERS DEFINITION: Atribut neodkazuje na tuple
-    ═════════════════════════════════════════════════════════════════
-    Expected:  "N-tice (tuple) obsahující potomky tříd SimpleConstant a SimpleObject."
-    Got:       repr(value) (type)
-    Problem:   Atribut '_inners' není definován jako tuple.
-    Context:   Kontrola a validace metadat pro: {class_name}.{attribute_name}
-    File info: File: ... | Line: ... | Function: ...
-    File path: ...
-    ─────────────────────────────────────────────────────────────────
-    🔧 How to fix:
-         • Změňte definici '_inners' na tuple.
-         • Příklad: _inners = (PrvekA, PrvekB).
-         • Pokud máte pouze jeden prvek, nezapomeňte na čárku: _inners = (PrvekA,).
-         • Acceptable definitions:
-         • class {class_name}(class_parrent):
-         •     _inners: tuple = (PrvekA, PrvekB)
-         •     ...
-    ═════════════════════════════════════════════════════════════════
-    """
-
-    # 1. Podmínka výjimky
+    # 1. Exception condition
     if not isinstance(inners, tuple):
 
-        # 2. Vypočet proměných
+        # 2. Variable resolution
         (class_name,
          error_name,
          context,
          acceptable_definitions
-         ) = exception_info_for_inners(owner_class)
+         ) = _exception_info_for_inners(owner_class)
 
-        # 3. Vyovlání výjimky
+        # 3. Exception invocation
         raise SimpleMetadataError(
             error_name=error_name,
-            label=f"Atribut neodkazuje na tuple",
-            expected="N-tice (tuple) obsahující potomky tříd SimpleConstant a SimpleObject.",
+            label="The '_inners' attribute does not reference a tuple",
+            expected="A tuple containing subclasses of SimpleConstant and SimpleObject.",
             value=inners,
-            problem=f"Atribut '_inners' musí být definován jako tuple.",
+            problem=f"The '_inners' attribute must be explicitly defined using the tuple data type.",
             context=context,
             how_to_fix=(
-                "Změňte definici '_inners' na tuple.",
-                "Příklad: _inners = (PrvekA, PrvekB).",
-                "Pokud máte pouze jeden prvek, nezapomeňte na čárku: _inners = (PrvekA,)."
+                "Change the definition of '_inners' to a tuple container.",
+                "Example layout: _inners = (ElementA, ElementB).",
+                "If declaring only a single element, remember to include a trailing comma: _inners = (ElementA,).",
             ) + acceptable_definitions,
             exception=TypeError
         )
@@ -68,20 +43,23 @@ def validate_inners_is_tuple(
 _DESIGN_NOTES = """
 # validate_inners_is_tuple
 
-## Účel
-Tato validace je první kontrolou v procesu kompozice. Vynucuje použití datového 
-typu `tuple` pro definici vnitřních prvků `_inners`.
+## Purpose
+Acts as a core structural validation check in the composition processing pipeline. 
+It strictly enforces the usage of the standard `tuple` type for defining components registered 
+within the `_inners` attribute namespace.
 
-## Proč právě Tuple?
-1. **Imutabilita**: Definice třídy by měla být konstantní. Tuple dává jasně 
-   najevo, že se seznam prvků nebude za běhu měnit.
-2. **Konzistence**: Na rozdíl od setu (množiny) zachovává tuple pořadí prvků, 
-   což je kritické pro pořadí parametrů v automaticky generované signatuře `_logic`.
-3. **Konvence**: V Pythonu je zvykem používat tuple pro typové anotace a 
-   strukturální definice (např. `isinstance` také přijímá tuple).
+## Rationale Behind Tuple Enforcement
+1. **Immutability**: Class structural metadata definitions must remain constant. A tuple 
+   guarantees that the underlying collection cannot be dynamically altered or corrupted at runtime.
+2. **Deterministic Ordering**: Unlike unordered collection models (e.g., sets), a tuple preserves 
+   the exact declaration order. This is highly critical because the positional ordering maps directly 
+   to the automatic argument layout inside the dynamically compiled `_logic` signature.
+3. **Idiomatic Design**: Using tuples aligns seamlessly with Pythonic metadata conventions 
+   (e.g., standard type unions or the native `isinstance` target structure).
 
-## Častá chyba (Edge Case)
-Uživatelé často zapomínají, že jednoprvkový tuple vyžaduje čárku `(Prvek,)`. 
-Bez ní Python závorky interpretuje jen jako prioritu operací a vrátí samotný 
-objekt uvnitř. Tato validace tuto chybu okamžitě zachytí.
+## Edge Case Prevention
+Developers frequently forget that a single-element tuple declaration in Python requires a trailing 
+comma, such as `(MyElement,)`. Without this trailing comma, Python parses the parentheses as standard 
+operational grouping and yields the raw internal class instead, causing subsequent mapping loops 
+to fail. This validation instantly flags this structural defect with crystal-clear directions.
 """

@@ -1,54 +1,34 @@
-from typing import Any, NoReturn
+import pytest
 # Outers
-from ...protocols import SimpleClassType
-from ...exceptions import SimpleMetadataError
+from simplibs.object.exceptions import SimpleMetadataError
+from simplibs.object._core_logic.metadata.validations.raise_metadata_is_immutable import (
+    raise_metadata_is_immutable,
+)
+from simplibs.exception.testing import assert_exception_function
 
 
-def raise_metadata_is_immutable(
-    attr_name: str,
-    current_value: Any,
-    new_value: Any,
-    owner_class: SimpleClassType
-) -> NoReturn:
-    """
-    Vyvolá výjimku při pokusu o změnu již inicializovaných metadat.
+# Dummy class to simulate owner_class context
+class DummyClass:
+    __name__ = "DummyClass"
 
-    ═════════════════════════════════════════════════════════════════
-    ⚠️ METADATA IMMUTABILITY ERROR: Field already initialized
-    ═════════════════════════════════════════════════════════════════
-    Expected:  Jednou nastavená data již nejde přepisovat.
-    Got:       {repr(value)} ({type(value).__name__})
-    Problem:   Hodnota je již nastavena a nelze ji změnit: {repr(current_value)}.
-    Context:   Pokus o přepsání '{attr_name}' v metadatech třídy '{class_name}'.
-    File info: File: ... | Line: ... | Function: ...
-    File path: ...
-    ─────────────────────────────────────────────────────────────────
-    🔧 How to fix:
-         • Metadata systému Simple jsou navržena jako 'Write-Once'.
-         • Po inicializaci hodnoty jsou imutabilní a nejde je dodatečně měnit.
-         • Dodatečný přepis je povolen jen pro neinicializované hodnoty.
-         • Pravděpodbně dochází k nevalidní operaci, a chyba bude v záměru či provedení.
-         • Pokud potřebujete dynamické chování, využijte k tomu určené cache sloty.
-    ═════════════════════════════════════════════════════════════════
-    """
 
-    # 1. Příprava kontextu
-    class_name = owner_class.__name__
-
-    # 2. Vyvolání výjimky
-    raise SimpleMetadataError(
-        error_name="METADATA IMMUTABILITY ERROR",
+def test_raise_metadata_is_immutable(subtests) -> None:
+    """Verify that the raiser terminates execution with a beautifully formatted metadata immutability error."""
+    assert_exception_function(
+        subtests,
+        raise_metadata_is_immutable,
+        invalid_params=("some_attribute", "old_value", "new_invalid_value", DummyClass),
+        exception_type=SimpleMetadataError,
+        value="new_invalid_value",
         label="Field already initialized",
-        expected="Jednou nastavená data již nejde přepisovat.",
-        value=new_value,
-        problem=f"Hodnota je již nastavena a nelze ji změnit: {repr(current_value)}.",
-        context=f"Pokus o přepsání '{attr_name}' v metadatech třídy '{class_name}'.",
+        expected="Once initialized, metadata fields are read-only and cannot be overwritten.",
+        problem="The field is already assigned and locked with value: 'old_value'.",
+        context="Attempted to overwrite attribute 'some_attribute' inside metadata of class 'DummyClass'.",
         how_to_fix=(
-            "Metadata systému Simple jsou navržena jako 'Write-Once'.",
-            "Po inicializaci hodnoty jsou imutabilní a nejde je dodatečně měnit.",
-            "Dodatečný přepis je povolen jen pro neinicializované hodnoty.",
-            "Pravděpodbně dochází k nevalidní operaci, a chyba bude v záměru či provedení.",
-            "Pokud potřebujete dynamické chování, využijte k tomu určené cache sloty."
+            "Simple metadata fields are designed to be 'Write-Once'.",
+            "After initialization, they become immutable and cannot be altered.",
+            "Subsequent overwrites are only permitted for uninitialized slots (holding UNSET).",
+            "If dynamic state preservation is required, utilize dedicated cache attributes or properties.",
         ),
-        exception=AttributeError
+        verbose=False
     )

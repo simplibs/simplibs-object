@@ -1,55 +1,52 @@
-from collections.abc import Callable
+from typing import Any, TYPE_CHECKING
 # Outers
 from ........exceptions import SimpleMetadataError
+if TYPE_CHECKING:
+    from ..._exceptions_helpers import ClassMethodExceptionInfoPayload
 
 
 def validate_method_is_callable(
-    row_method: Callable,
-    base_info: dict[str, str | tuple[str, ...]],
+    raw_method: Any,
+    base_info: "ClassMethodExceptionInfoPayload",
 ) -> None:
-    """
-    Validuje, že atribut třídy je volatelný objekt (callable).
+    """Validates that a class attribute is a callable object.
 
-    ═════════════════════════════════════════════════════════════════
-    ⚠️ METHOD LOGIC ERROR: Metoda není volatelný objekt
-    ═════════════════════════════════════════════════════════════════
-    Expected:  Volatelná třídní metoda.
-    Problem:   '{class_name}.{method_name}' není volatelná.
-    Context:   Kontrola a validace metadat pro: {class_name}.{method_name}
-    File info: File: ... | Line: ... | Function: ...
-    File path: ...
-    ─────────────────────────────────────────────────────────────────
-    🔧 How to fix:
-         • Ujistěte se, že '{method_name}' je definovaná jako metoda.
-         • Zkontrolujte, že není nahrazen datovým atributem.
-         • Expected structure:
-         • class {class_name}(SimpleObject):
-         •     ...
-         •     @classmethod
-         •     def {method_name}({', '.join(expected_params)}):
-         •         ...
-    ═════════════════════════════════════════════════════════════════
+    Raises:
+        SimpleMetadataError: If the raw attribute is not a callable object.
     """
 
-    # 1. Podmínka výjimky
-    if not callable(row_method):
+    # 1. Structural evaluation checkpoint
+    if not callable(raw_method):
 
-        # 2. Vypočet proměných
+        # 2. Extract shared diagnostic elements from context dictionary
         class_name = base_info["class_name"]
         method_name = base_info["method_name"]
         expected_structure = base_info["expected_structure"]
         context = base_info["context"]
 
-        # 3. Vyovlání výjimky
+        # 3. Raise domain exception with full packed diagnostic payload
         raise SimpleMetadataError(
             error_name="METHOD LOGIC ERROR",
-            label="Metoda není volatelný objekt",
-            expected="Volatelná třídní metoda.",
-            problem=f"'{class_name}.{method_name}' není volatelný objekt.",
+            label="Method is not a callable object",
+            expected="Callable class method definition.",
+            problem=f"'{class_name}.{method_name}' is not callable.",
             context=context,
             how_to_fix=(
-                f"Ujistěte se, že '{method_name}' je definovaná jako metoda.",
-                "Zkontrolujte, že není nahrazen datovým atributem.",
+                f"Ensure that '{method_name}' is properly defined as a function hook.",
+                "Verify that the method identifier has not been overwritten by a plain data attribute."
             ) + expected_structure,
             exception=TypeError
         )
+
+
+_DESIGN_NOTES = """
+# validate_method_is_callable
+
+## Purpose
+Enforces operational invocation capability on reflected class attributes before signature auditing. It prevents early interpreter failures by ensuring that the targeted attribute descriptor is a valid callable rather than a static data field.
+
+## Diagnostic Layout & Formatting
+1. **Dictionary Integration**: Resolves dynamic interpolation fields (`class_name`, `method_name`) directly from the shared `base_info` context map. It utilizes the `"expected_structure"` token to dynamically chain the contextual structural blueprint snippet to the exception message.
+2. **Defensive Reflection Guard**: Intercepts structural type corruptions at the boundary layer, ensuring that subsequent reflection routines can safely assume callable bytecode interfaces.
+3. **Happy Path Performance**: Minimizes operational friction by executing a native `callable()` evaluation. If the assertion passes, it bypasses dictionary lookups and dictionary unpacking overhead entirely.
+"""

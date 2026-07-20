@@ -1,79 +1,73 @@
-from typing import Any, TYPE_CHECKING
+from typing import Union
+import pytest
 # Outers
-from ........exceptions import SimpleMetadataError
-from .._exceptions_helpers import exception_info_for_default
-# Annotations
-if TYPE_CHECKING:
-    from ........protocols.classes import SimpleClassLike
+from simplibs.object.exceptions import SimpleMetadataError
+from simplibs.object._core_logic.metadata.init_processors.attributes.default.validations.constant.validate_default_matches_annotation import (
+    validate_default_matches_annotation,
+)
+from simplibs.exception.testing import (
+    assert_exception_function,
+    assert_function_valid_input,
+)
 
 
-def validate_default_matches_annotation(
-    default_value: Any,
-    expected_type: Any,
-    owner_class: "SimpleClassLike",
+class MockSimpleObject:
+    """Mock class mimicking a SimpleObject structure for metadata extraction."""
+    pass
+
+
+@pytest.mark.parametrize(
+    "default_value, expected_type",
+    [
+        (42, int),
+        ("Hello", str),
+        (3.14, float),
+        (42, Union[int, str]),
+        ("World", Union[int, str]),
+    ]
+)
+def test_validate_default_matches_annotation_happy_path(
+    subtests,
+    default_value: object,
+    expected_type: object
 ) -> None:
-    """
-    Validuje, že hodnota '_default' odpovídá definovanému typu '_type'.
-
-    Využívá funkci isinstance, která si díky předchozím validacím poradí
-    s atomickými typy, Uniony i plochými tuply.
-
-    ═════════════════════════════════════════════════════════════════
-    ⚠️ INVALID DEFAULT DEFINITION: Hodnota neodpovídá anotaci
-    ═════════════════════════════════════════════════════════════════
-    Expected:  Hodnota typu: {expected_type}.
-    Got:       repr(value) (type)
-    Problem:   Definovaný default neodpovídá definovanému typu.
-    Context:   Kontrola a validace metadat pro: {class_name}.{attribute_name}
-    File info: File: ... | Line: ... | Function: ...
-    File path: ...
-    ─────────────────────────────────────────────────────────────────
-    🔧 How to fix:
-         • Změňte hodnotu '_default' tak, aby odpovídala typu '{expected_type}'.
-         • Nebo upravte definici '_type' tak, aby zahrnovala aktuální typ hodnoty.
-         • U konstanty (SimpleConstant) je definice platného '_default' povinná.
-    ═════════════════════════════════════════════════════════════════
-    """
-    # 1. Podmínka výjimky
-    if not isinstance(default_value, expected_type):
-
-        # 2. Vypočet proměných
-        (class_name,
-         class_parrent,
-         error_name,
-         context,
-         ) = exception_info_for_default(owner_class)
-
-        # 3. Vyovlání výjimky
-        raise SimpleMetadataError(
-            error_name=error_name,
-            label="Hodnota neodpovídá anotaci",
-            expected=f"Hodnota typu: {expected_type}",
-            value=default_value,
-            problem="Definovaný default neodpovídá definovanému typu.",
-            context=context,
-            how_to_fix=(
-                f"Změňte hodnotu '_default' tak, aby odpovídala typu '{expected_type}'.",
-                "Nebo upravte definici '_type' tak, aby zahrnovala aktuální typ hodnoty.",
-                "U konstanty (SimpleConstant) je definice platného '_default' povinná."
-            ),
-            exception=TypeError
-        )
+    """Verify that type-compliant default values pass the validation guard without exceptions."""
+    assert_function_valid_input(
+        subtests,
+        validate_default_matches_annotation,
+        valid_params=(default_value, expected_type, MockSimpleObject),
+        verbose=False
+    )
 
 
-_DESIGN_NOTES = """
-# validate_default_matches_annotation
-
-## Účel
-Tato validace propojuje definici typu se skutečnou hodnotou. Je to klíčový bod 
-pro zachování typové bezpečnosti celého SimpleObject systému.
-
-## Spolupráce s předchozími kroky
-Díky tomu, že `validate_type_definition` již zajistil, že `_type` je validní 
-vstup pro `isinstance()`, zde můžeme bezpečně a rychle provést typovou kontrolu.
-
-## Význam pro uživatele
-Zabráníme vzniku logických chyb, kdy uživatel deklaruje, že objekt reprezentuje 
-`int`, ale jako výchozí hodnotu podstrčí `str`. Tím garantujeme, že `_logic` 
-v budoucnu (nebo přímé použití defaultu) nikdy nevrátí neočekávaný typ dat.
-"""
+@pytest.mark.parametrize(
+    "default_value, expected_type",
+    [
+        ("NotAnInt", int),
+        (42, str),
+        (3.14, int),
+        ([1, 2, 3], Union[int, str]),
+    ]
+)
+def test_validate_default_matches_annotation_invalid_inputs(
+    subtests,
+    default_value: object,
+    expected_type: object
+) -> None:
+    """Verify that type mismatches between default and annotation trigger a properly formatted SimpleMetadataError."""
+    assert_exception_function(
+        subtests,
+        validate_default_matches_annotation,
+        invalid_params=(default_value, expected_type, MockSimpleObject),
+        exception_type=SimpleMetadataError,
+        value=default_value,
+        label="Type mismatch for default value",
+        expected="A value conforming to the defined type: ",
+        problem="The assigned default value does not match the declared type annotation.",
+        context="MockSimpleObject",
+        how_to_fix=(
+            "Change the '_default' value to strictly match the '",
+            "Alternatively, expand or modify the '_type' definition to encompass the current value's type.",
+            "For a constant leaf structure (SimpleConstant), a valid, type-compliant '_default' is mandatory.",
+        ),
+    )

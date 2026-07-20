@@ -1,23 +1,24 @@
+# Inners
 from .SimpleError import SimpleError
 
+
 class SimpleLogicError(SimpleError):
-    """Výjimka pro chyby vzniklé při manipulaci s daty (validace, tvorba, update)."""
+    """Exception for errors occurring during data manipulation (validation, creation, update)."""
+
 
 _DESIGN_NOTES = """
 # SimpleLogicError
 
-## Účel
-Tato výjimka pokrývá celý životní cyklus dat uvnitř SimpleObjectu. Vyvolává se v momentě, 
-kdy jsou metadata v pořádku, ale konkrétní data (hodnoty) nevyhovují pravidlům.
+## Purpose
+This exception covers the entire data lifecycle inside `SimpleObject`. It is raised when the metadata is perfectly valid, but the specific data (values) provided do not comply with the defined rules.
 
-## Logika
-Dědí z `SimpleError`. Používá se v mixinech `base_logic` pro:
-- Selhání typové kontroly (ValidateType).
-- Selhání uživatelské validace (Validate).
-- Chyby při normalizaci (Normalize).
-- Problémy při dekompozici nebo skládání hodnoty (Create/Update/Decompose).
+## Logic
+Inherits from `SimpleError`. It is used within `base_logic` mixins for:
+- Type check failures (ValidateType).
+- User validation failures (Validate).
+- Normalization errors (Normalize).
+- Issues during value decomposition or composition (Create/Update/Decompose).
 
-## Poznámky
-Oddělením od `SimpleMetadataError` dáváme uživateli jasný nástroj, jak 
-rozlišit mezi špatně napsaným kódem (třídou) a špatně zadanými daty (instancí).
+## Notes
+By separating this from `SimpleMetadataError`, we provide the user with a clear tool to distinguish between a poorly written class definition (code issue) and incorrectly provided data (runtime instance issue).
 """

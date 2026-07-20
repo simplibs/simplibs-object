@@ -11,44 +11,42 @@ def raise_method_raised_exceptions(
     intercepted_exception: Exception,
     bound_method: "ClassMethodProtocol",
 ) -> None:
-    """
-    Vytváří výjimku, když zkušební výpočet metody vyvolal výjimku.
+    """Raises a packaged metadata exception when a dry-run execution of a method fails with an error.
 
-    ═════════════════════════════════════════════════════════════════
-    ⚠️ METHOD LOGIC ERROR: Zkušební výpočet vyvolal výjimku
-    ═════════════════════════════════════════════════════════════════
-    Expected:  Úspěšné dokončení výpočtu bez vyvolání výjimky..
-    Problem:   Během zkušebního výpočtu nastala chyba.
-    Context:   Kontrola a validace metadat pro: {class_name}.{method_name}
-    File info: File: ... | Line: ... | Function: ...
-    File path: ...
-    ─────────────────────────────────────────────────────────────────
-    🔧 How to fix:
-         • Zkontrolujte vnitřní logiku metody '{method_name}'.
-         • Prověřte, zda metoda korektně zpracovává své defaultní hodnoty.
-         • Detailní příčina selhání je uvedena níže v 'Intercepted exception'.
-    ═════════════════════════════════════════════════════════════════
-    Intercepted exception ({ExceptionType}):
-        {ErrorMessage}
+    Raises:
+        SimpleMetadataError: Always, packaging the caught exception as the underlying cause.
     """
 
-    # 0. Podmínka výjimky
+    # 0. Exception condition boundary
     # if intercepted_exception:
 
-    # 1. Výpočet proměnných
+    # 1. Compute dynamic diagnostic variables
     class_name, method_name, context = exception_context_for_classmethod(bound_method)
 
-    # 2. Vyvolání výjimky
+    # 2. Raise domain exception with full packed diagnostic payload
     raise SimpleMetadataError(
         error_name="METHOD LOGIC ERROR",
-        label="Výjimka při zkušebním výpočtu",
-        expected="Úspěšné dokončení výpočtu bez vyvolání výjimky.",
-        problem="Během zkušebního výpočtu nastala chyba.",
+        label="Exception during dry-run execution",
+        expected="Successful completion of the calculation without raising any exceptions.",
+        problem="An unexpected error occurred during the trial calculation run.",
         context=context,
         how_to_fix=(
-            f"Zkontrolujte vnitřní logiku metody '{method_name}'.",
-            "Prověřte, zda metoda korektně zpracovává své defaultní hodnoty.",
-            "Detailní příčina selhání je uvedena níže v 'Intercepted exception."
+            f"Check the internal implementation logic of the '{method_name}' method.",
+            "Verify whether the method correctly processes its fallback default parameter values.",
+            "The precise root cause of the failure is detailed below under 'Intercepted exception'."
         ),
         exception=intercepted_exception
     )
+
+
+_DESIGN_NOTES = """
+# raise_method_raised_exceptions
+
+## Purpose
+Acts as a dedicated panic handler that captures raw runtime crashes thrown during metadata dry-runs. It repackages unhandled operational errors into structured domain exceptions, ensuring that custom internal bugs do not break structural composition pipelines silently.
+
+## Diagnostic Layout & Formatting
+1. **Trace Interception**: Preserves the structural cause by nesting the raw `intercepted_exception` instance directly inside the `SimpleMetadataError` payload structure.
+2. **Dynamic Reflection**: Reuses standard dynamic identifier fields extracted by `exception_context_for_classmethod` to dynamically isolate the exact class and classmethod origin locations.
+3. **No-Bypass Execution**: As a pure error-path sink, this function bypasses conditional checking and completely offloads execution formatting and exception allocation costs from the main operational runtime flow.
+"""

@@ -1,9 +1,9 @@
 from typing import TYPE_CHECKING
 # Outers
-from .......exceptions import SimpleObjectMixinError
+from ........exceptions import SimpleMixinError
 # Annotations
 if TYPE_CHECKING:
-    from .......protocols.classes import SimpleClassLike
+    from ........protocols.classes import SimpleClassLike
 
 def validate_mixin_is_class(
     cls: "SimpleClassLike",
@@ -18,7 +18,7 @@ def validate_mixin_is_class(
 
     if not isinstance(mixin, type):
 
-        raise SimpleObjectMixinError(
+        raise SimpleMixinError(
             error_name="INVALID MIXIN",
             label="Mixin must be a class",
             expected="Třídu odvozenou od SimpleMixin.",

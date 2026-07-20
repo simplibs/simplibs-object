@@ -1,7 +1,7 @@
 from typing import Any, TYPE_CHECKING
 # Outers
 from ........exceptions import SimpleMetadataError
-from .._exceptions_helpers import exception_info_for_type
+from .._exception_info_for_type import _exception_info_for_type
 # Annotations
 if TYPE_CHECKING:
     from ........protocols.classes import SimpleClassLike
@@ -12,60 +12,53 @@ def validate_type_from_tuple_is_not_none(
     type_tuple: tuple[Any, ...],
     owner_class: "SimpleClassLike"
 ) -> None:
-    """
-    Validuje, že atribut _type neobsahuje hodnotu None.
+    """Validates that a type definition within a tuple structure does not contain a literal 'None' value."""
 
-    ═════════════════════════════════════════════════════════════════
-    ⚠️ INVALID TYPE DEFINITION: Value 'None' detected
-    ═════════════════════════════════════════════════════════════════
-    Expected:  Typ reprezentující výstupní objekt třídy.
-    Got:       repr(value) (type)
-    Problem:   Třídní atribut '_type' obsahuje hodnotu 'None'.
-    Context:   Kontrola a validace metadat pro: {class_name}.{attribute_name}
-    File info: File: ... | Line: ... | Function: ...
-    File path: ...
-    ─────────────────────────────────────────────────────────────────
-    🔧 How to fix:
-         • Změňte atribut '_type' tak aby neobsahoval hodnotu 'None'.
-         • Třídní typ musí odpovídat hodnotě kterou třída reprezentuje.
-         • Atribut '_type' je anotací pro hodnotu kterou reprezentuje třídní default.
-         • Hodnota kterou třída reprezentuje, nesmí být 'None'.
-         • To znamená, že typ, který reprezentuje tuto třídní hodnotu nesmí být 'None'.
-         • Acceptable definitions:
-         • class {class_name}(class_parrent):
-         •     _type: type = samostatně definované typy jako je 'str', 'int', atd.
-         •     _type: UnionType = union type definice pro více povolených typů.
-         •     _type: tuple[type, ...] = tuple obsahujích více povolených typů (bude převedeno na UnionType).
-         •     ...
-    ═════════════════════════════════════════════════════════════════
-    """
-
-    # 1. Podmínka výjimky
+    # 1. Exception condition
     if inner_type is None:
 
-        # 2. Vypočet proměných
+        # 2. Variable resolution
         (class_name,
-         class_parrent,
+         class_parent,
          error_name,
          context,
          acceptable_definitions
-         ) = exception_info_for_type(owner_class)
+         ) = _exception_info_for_type(owner_class)
 
-
-        # 3. Vyovlání výjimky
+        # 3. Exception invocation
         raise SimpleMetadataError(
             error_name=error_name,
-            label="Value 'None' detected",
+            label="Literal 'None' detected in type tuple",
             value=type_tuple,
-            expected="Typ reprezentující výstupní objekt třídy.",
-            problem="Třídní atribut '_type' obsahuje hodnotu 'None'.",
+            expected="A valid type or class reference representing the output object.",
+            problem=f"The class attribute '_type' contains a literal 'None' value within its tuple definition.",
             context=context,
             how_to_fix=(
-                "Změňte atribut '_type' tak aby neobsahoval hodnotu 'None'.",
-                "Třídní typ musí odpovídat hodnotě kterou třída reprezentuje.",
-                "Atribut '_type' je anotací pro hodnotu kterou reprezentuje třídní default.",
-                "Hodnota kterou třída reprezentuje, nesmí být 'None'.",
-                "To znamená, že typ, který reprezentuje tuto třídní hodnotu nesmí být 'None'.",
+                "Modify the '_type' attribute so that it does not contain the literal value 'None'.",
+                "The defined types must reflect the actual concrete instances the class represents.",
+                "If you intended to allow absence of value, use 'NoneType' from the 'types' module instead of 'None'.",
+                "However, note that in this architecture, representing 'None' as a core value type is generally disallowed.",
             ) + acceptable_definitions,
             exception=TypeError
         )
+
+
+_DESIGN_NOTES = """
+# validate_type_from_tuple_is_not_none
+
+## Purpose
+Prevents a common developer misconception where `None` is used as a placeholder for 
+`NoneType` inside an attribute type tuple (e.g., writing `_type = (int, None)`).
+
+## Mechanism & Pipeline Placement
+During the execution of `process_type`, if `_type` is provided as a standard Python 
+`tuple`, the orchestrator iterates over its internal components. This guard intercepts 
+the iteration to ensure no literal `None` elements sneak into the collection before 
+it gets flattened and converted into a modern `UnionType`.
+
+## Architectural Rules
+In the SimpleObject domain, metadata parameters must represent actual types compatible 
+with Python's native `isinstance()` checks. Because `isinstance(val, None)` throws a 
+native `TypeError`, this validator provides a highly descriptive domain exception 
+before Python's runtime fails cryptically.
+"""

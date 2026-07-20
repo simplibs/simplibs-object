@@ -20,7 +20,7 @@ def raise_mixin_composite_only_flag_is_not_bool(
     # 2. Musí být typu bool
     if not isinstance(composite_only, bool):
 
-        raise SimpleObjectMixinError(
+        raise SimpleMixinError(
             error_name="MIXIN DEFINITION ERROR",
             label="Invalid _composite_only flag",
             expected="Hodnota _composite_only musí být typu bool (True/False).",

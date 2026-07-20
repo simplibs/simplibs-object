@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 # Outers
 from ........exceptions import SimpleMetadataError
-from .._exceptions_helpers import exception_info_for_inners
+from .._exception_info_for_inners import _exception_info_for_inners
 # Annotations
 if TYPE_CHECKING:
     from ........protocols.classes import SimpleClassLike
@@ -11,86 +11,59 @@ def validate_inner_is_not_simple_class(
     inner: "SimpleClassLike",
     owner_class: "SimpleClassLike"
 ) -> None:
-    """
-    Validuje, že vnitřní prvek není přímo základní třída SimpleObject nebo SimpleConstant.
+    """Validates that the inner element is not the raw base class SimpleObject or SimpleConstant itself."""
 
-    Tato kontrola brání logické chybě, kdy by byla do kompozice vložena
-    abstraktní základní třída namísto konkrétního potomka s definovanými daty.
+    # Internal imports to avoid circular dependency states
+    from ........SimpleConstant import SimpleConstant
+    from ........SimpleObject import SimpleObject
 
-    ═════════════════════════════════════════════════════════════════
-    ⚠️ INVALID INNERS DEFINITION: Prvek z _inners je abstraktní základ
-    ═════════════════════════════════════════════════════════════════
-    Expected:  Konkrétní potomek třídy SimpleObject nebo SimpleConstant.
-    Got:       repr(inner) (type)
-    Problem:   V definici '_inners' třídy '{class_name}' je přímo třída '{inner.__name__}'..
-    Context:   Kontrola a validace metadat pro: {class_name}.{attribute_name}
-    File info: File: ... | Line: ... | Function: ...
-    File path: ...
-    ─────────────────────────────────────────────────────────────────
-    🔧 How to fix:
-         • Vnitřní prvky atributu _inners mohou být pouze potomci třídy SimpleObject a SimpleConstant.
-         • Vnitřním prvkem ale nemůže být přímo třída SimpleObject nebo SimpleConstant.
-         • Základní třídy (SimpleObject, SimpleConstant) slouží pouze jako vzory pro dědění.
-         • Nahraďte tento prvek jeho konkrétním potomkem, který reprezentuje reálná data.
-         • Acceptable definitions:
-         • class {class_name}(class_parrent):
-         •     _inners: tuple = (PrvekA, PrvekB)
-         •     ...
-    ═════════════════════════════════════════════════════════════════
-    """
-
-    # Vnitřní import předcházející cilkulární chybě
-    from .......SimpleConstant import SimpleConstant
-    from .......SimpleObject import SimpleObject
-
-    # 1. Podmínka výjimky
+    # 1. Exception condition
     if inner is SimpleConstant or inner is SimpleObject:
 
-        # 2. Vypočet proměných
+        # 2. Variable resolution
         (class_name,
          error_name,
          context,
          acceptable_definitions
-         ) = exception_info_for_inners(owner_class)
+         ) = _exception_info_for_inners(owner_class)
 
-        # 3. Vyovlání výjimky
+        # 3. Exception invocation
         raise SimpleMetadataError(
             error_name=error_name,
-            label="Prvek z _inners je abstraktní základ",
-            expected="Konkrétní potomek třídy SimpleObject nebo SimpleConstant.",
+            label="Base framework class detected inside _inners",
+            expected="A concrete user-defined subclass of SimpleObject or SimpleConstant.",
             value=inner,
-            problem=f"V definici '_inners' třídy '{class_name}' je přímo třída '{inner.__name__}'.",
+            problem=f"The '_inners' definition of class '{class_name}' directly contains the base class '{inner.__name__}'.",
             context=context,
             how_to_fix=(
-                "Vnitřní prvky atributu _inners mohou být pouze potomci třídy SimpleObject a SimpleConstant.",
-                "Vnitřním prvkem ale nemůže být přímo třída SimpleObject nebo SimpleConstant.",
-                "Základní třídy (SimpleObject, SimpleConstant) slouží pouze jako vzory pro dědění.",
-                "Nahraďte tento prvek jeho konkrétním potomkem, který reprezentuje reálná data.",
+                "Elements within the '_inners' collection must be concrete subclasses, not the base classes themselves.",
+                "The core base classes (SimpleObject, SimpleConstant) serve strictly as blueprints for inheritance.",
+                "Replace this structural reference with a specific subclass that represents actual system data.",
             ) + acceptable_definitions,
             exception=TypeError
         )
 
 
 _DESIGN_NOTES = """
-# validate_inner_is_not_simple_object_class
+# validate_inner_is_not_simple_class
 
-## Účel
-Tato validace funguje jako doplňkový filtr k `validate_inner_is_simple_object_subclass`. 
-Zatímco předchozí krok ověřil příslušnost k "rodině", tento krok hlídá, aby 
-v rodokmenu nefiguroval přímo "Praotec" (základní třída).
+## Purpose
+Acts as a logical filter working alongside the subclass verification layer. While 
+checking the inheritance hierarchy ensures structural compatibility, this validation 
+guarantees that the abstract architectural roots are never utilized directly as functional 
+data elements.
 
-## Proč je tato kontrola separovaná?
-1. **Sémantický rozdíl**: Být "podtřídou" je technický požadavek na kompatibilitu. 
-   Nebýt "přímo tou třídou" je logický požadavek na smysluplnost dat.
-2. **Čistota signatur**: Pokud by do pipeline prošel přímo `SimpleObject`, 
-   následné procesory (např. `create_names`) by generovaly nesmyslné názvy 
-   jako `simple_object` v argumentech metody `_logic`, což by vedlo k 
-   nepřehlednému a nefunkčnímu kódu.
+## Architectural Separation
+1. **Semantic Distinction**: Being part of a subclass tree is a technical requirement 
+   for runtime operation. Avoiding the exact base instance references is a functional 
+   rule for meaningful domain modeling.
+2. **Signature Cleanliness**: If raw base classes slipped into the compilation pipeline, 
+   subsequent dynamic processors would generate non-descriptive parameter mappings 
+   (e.g., matching a generic `simple_object` name inside the dynamic `_logic` method), 
+   corrupting the static signature analysis.
 
-## Technické provedení
-Používáme operátor `is`, který v Pythonu porovnává identitu objektů v paměti. 
-Je to nejrychlejší a nejpřesnější způsob, jak ověřit, zda dvě reference 
-ukazují na naprosto stejnou třídu. Reference na `simple_object_base` je 
-opět předávána z řídící metody, aby byla zachována konzistence v rámci 
-celého validačního cyklu.
+## Execution Mechanics
+Employs the Python `is` identity operator to evaluate memory addresses directly. This 
+represents the most performant and deterministic mechanism to verify exact type references 
+without risking inheritance resolution side-effects.
 """

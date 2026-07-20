@@ -1,4 +1,4 @@
-from ......exceptions import SimpleObjectInstanceError
+from ........exceptions import SimpleInstanceError
 
 
 def validate_param_is_bool(
@@ -13,7 +13,7 @@ def validate_param_is_bool(
 
     if not isinstance(as_atom, bool):
 
-        raise SimpleObjectInstanceError(
+        raise SimpleInstanceError(
             error_name="INVALID PARAMETER",
             label="Parameter 'as_atom' must be bool",
             expected="Hodnota typu bool (True nebo False).",

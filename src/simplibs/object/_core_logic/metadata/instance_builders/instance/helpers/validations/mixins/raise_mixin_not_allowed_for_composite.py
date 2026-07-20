@@ -1,10 +1,10 @@
 from typing import TYPE_CHECKING
 # Outers
-from .......exceptions import SimpleMixinError
+from ........exceptions import SimpleMixinError
 # Annotations
 if TYPE_CHECKING:
-    from .......protocols.classes import SimpleClassLike
-    from .......protocols.mixins.base_class import SimpleMixinProtocol
+    from ........protocols.classes import SimpleClassLike
+    from ........protocols.mixins.base_class import SimpleMixinProtocol
 
 
 def raise_mixin_not_allowed_for_composite(

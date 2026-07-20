@@ -1,9 +1,9 @@
 from typing import Any, TYPE_CHECKING
 # Outers
-from .......exceptions import SimpleObjectInstanceError
+from ........exceptions import SimpleInstanceError
 # Annotations
 if TYPE_CHECKING:
-    from .......protocols.classes import SimpleClassLike
+    from ........protocols.classes import SimpleClassLike
 
 
 def validate_class_is_not_base_class(
@@ -18,7 +18,7 @@ def validate_class_is_not_base_class(
 
     if cls.__name__ in BASE_CLASS_NAMES:
 
-        raise SimpleObjectInstanceError(
+        raise SimpleInstanceError(
             error_name="INVALID CLASS",
             label="Base class used instead of declarative class",
             expected="Deklarativní třídu odvozenou od SimpleBase, nikoli základní třídu.",

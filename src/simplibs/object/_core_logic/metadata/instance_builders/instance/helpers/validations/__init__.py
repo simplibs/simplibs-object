@@ -1,3 +1,4 @@
-from .mixins import validate_mixin_is_simple_base_subclass, validate_mixin_is_compatible, validate_mixin_is_class
-from .parameters import validate_param_is_bool, validate_class_is_not_base_class
-from .slots import raise_mixin_slots_conflict_error
+from .validate_mixins import validate_mixins
+from .validate_hashing_for_immutable_value import validate_hashing_for_immutable_value
+from .validate_class_and_parameters import validate_class_and_parameters
+from .raise_mixin_slots_conflict_error import raise_mixin_slots_conflict_error

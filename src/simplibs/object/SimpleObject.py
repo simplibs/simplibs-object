@@ -3,7 +3,7 @@ from simplibs.sentinels import UNSET
 # Inners
 from .SimpleConstant import SimpleConstant
 from .protocols.methods import LogicSignature, P, R
-from ._core_logic.base_utils.object_methods import calculate_value, decompose_value
+from ._core_logic.object_methods import calculate_value, decompose_value
 # Annotations
 if TYPE_CHECKING:
     from .protocols.classes import SimpleObjectProtocol

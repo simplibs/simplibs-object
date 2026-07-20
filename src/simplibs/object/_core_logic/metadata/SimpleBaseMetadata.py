@@ -2,7 +2,7 @@ from typing import Set, Any, TYPE_CHECKING
 from simplibs.sentinels import UNSET
 # Inners
 from .init_processors.names import create_names
-from .init_processors.others import calculate_blueprint_path
+from .init_processors.path import calculate_blueprint_path
 from .validations import raise_metadata_is_immutable
 # Annotations
 if TYPE_CHECKING:
@@ -12,85 +12,111 @@ if TYPE_CHECKING:
 
 class SimpleBaseMetadata:
     """
-    Základní orchestrátor metadat systému Simple.
-    Zajišťuje extrakci jmen a správu jmenného prostoru objektu.
+    Core metadata orchestrator for the Simple system.
+    Handles class name token extraction and object namespace management.
     """
 
-    #--- Definice __slots__ pro lepší výkon ---#
-    # (každý potomek musí slots definovat jinak příjde o tuto výhodu)
+    #--- __slots__ definition for optimized runtime performance ---#
+    # (Every subclass must define slots explicitly to maintain this optimization)
     __slots__ = (
-        # 1. Reference na třídu vlastníka
+        # 1. Reference to the owner class blueprint
         "owner_class",
 
-        # 2. Názvová identita (vypočtená z názvu třídy)
-        "class_name",       # Např. "MojeData"
-        "name_tuple",       # Např. ("Moje", "Data")
-        "name_snake",       # Např. "moje_data"
-        "name_private",     # Např. "_moje_data"
+        # 2. String identity markers (derived from the class name)
+        "class_name",       # e.g., "MyData"
+        "name_tuple",       # e.g., ("My", "Data")
+        "name_snake",       # e.g., "my_data"
+        "name_private",     # e.g., "_my_data"
 
-        # 3. Správa jmenného prostoru
-        "node_names_set",       # Set použitých jmen pro detekci kolizí
+        # 3. Namespace lifecycle management
+        "node_names_set",       # Set of occupied names to detect naming collisions
 
-        # 4. Pomocný předvýpočet pro __repr__
+        # 4. Precalculated path helper utilized by __repr__
         "blueprint_path"
     )
 
-    #--- Definice __init__ pro linicializaci hodnot ze slotů ---#
-    # (přidává metodu skrze kterou se budou iniicalizovat potomci)
+    #--- __init__ definition for initializing slot properties ---#
+    # (Subclasses do not define their own __init__; they inherit this orchestrator flow)
     def __init__(
         self: "SimpleBaseMetadataProtocol",
         owner_class: "SimpleClassLike"
     ) -> None:
         """
-        Inicializuje základní metadata.
-        Pokud je bypass=True, vytvoří pouze prázdnou schránku pro systémové báze.
+        Initializes core blueprint metadata attributes.
         """
-        # 1. Přiřazení třídy
+        # 1. Assign owner class reference
         self.owner_class = owner_class
 
-        # 2. Výpočet jmenné identity
+        # 2. Derive string identity tokens
         self.class_name = owner_class.__name__
         (self.name_tuple,
          self.name_snake,
          self.name_private) = create_names(owner_class)
 
-        # 3. Registrace jména do setu použitých jmen (základ pro budoucí validace inners)
+        # 3. Register the snake_case name to initialize the collision detection set
         self.node_names_set: Set[str] = {self.name_snake}
 
-        # 4. Příprava parametru pro vytváření repr
+        # 4. Precalculate the blueprint path representation
         self.blueprint_path = calculate_blueprint_path(owner_class)
 
-        # 5. Spuštění metod pro integraci logiky potomků
+        # 5. Execute downstream hooks for subclass-specific metadata processing
         self._process_user_data()
 
-    #--- Definice metody pro inicializaci potomků ---#
-    # (potomci nemají vlastní init a používají tuto metodu)
+    #--- Subclass initialization hook ---#
+    # (Invoked at the end of base initialization to be overridden by subclasses)
     def _process_user_data(
         self: "SimpleBaseMetadataProtocol"
     ) -> None:
         """
-        Hook pro procesy specifické pro daný typ metadata.
+        Hook method for type-specific metadata processing execution.
 
-        Výchozí implementace: žádný obsah.
-        Určeno pro přepsání v podtřídách.
+        Default implementation: No operation.
+        Designed to be overridden by specialized metadata subclasses.
         """
         pass
 
-    #--- Metoda pro zápis atributů metadatové třídy ---#
-    # (zamezuje přepisu již zadaných dat)
+    #--- Custom attribute assignment interceptor ---#
+    # (Enforces the immutability of initialized metadata attributes)
     def __setattr__(
         self: "SimpleBaseMetadataProtocol",
         attr_name: str,
         new_value: Any
     ) -> None:
-        """Povolí zápis pouze pokud je pole UNSET nebo patří do cache."""
+        """Permits assignment only if the target slot holds UNSET."""
 
-        # 1. Získání aktuální hodnoty
+        # 1. Fetch the current state of the attribute
         current_value = getattr(self, attr_name, UNSET)
 
-        # 2. Kontrola zda přepisujeme jen nedefinovaný prvek
+        # 2. Raise an error if attempting to overwrite an already assigned slot
         if current_value is not UNSET:
             raise_metadata_is_immutable(attr_name, current_value, new_value, self.owner_class)
 
-        # 3. Provedení zápisu
+        # 3. Commit the write operations if valid
         super().__setattr__(attr_name, new_value)
+
+
+_DESIGN_NOTES = """
+# SimpleBaseMetadata
+
+## Purpose
+Acts as the abstract structural foundation and orchestrator for all metadata processing pipelines within the Simple ecosystem. It intercepts class creation, extracts naming identity tokens, initializes namespace registries, and guarantees absolute immutability of structural metadata once compiled.
+
+## The Write-Once Paradigm (`__setattr__`)
+To secure system stability, metadata attributes strictly follow a **Write-Once** lifecycle pattern:
+- Slots are initialized either dynamically or set to `UNSET` by default.
+- `__setattr__` intercepts every assignment request. If an attribute contains a value other than `UNSET`, it is considered locked.
+- Any subsequent attempt to re-assign or mutate that attribute triggers `raise_metadata_is_immutable`.
+- This ensures that once a class blueprint structural layout is determined at boot time, it cannot be corrupted at runtime.
+
+## Namespace Management & Collision Shielding
+The `node_names_set` property serves as the foundational tracking registry for all identifiers associated with a class entity.
+- During this base initialization step, the class's own `name_snake` token is registered.
+- In downstream subclasses (e.g., composite objects), this set expands as inner attributes are processed.
+- This structural layout allows the framework to execute ultra-fast lookup checks to detect and prevent naming collisions between structural properties, methods, and system-generated tokens.
+
+## Inherited Initialization Architecture
+Subclasses of `SimpleBaseMetadata` **must not** implement their own `__init__` methods. 
+- The entire structural pipeline is centrally controlled by `SimpleBaseMetadata.__init__`.
+- Custom initialization logic for specialized metadata flavors (Constants vs. Composite Objects) must be isolated inside the `_process_user_data()` hook.
+- This guarantees that core identity fields (`name_snake`, `blueprint_path`, etc.) are always consistently populated before any subclass-specific evaluations take place.
+"""

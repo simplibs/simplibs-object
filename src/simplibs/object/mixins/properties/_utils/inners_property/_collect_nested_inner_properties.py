@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 # Inners
-from ....._core_logic.base_utils.properties import create_properties_for_inner
+from ....._core_logic.properties import create_properties_for_inner
 # Annotations
 if TYPE_CHECKING:
     from .....protocols.metadata import SimpleMetadataLike

@@ -14,53 +14,48 @@ def validate_decompose_unvalide_item_value(
     inners: tuple["SimpleClassLike", ...],
     bound_method: "ClassMethodProtocol",
 ) -> None:
-    """
-    Vytváří výjimku, když metoda _decompose vrátila prvek,
-    který sice odpovídá typu, ale neodpovídá defaultní hodnotě inneru.
+    """Validates that an item returned by the _decompose method matches its configured default blueprint value.
 
-    ═════════════════════════════════════════════════════════════════
-    ⚠️ METHOD LOGIC ERROR: Neplatná hodnota prvku z návratové hodnoty
-    ═════════════════════════════════════════════════════════════════
-    Expected:  Hodnota '{inner.meta.default!r}' (podle definice v '{inner.meta.owner_class.__name__}').
-    Got:       {repr(value)} ({type(value).__name__})
-    Problem:   Prvek '{inner.meta.name_snake}' neodpovídá defaultní hodnotě definované v '_inners'.
-    Context:   Kontrola a validace metadat pro: {class_name}.{method_name}
-    File info: File: ... | Line: ... | Function: ...
-    File path: ...
-    ─────────────────────────────────────────────────────────────────
-    🔧 How to fix:
-         • Upravte výpočet v metodě '_decompose' tak, aby vracel defaultní hodnotu.
-         • Očekávaná hodnota je '{inner.meta.default!r}'.
-         • Ujistěte se, že pořadí prvků v returnu odpovídá pořadí v '_inners'.
-         • Očekávané pořadí prvků: '{', '.join(inner_names_tuple)}'.
-         • Příklad dle defualtních hodnot z inners:
-         •     return ({', '.join(inner_values_tuple)})
-    ═════════════════════════════════════════════════════════════════
+    Raises:
+        SimpleMetadataError: If the decomposed value does not equal the expected default value.
     """
 
-    # 1. Podmínka výjimky
+    # 1. Structural evaluation checkpoint
     if value != inner.meta.default:
 
-        # 2. Výpočet proměnných
+        # 2. Extract shared diagnostic elements and compute default value maps
         class_name, method_name, context = exception_context_for_classmethod(bound_method)
         meta = inner.meta
         inner_values = tuple(inner.meta.default for inner in inners)
 
-        # 3. Vyvolání výjimky
+        # 3. Raise domain exception with full packed diagnostic payload
         raise SimpleMetadataError(
             error_name="METHOD LOGIC ERROR",
-            label="Neplatná hodnota prvku z návratové hodnoty",
-            expected=f"Hodnota '{meta.default!r}' (podle definice v '{meta.class_name}').",
+            label="Invalid item value in return value",
+            expected=f"Value '{meta.default!r}' (as defined in '{meta.class_name}').",
             value=value,
-            problem=f"Prvek '{meta.name_snake}' neodpovídá defaultní hodnotě definované v '_inners'.",
+            problem=f"Item '{meta.name_snake}' does not match the default value defined in '_inners'.",
             context=context,
             how_to_fix=(
-                f"Zkontrolujte výpočet prvku '{meta.name_snake}' v metodě '_decompose'.",
-                f"Očekávaná hodnota je '{meta.default!r}', ale obdrželi jsme '{value!r}'.",
-                "Ujistěte se, že pořadí prvků v returnu odpovídá pořadí v '_inners'.",
-                f"Očekávané pořadí prvků: '{', '.join(meta.inners_params_name)}'.",
-                "Příklad dle defualtních hodnot z inners:",
+                f"Check the value computation or mapping of item '{meta.name_snake}' inside the '_decompose' method.",
+                f"Expected value is '{meta.default!r}', but received '{value!r}'.",
+                "Ensure that the structural order of the returned elements strictly matches the '_inners' definition sequence.",
+                f"Expected item order: '{', '.join(meta.inners_params_name)}'.",
+                "Example based on default values from inners:",
                 f"    return ({', '.join(map(repr, inner_values))})"
             ),
             exception=ValueError
         )
+
+
+_DESIGN_NOTES = """
+# validate_decompose_unvalide_item_value
+
+## Purpose
+Enforces strict value invariance assertions on structural data fields unbundled during the `_decompose` workflow. This ensures that calculated defaults or structure templates exactly match their configured default layouts before initialization pipelines lock the state.
+
+## Diagnostic Layout & Formatting
+1. **Dynamic Blueprint Mapping**: Resolves dynamic field descriptors (`name_snake`, `class_name`, `default`, `inners_params_name`) using the internal `inner.meta` schema layer to construct direct contextual hints.
+2. **Representation Layer Safety**: Uses `map(repr, inner_values)` and explicit structural representation literal strings (`!r`) to ensure accurate token strings are printed for raw types (e.g. distinguishing strings from integers).
+3. **Happy Path Performance**: Bypasses string building and exception mapping allocations entirely by using a standard native inequality block check (`!=`). If the dynamic value matches the preset blueprint value, execution exits instantly.
+"""

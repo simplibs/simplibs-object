@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING, Any
 # Outers
 from ........exceptions import SimpleMetadataError
-from .._exceptions_helpers import exception_info_for_inners
+from .._exception_info_for_inners import _exception_info_for_inners
 # Annotations
 if TYPE_CHECKING:
     from ........protocols.classes import SimpleClassLike
@@ -11,75 +11,52 @@ def validate_inners_is_not_empty(
     inners: Any,
     owner_class: "SimpleClassLike"
 ) -> None:
-    """
-    Validuje, že '_inners' není prázdným objektem.
+    """Validates that the '_inners' collection is not an empty tuple."""
 
-    Tato kontrola předchází chybám při iteraci a zajišťuje neměnnost 
-    definice struktury kompozitního objektu.
-
-    ═════════════════════════════════════════════════════════════════
-    ⚠️ INVALID INNERS DEFINITION: Atribut is empty tuple
-    ═════════════════════════════════════════════════════════════════
-    Expected:  "N-tice (tuple) obsahující potomky tříd SimpleConstant a SimpleObject."
-    Got:       repr(value) (type)
-    Problem:   Atribut '_inners' nesmí být prázdný.
-    Context:   Kontrola a validace metadat pro: {class_name}.{attribute_name}
-    File info: File: ... | Line: ... | Function: ...
-    File path: ...
-    ─────────────────────────────────────────────────────────────────
-    🔧 How to fix:
-         • Zajistěte aby byla definice '_inners' správně definovaná.
-         • Atribut '_inners' musí být definován jako tuple a nesmí být prázdný.
-         • Acceptable definitions:
-         • class {class_name}(class_parrent):
-         •     _inners: tuple = (PrvekA, PrvekB)
-         •     ...
-    ═════════════════════════════════════════════════════════════════
-    """
-
-    # 1. Podmínka výjimky
+    # 1. Exception condition
     if isinstance(inners, tuple) and not inners:
 
-        # 2. Vypočet proměných
+        # 2. Variable resolution
         (class_name,
          error_name,
          context,
          acceptable_definitions
-         ) = exception_info_for_inners(owner_class)
+         ) = _exception_info_for_inners(owner_class)
 
-        # 3. Vyovlání výjimky
+        # 3. Exception invocation
         raise SimpleMetadataError(
             error_name=error_name,
-            label=f"{owner_class.__name__}._inners",
-            expected="N-tice (tuple) obsahující potomky tříd SimpleConstant a SimpleObject.",
+            label="The '_inners' attribute is an empty tuple",
+            expected="A non-empty tuple containing subclasses of SimpleConstant or SimpleObject.",
             value=inners,
-            problem=f"Atribut '_inners' odkazuje na prázdný objekt.",
+            problem=f"The '_inners' attribute on class '{class_name}' points to an empty tuple container.",
             context=context,
             how_to_fix=(
-                "Zajistěte aby byla definice '_inners' správně definovaná.",
-                "Atribut '_inners' musí být definován jako tuple a nesmí být prázdný."
+                "Ensure that the '_inners' attribute is correctly declared with at least one element.",
+                "The '_inners' collection cannot be empty; if this class has no inner components, remove the '_inners' attribute completely so it behaves as a constant.",
             ) + acceptable_definitions,
-            exception=TypeError
+            exception=ValueError
         )
 
 
 _DESIGN_NOTES = """
-# validate_inners_is_tuple
+# validate_inners_is_not_empty
 
-## Účel
-Tato validace je první kontrolou v procesu kompozice. Vynucuje použití datového 
-typu `tuple` pro definici vnitřních prvků `_inners`.
+## Purpose
+Ensures structural clarity and enforces the architectural boundary between constants 
+and compositions. An empty `_inners` tuple represents an invalid semantic state within 
+the framework.
 
-## Proč právě Tuple?
-1. **Imutabilita**: Definice třídy by měla být konstantní. Tuple dává jasně 
-   najevo, že se seznam prvků nebude za běhu měnit.
-2. **Konzistence**: Na rozdíl od setu (množiny) zachovává tuple pořadí prvků, 
-   což je kritické pro pořadí parametrů v automaticky generované signatuře `_logic`.
-3. **Konvence**: V Pythonu je zvykem používat tuple pro typové anotace a 
-   strukturální definice (např. `isinstance` také přijímá tuple).
+## Why Emptiness is Forbidden
+1. **Architectural Dichotomy**: The presence of `_inners` classifies a class as a 
+   composition (`SimpleObject`). If there are no inner items, the class should not 
+   declare `_inners` at all, allowing it to naturally fall back to a constant state (`SimpleConstant`).
+2. **Signature Integrity**: Downstream template processors map inner items to dynamic 
+   positional arguments inside generated methods. An empty collection would result in a 
+   redundant, empty signature layout, polluting the reflection API layer.
 
-## Častá chyba (Edge Case)
-Uživatelé často zapomínají, že jednoprvkový tuple vyžaduje čárku `(Prvek,)`. 
-Bez ní Python závorky interpretuje jen jako prioritu operací a vrátí samotný 
-objekt uvnitř. Tato validace tuto chybu okamžitě zachytí.
+## Error Strategy
+Triggers a `ValueError` wrapper rather than a generic type check. This signals to the 
+developer that while the container wrapper type itself is valid (`tuple`), its current content 
+state makes it impossible to continue class compilation.
 """

@@ -1,46 +1,24 @@
 # Outers
-from .....exceptions import SimpleMetadataError
+from ......exceptions import SimpleMetadataError
 
 
 def validate_class_name_is_ascii(
     class_name: str
 ) -> None:
-    """
-    Validuje, že jméno třídy obsahuje pouze ASCII znaky (bez diakritiky).
-    
-    Určeno pro validaci názvů tříd získaných z již vytvořeného objektu (ClassName.__name__).
-    Pracuje s předpokladem, že třída již prošla Python definicí a základními kontrolami.
-
-    ═════════════════════════════════════════════════════════════════
-    ⚠️ CLASS NAME NOT ASCII: Non-standard characters detected
-    ═════════════════════════════════════════════════════════════════
-    Expected:  Pouze základní ASCII znaky (A-Z, a-z, 0-9, _)
-    Got:       {repr(value)} (str)
-    Problem:   Název třídy obsahuje nepovolené znaky (diakritiku nebo symboly).
-    Context:   Kontrola metadat potomka SimpleObject třídy.
-    File info: File: ... | Line: ... | Function: ...
-    File path: ...
-    ─────────────────────────────────────────────────────────────────
-    🔧 How to fix:
-         • Třída má neplatný název — nejspíše byla vytvořena dynamicky se špatným vstupem.
-         • Odstraňte z názvu háčky a čárky (např. 'Měna' -> 'Mena').
-         • Kontaktujte správce systému.
-    ═════════════════════════════════════════════════════════════════
-    """
-
+    """Validates that the class name contains only standard ASCII characters, prohibiting diacritics."""
     if not class_name.isascii():
         raise SimpleMetadataError(
             error_name="CLASS NAME NOT ASCII",
-            label="class_name",
+            label="Non-standard characters detected",
             value=class_name,
-            problem="Název třídy obsahuje nepovolené znaky (diakritiku nebo symboly).",
-            expected="Pouze základní ASCII znaky (A-Z, a-z, 0-9, _)",
+            problem="The class name contains disallowed characters (localized diacritics or non-ASCII symbols).",
+            expected="Strictly basic ASCII characters (A-Z, a-z, 0-9, _).",
             how_to_fix=(
-                "Třída má neplatný název — nejspíše byla vytvořena dynamicky se špatným vstupem.",
-                "Odstraňte z názvu háčky a čárky (např. 'Měna' -> 'Mena').",
-                "Kontaktujte správce systému."
+                "The class possesses an invalid name — it was likely generated dynamically with an invalid input string.",
+                "Remove all accents, hooks, and diacritics from the class identifier (e.g., transform 'Měna' to 'Mena').",
+                "Review the runtime blueprint definition layer or contact the system administrator.",
             ),
-            context="Kontrola metadat potomka SimpleObject třídy",
+            context="Structural validation of dynamic class identifiers during metadata extraction.",
             exception=ValueError
         )
 
@@ -48,71 +26,50 @@ def validate_class_name_is_ascii(
 _DESIGN_NOTES = """
 # validate_class_name_is_ascii
 
-## Účel
-Validuje, že jméno třídy SimpleObject obsahuje pouze ASCII znaky bez diakritiky.
-Určeno pro kontrolu názvů tříd získaných z již vytvořeného objektu (`ClassName.__name__`).
+## Purpose
+Validates that the class name of a Simple structure contains only ASCII characters without any localized diacritics. It is designed to evaluate names extracted directly from live class objects (`ClassName.__name__`). This check operates with the guarantees established by the upstream Python parser or preceding validation steps.
 
-Tato validace pracuje s vědomím, že třída již prošla Python definicí,
-a tudíž máme zaručeny určité základní vlastnosti.
+## What Python/Upstream Already Guarantees (Standard Class Context)
+When a class is evaluated here, we safely operate under the assumption that the string has already been parsed as a structural entity. This means we do not need to repeat checks for the following:
+1. **Type is strictly str** — `ClassName.__name__` always returns a primitive string.
+2. **Never empty** — Python never permits empty class identifiers (`class :` is a syntax error).
+3. **Valid Identifier Pattern** — The value structurally satisfies `isidentifier()`, meaning it contains only letters, digits, and underscores, does not start with a digit, and contains no spaces or punctuation.
+4. **Not a keyword** — Python natively rejects reserved keywords (`class class:` is a syntax error).
 
-## Co Python již garantuje (při normální definici třídy)
+Because of these pre-conditions, the class name string contains nothing but `[a-zA-Z0-9_]` alongside valid Unicode word characters (like localized letters).
 
-Když napíšeš `class ClassName:` a Python jí dovolí vytvořit, pak máš zaručeno:
+## What This Validation Enforces
+By checking `isascii()`, we shrink the allowed character space to guarantee:
+- ✓ Only characters belonging to the standard ASCII table (0-127).
+- ✓ Absolute exclusion of diacritics, accents, hooks, or non-English letters.
+- ✓ Absolute exclusion of any extended Unicode symbols.
 
-1. **Typ je str** — `ClassName.__name__` vždy vrátí řetězec
-2. **Není prázdné** — Python nikdy nedovolí `class :`
-3. **Je to validní identifikátor** — Projde `isidentifier()` s jistotou
-   - Obsahuje jen: písmena, číslice, podtržítko
-   - Nespojuje se s číslem (`class 2MyClass:` = ERROR)
-   - Bez mezer, pomlček, teček (`class My-Class:` = ERROR)
-4. **Není klíčové slovo** — Python to při definici neopeř (`class class:` = ERROR)
-
-Všechny tyto kontroly **nemusíme dělat znovu** — Python je již prověřil!
-
-## Co zbývá po vynechání těchto kontrol?
-
-Po tom, co Python garantuje `isidentifier()`, obsahuje název:
+**Practical Output:** If a string satisfies both `isidentifier()` and this `isascii()` check, it is guaranteed to consist exclusively of:
 
 ```
-Jen: [a-zA-Z0-9_]
-```
 
-Nic více. Žádné jiné znaky nejsou v Python identifikátoru možné.
-
-## Co kontrolujeme my — ASCII znaky
-
-Kontrolujeme `isascii()` — Je-li true, garantujeme:
-- ✓ Pouze znaky ASCII tabulky (0-127)
-- ✓ Žádná diakritika (háčky, čárky)
-- ✓ Žádné Unicode symboly
-
-**Prakticky to znamená:** Pokud projde `isascii()`, obsah je stále jen:
-
-```
 [a-zA-Z0-9_]
+
 ```
 
-Protože jiné znaky by `isidentifier()` neprošly (Python to už dělal).
+## Validation Pipeline Architecture
+This validation represents the second pillar of the structural name screening process:
+1. `validate_class_name_is_identifier`: Filters out illegal symbols, spaces, hyphens, and starting digits.
+2. `validate_class_name_is_ascii` (This function): Strips out diacritics and non-ASCII localized alphabets.
+3. `validate_class_name_has_no_underscores`: Strips out underscores, finalizing a pure PascalCase requirement `[a-zA-Z0-9]`.
 
-## Příklady
-
+## Examples
 ```python
-# OK — ASCII, bez diakritiky
-validate_class_name_is_ascii("MyClass")      # ✓
-validate_class_name_is_ascii("Class123")     # ✓
-validate_class_name_is_ascii("My_Class")     # ✓
+# VALID (Passes this check; underscores are handled downstream)
+validate_class_name_is_ascii("MyClass")               # OK
+validate_class_name_is_ascii("Class123")              # OK
+validate_class_name_is_ascii("My_Class")              # OK
 
-# CHYBA — není ASCII (diakritika)
-validate_class_name_is_ascii("Třída")        # ✗ háček
-validate_class_name_is_ascii("Mesíc")        # ✗ čárka
-validate_class_name_is_ascii("Ελληνικά")     # ✗ řečtina
+# INVALID (Raises SimpleMetadataError via ValueError)
+validate_class_name_is_ascii("Třída")                 # Fail: contains a hook 'ř' and accent 'í'
+validate_class_name_is_ascii("Mesíc")                 # Fail: contains an accent 'í'
+validate_class_name_is_ascii("Ελληνικά")              # Fail: Greek alphabet
+
 ```
 
-## Poznámky
-- Tato kontrola je **první ze dvou doplňkových validací** pro SimpleObject.
-- Po projití `isascii()` obsahuje název pouze znaky `[a-zA-Z0-9_]`.
-- Druhá doplňková kontrola `validate_class_name_not_contain_underscore()`
-  dále zakazuje podtržítko, čímž zbyde pouze `[a-zA-Z0-9]`.
-- Separace na dvě funkce umožňuje jasnou separaci zájmů
-  a snadnější čitelnost kódu.
 """

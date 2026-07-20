@@ -2,62 +2,60 @@ from typing import TYPE_CHECKING, Any
 from simplibs.sentinels import UNSET
 # Outers
 from ........exceptions import SimpleMetadataError
-from .._exceptions_helpers import exception_info_for_inners
+from .._exception_info_for_inners import _exception_info_for_inners
 # Annotations
 if TYPE_CHECKING:
     from ........protocols.classes import SimpleClassLike
 
 
 def validate_inners_is_defined(
-    atrribut_value: Any,
+    attribute_value: Any,
     owner_class: "SimpleClassLike"
 ) -> None:
-    """
-    Validuje, že atribut _inners je na třídě definovaný.
+    """Validates that the '_inners' attribute is explicitly defined on the class."""
 
-    Tato validace by nikdy neměla nastat protože k ověření,
-    že třída obsahuje atribut '_inners' dochází v kodu již dříve,
-    při rozhodnutí, zda se jedná o třídu kompoziční a nebo s konstantou.
+    # 1. Exception condition
+    if attribute_value is UNSET:
 
-    ═════════════════════════════════════════════════════════════════
-    ⚠️ INVALID INNERS DEFINITION: Attribut není definovaný
-    ═════════════════════════════════════════════════════════════════
-    Expected:  Attribut '_inners' obsahující vnitřní prvky kompozice.
-    Problem:   Attribut není na třídě nedefinovaný.
-    Context:   Kontrola a validace metadat pro: {class_name}.{attribute_name}
-    File info: File: ... | Line: ... | Function: ...
-    File path: ...
-    ─────────────────────────────────────────────────────────────────
-    🔧 How to fix:
-         • Třída kompozice (SimpleObject) musí deklarovat attribut '_inners'.
-         • Definujte atribut '_inners' ve třídě '{class_name}'.
-         • Acceptable definitions:
-         • class {class_name}(class_parrent):
-         •     _inners: tuple = (PrvekA, PrvekB)
-         •     ...
-    ═════════════════════════════════════════════════════════════════
-    """
-
-    # 1. Podmínka výjimky
-    if atrribut_value is UNSET:
-
-        # 2. Vypočet proměných
+        # 2. Variable resolution
         (class_name,
          error_name,
          context,
          acceptable_definitions
-         ) = exception_info_for_inners(owner_class)
+         ) = _exception_info_for_inners(owner_class)
 
-        # 3. Vyovlání výjimky
+        # 3. Exception invocation
         raise SimpleMetadataError(
             error_name=error_name,
-            label="Attribut '_inners' není definovaný",
-            expected=f"Attribut '_inners' obsahující vnitřní prvky kompozice.",
-            problem=f"Attribut není na třídě nedefinovaný.",
+            label="The '_inners' attribute is not defined",
+            expected="An explicit '_inners' attribute containing the composition elements tuple.",
+            problem=f"The required '_inners' attribute is completely missing from the class structure of '{class_name}'.",
             context=context,
             how_to_fix=(
-                "Třída kompozice (SimpleObject) musí deklarovat attribut '_inners'.",
-                f"Definujte atribut '_inners' ve třídě '{class_name}'.",
+                "A composition class (SimpleObject) must explicitly declare the '_inners' attribute.",
+                f"Define the '_inners' tuple within the body of class '{class_name}'.",
             ) + acceptable_definitions,
             exception=AttributeError
         )
+
+
+_DESIGN_NOTES = """
+# validate_inners_is_defined
+
+## Purpose
+Acts as a safety backup guard ensuring that the target class definition actually 
+contains the `_inners` attribute slot. It prevents downstream processing errors 
+caused by missing attributes when handling composite object types.
+
+## Runtime Context & Edge Cases
+Under standard architectural flows, this exception state should theoretically never 
+be reached. The higher-level orchestration layers typically route the class initialization 
+based on whether `_inners` is declared in the class namespace. However, this guard 
+is preserved to guarantee absolute structural deterministic isolation and protect the 
+pipeline from manual manipulation or dynamic `delattr` interventions.
+
+## Exception Mapping
+Unlike other structural validators that map to `TypeError`, this specific validation 
+leverages a standard `AttributeError` wrapper, precisely matching native Python expectations 
+when a required attribute token is missing from a class context.
+"""

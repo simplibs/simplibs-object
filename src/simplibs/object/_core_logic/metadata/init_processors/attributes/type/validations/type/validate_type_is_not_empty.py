@@ -1,7 +1,7 @@
 from typing import Any, TYPE_CHECKING
 # Outers
 from ........exceptions import SimpleMetadataError
-from .._exceptions_helpers import exception_info_for_type
+from .._exception_info_for_type import _exception_info_for_type
 # Annotations
 if TYPE_CHECKING:
     from ........protocols.classes import SimpleClassLike
@@ -11,55 +11,53 @@ def validate_type_is_not_empty(
     processed_type: Any,
     owner_class: "SimpleClassLike"
 ) -> None:
-    """
-    Validuje, že atribut _type nemá prázdnou hodnotu.
+    """Validates that the '_type' attribute is not defined as an empty container or collection."""
 
-    ═════════════════════════════════════════════════════════════════
-    ⚠️ INVALID TYPE DEFINITION: Empty definition is not allowed
-    ═════════════════════════════════════════════════════════════════
-    Expected:  Typ reprezentující výstupní objekt třídy.
-    got:       '()' (tuple)
-    Problem:   Třídní atribut '_type' nesmí být prázdným objektem.
-    Context:   Kontrola a validace metadat pro: {class_name}.{attribute_name}
-    File info: File: ... | Line: ... | Function: ...
-    File path: ...
-    ─────────────────────────────────────────────────────────────────
-    🔧 How to fix:
-         . Třídní typ musí odpovídat hodnotě kterou třída reprezentuje.
-         • Definice typu nesmí být prázdná, aby bylo možné provádět validace hodnot..
-         • Změňte atribut '_type' tak aby odpovídal objektu který třída reprezentuje..
-         • Acceptable definitions:
-         • class {class_name}(class_parrent):
-         •     _type: type = samostatně definované typy jako je 'str', 'int', atd.
-         •     _type: UnionType = union type definice pro více povolených typů.
-         •     _type: tuple[type, ...] = tuple obsahujích více povolených typů (bude převedeno na UnionType).
-         •     ...
-    ═════════════════════════════════════════════════════════════════
-    """
-
-    # 1. Podmínka výjimky
+    # 1. Exception condition
     if not processed_type:
 
-        # 2. Vypočet proměných
+        # 2. Variable resolution
         (class_name,
-         class_parrent,
+         class_parent,
          error_name,
          context,
          acceptable_definitions
-         ) = exception_info_for_type(owner_class)
+         ) = _exception_info_for_type(owner_class)
 
-        # 3. Vyovlání výjimky
+        # 3. Exception invocation
         raise SimpleMetadataError(
             error_name=error_name,
-            label=f"Empty definition is not allowed",
+            label="Empty definition is not allowed",
             value=processed_type,
-            expected="Typ reprezentující výstupní objekt třídy.",
-            problem="Třídní atribut '_type' nesmí být prázdným objektem.",
+            expected="A non-empty type, UnionType, or a tuple containing valid types.",
+            problem="The class attribute '_type' must not be evaluated as an empty object or container.",
             context=context,
             how_to_fix=(
-                "Třídní typ musí odpovídat hodnotě kterou třída reprezentuje.",
-                "Definice typu nesmí být prázdná, aby bylo možné provádět validace hodnot.",
-                "Změňte atribut '_type' tak aby odpovídal objektu který třída reprezentuje.",
+                "The class type must accurately reflect the value structure that this class represents.",
+                "The type definition cannot be empty, as downstream validators require concrete type definitions.",
+                "Change the '_type' attribute to target the actual class or types allowed for this object.",
             ) + acceptable_definitions,
             exception=ValueError
         )
+
+
+_DESIGN_NOTES = """
+# validate_type_is_not_empty
+
+## Purpose
+Prevents developers from initializing object metadata with empty collections or empty 
+falsy values (such as an empty tuple `_type = ()`), which would bypass type checking 
+mechanisms completely.
+
+## Pipeline Integration & Truthiness Catch
+This validator is triggered early in the `process_type` flow. Because it checks for 
+general truthiness via `if not processed_type:`, it works in tandem with the previous 
+`UNSET` checks. It specifically catches initialized but empty structural constructs 
+that evaluate to `False` in a boolean context.
+
+## Architectural Enforcement
+Downstream casting, instance comparisons, and data mapping functions rely entirely 
+on a populated type matrix. An empty type constraint would break runtime execution 
+during validation loops; by shifting the error to the initialization phase with 
+a clear `ValueError`, debugging remains straightforward.
+"""

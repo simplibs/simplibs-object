@@ -4,16 +4,16 @@ from simplibs.sentinels import UNSET
 from .validations.inners import (
     validate_inners_is_not_empty,
     validate_inners_is_defined,
-    validate_inners_is_tuple
+    validate_inners_is_tuple,
 )
 from .validations.inner import (
     validate_inner_is_simple_subclass,
     validate_inner_is_not_simple_class,
-    validate_inner_is_class
+    validate_inner_is_class,
 )
 from .validations.name_collisions import (
     validate_collision_within_inners,
-    validate_if_collision_with_owner_class
+    validate_if_collision_with_owner_class,
 )
 # Annotations
 if TYPE_CHECKING:
@@ -45,23 +45,23 @@ def process_inners(
             - inners_annotations (dict): {name: type} for type hints
     """
 
-    # 1. Získání atributu
+    # 1. Acquire the attribute value
     raw_inners = getattr(owner_class, "_inners", UNSET)
 
-    # 2. Ověření zda je nově dafinován
+    # 2. Verify whether it is newly defined
     need_validations = "_inners" in owner_class.__dict__ and raw_inners is not UNSET
 
-    # 3. Základní validace
+    # 3. Base validations
     if need_validations:
 
-        # 3.1 Validace formátu
+        # 3.1 Format validation
         if (not raw_inners or
             not isinstance(raw_inners, tuple)):
             validate_inners_is_defined(raw_inners, owner_class)
             validate_inners_is_tuple(raw_inners, owner_class)
             validate_inners_is_not_empty(raw_inners, owner_class)
 
-        # 3.2 Vnitřní import na základní třídy, které jsou potřeba v for cyklu
+        # 3.2 Internal import for base classes required within the for-loop
         from ......SimpleConstant import SimpleConstant
         from ......SimpleObject import SimpleObject
 
@@ -105,92 +105,81 @@ def process_inners(
 _DESIGN_NOTES = """
 # process_inners
 
-## Účel
-Validuje a zpracovává seznam vnitřních prvků (inners) kompozitní třídy.
-Inners určují, zda se třída chová jako konstanta (bez inners) nebo jako kompozice (s inners).
-Tímto přístupem se zajišťuje konzistentní rozhraní a determinismus výpočtů.
+## Purpose
+Validates and processes the list of inner elements (`_inners`) of a composite class.
+The inner elements determine whether the target class behaves as a constant leaf node (no inners defined) or as a structural composition (with inners defined). This unified approach ensures a completely consistent public interface and strict arithmetic determinism across all object structures.
 
-## Klíčová roles inners
-Inners mohou být výhradně třídy dědící z SimpleConstant (včetně SimpleObject).
-To zaručuje, že každý prvek má:
-  - Konzistentní metadata (__metadata__)
-  - Definovanou typovou anotaci (_type)
-  - Výchozí hodnotu (_default)
-  - Jmenný prostor (node_names_set)
+## The Crucial Role of Inners
+Elements within the `_inners` collection must exclusively be class types that inherit from `SimpleConstant` (which structurally includes `SimpleObject`). This architectural constraint guarantees that every single registered component possesses:
+  - A consistent metadata tracking namespace (`__metadata__`)
+  - A strictly defined data type boundary annotation (`_type`)
+  - A guaranteed baseline fallback default state (`_default`)
+  - A fully resolved unique nested identifier index (`node_names_set`)
 
-Pokud se inners definují, třída je klasifikována jako SimpleObject (kompozice).
-Bez inners je třída SimpleConstant (atom).
+If the `_inners` attribute is actively defined, the class compilation pipeline automatically classifies the target entity as a `SimpleObject` (a composite structure). In the absolute absence of `_inners`, the class naturally compiles as a terminal `SimpleConstant` (an atomic leaf node).
 
-## Tok zpracování
+## Operational Control Flow
 
-### 1. Natažení a validace inners
-Nejprve se pokusíme natáhnout `_inners` z `__dict__` třídy.
-Následuje triple validace:
-  - Existuje atribut `_inners`?
-  - Je typu tuple?
-  - Není prázdný tuple?
+### 1. Attribute Extraction and Boundary Validation
+The routine initially attempts to fetch the `_inners` attribute directly from the local class `__dict__`. Following this extraction, a comprehensive triple-validation sequence is established:
+  - Is the `_inners` token actively defined and present?
+  - Is the container formatted explicitly as a standard Python `tuple`?
+  - Is the provided tuple sequence populated (not an empty container)?
 
-Prázdný tuple je chyba, protože by se třída měla chovat jako konstanta (bez inners).
+An empty tuple container represents a structural error because a node declaring an `_inners` namespace must contain actual components; otherwise, the attribute should be omitted entirely so the node can naturally compile as a pure constant leaf.
 
-### 2. Příprava kontejnerů
-Vytvoří se 4 kontejnery pro sběr dat během iterace:
-  - `new_node_names_set` (set): Akumulátor jmen (kopie původního setu)
-  - `inners_params_name` (list): Jména pro parametry metody _logic
-  - `inners_default` (dict): Výchozí hodnoty pro výpočet defaultu
-  - `inners_annotations` (dict): Typové anotace pro type hints
+### 2. Container Preparation
+Four distinct internal data containers are initialized to safely aggregate structural component attributes during the iteration phase:
+  - `new_node_names_set` (set): The main cumulative identifier namespace accumulator (initialized as a shallow copy of the parent tracking index).
+  - `inners_params_name` (list): Stores target parameter names required to dynamically compile the downstream `_logic` execution method signature.
+  - `inners_default` (dict): Maps individual components to their fallback states for late-bound composite default computations.
+  - `inners_annotations` (dict): Collects type boundary annotations to generate precise runtime type hints for the compilation engine.
 
-### 3. Import SimpleConstant a SimpleObject
-Třídy se importují až zde (ne na začátku souboru) kvůli circular dependency.
-Pokud první dvě validace (4.1) selžou, tyto importy nejsou vykonány,
-což šetří CPU cykly v error path.
+### 3. Isolated Base Class Imports
+The core base framework classes (`SimpleConstant` and `SimpleObject`) are explicitly imported locally within this block rather than at the root module level. This completely shields the system initialization cycle from circular dependency runtime loops. Furthermore, if high-level container format validations fail, these local imports are completely skipped, avoiding unnecessary CPU overhead during the error pathway execution.
 
-### 4. Iterace skrze inners
-Pro každý inner se provádí:
+### 4. Component Traversal Iteration
+The engine opens a linear sequence traversing each individual inner element, enforcing the following checkpoints:
 
-#### 4.1 Základní validace
-Kontroluje se na třech úrovních:
-  - `not isinstance(inner, type)` – Pokud to není třída, vrh výjimku
-  - `not issubclass(inner, SimpleConstant)` – Pokud to není potomek SimpleConstant, vrh výjimku
-  - `inner is SimpleConstant` – Pokud je to přesně SimpleConstant (base class), vrh výjimku
-  - `inner is SimpleObject` – Pokud je to přesně SimpleObject (base class), vrh výjimku
+#### 4.1 Base Structural Type Guards
+Evaluates the internal integrity of the reference type across three rigorous boundary layers:
+  - `not isinstance(inner, type)` – Rejects active state instances or raw data values; inputs must be abstract class types.
+  - `not issubclass(inner, SimpleConstant)` – Enforces framework family lineage alignment.
+  - `inner is SimpleConstant` – Blocks utilizing the literal framework root base class directly as a functional data element.
+  - `inner is SimpleObject` – Blocks utilizing the literal composite root base class directly as a functional data element.
 
-Důvod: Pouze uživatelsky definované třídy jsou povoleny, ne samotné bazové třídy.
+Rationale: The composition layer demands concrete, user-defined operational domain blueprints, never the raw boilerplate framework roots themselves.
 
-#### 4.2 Detekce kolizí jmen
-Kontroluje se průnik mezi `new_node_names_set` a `inner.meta.node_names_set`.
-Pokud je průnik neprázdný, vrh specifickou výjimku:
-  - Nejprve se zkontroluje zda kolize není způsobena vlastní třídou (collision with owner)
-  - Pak se hledá konkrétní inner, který koliduje (collision within siblings)
+#### 4.2 Precision Lookahead Collision Detection
+Computes a direct mathematical intersection between the cumulative active namespace (`new_node_names_set`) and the incoming component's internal index (`inner.meta.node_names_set`). If the intersection yields a conflict, specific diagnostics are routed:
+  - The framework first checks if the conflict matches the root parent class identity (`validate_if_collision_with_owner_class`), blocking recursive loop paradoxes.
+  - It then traces sibling namespaces down the tree (`validate_collision_within_inners`) to pinpoint the precise overlapping components.
 
-Tento přístup poskytuje lepší error messages.
+This hierarchical evaluation pattern ensures exceptionally clear, actionable diagnostic exception reporting for the developer.
 
-#### 4.3 Registrace jmen
-Přidá se `inner.meta.node_names_set` do globálního setu `new_node_names_set`.
-Tímto se zajistí, že všechny vnitřní prvky (i vnořené) jsou v namespace zaregistrovány.
+#### 4.3 Identifier Namespace Registration
+Merges the incoming element's `inner.meta.node_names_set` directly into the global `new_node_names_set` accumulator via an in-place `.update()` operation. This guarantees that all nested sub-components are instantly mirrored within the local context, shielding subsequent elements from duplicating names down the line.
 
-#### 4.4 Sběr metadat
-Z každého inner se extrahu:
-  - `name_snake` – Název pro parametr _logic
-  - `meta.default` – Výchozí hodnota (použije se později v process_default)
-  - `meta.value_type` – Typová anotace (použije se v _logic signature)
+#### 4.4 Metadata Component Extraction
+Extracts and registers the core semantic definitions from the target inner component:
+  - `name_snake` – Resolves the parameter naming token required for the `_logic` signature mapping.
+  - `meta.default` – Captures the individual component fallback state (utilized later during compound `process_default` calculations).
+  - `meta.value_type` – Extracts type hint targets to accurately map structural validation types inside the dynamic reflection layout.
 
-## Návratová hodnota
-Funkce vrací tuple pěti hodnot:
-  - `raw_inners` – Původní tuple tříd (pro pozdější reference)
-  - `new_node_names_set` – Aktualizovaný set všech jmen (pro detekci kolizí v composite)
-  - `inners_params_name` – Tuple jmen (pro _logic signature)
-  - `inners_default` – Dict {name: default} (pro výpočet composite default)
-  - `inners_annotations` – Dict {name: type} (pro _logic type hints)
+## Return Value Guarantees
+The function finalizes by returning a structured tuple containing two computed states:
+  - `raw_inners` – The original immutable tuple of class types (preserved for downstream structural mapping references).
+  - `new_node_names_set` – The fully updated, comprehensive tracking index containing all identifier names captured across this entire composition subtree branch.
 
-## Happy Path
-Kód je optimalizován pro happy path, kde validace proběhnou bez problému:
-  - Podmínky na začátku (řádky 1) jsou nejčastěji True → branch predictor caches them
-  - Pokud happy path selže, všechny ostatní validace se volají v error path (není penalizace)
-  - Žádný zbytečný kód v normálním toku
+## Happy Path Optimization Strategy
+The architecture is heavily optimized for the "happy path" layout, where class definitions are structurally sound and free of design anomalies:
+  - Condition expressions located at primary execution boundaries are highly predictive of successful compilation passes, allowing the internal branch caching mechanisms to execute at maximum performance.
+  - If a structural anomaly occurs, the control flow immediately steps out of the fast linear loop and transfers execution entirely to specialized error factories, ensuring zero runtime penalty during standard execution passes.
+  - No redundant temporary memory or structural buffers are allocated during successful validation cycles.
 
-## Poznámky
-- `node_names_set` se zkopíruje na začátku (`.copy()`) aby se nemodifikoval originál
-- Import SimpleConstant/SimpleObject je na pozici 3 aby se neuváděl před happy path kontrolou
-- Funkcí se používá výhradně v SimpleObjectMetadata._process_user_interface()
-- Všechny chyby vedou k vyhození specifické výjimky, ne k defaultnímu chování
+## Architectural Architecture Notes
+- The parent `node_names_set` index is explicitly isolated via a `.copy()` invocation immediately upon entry, guaranteeing that sibling tree processing never pollutes or alters the original tracking metadata state.
+- Postponing the structural imports of `SimpleConstant`/`SimpleObject` directly guarantees they never execute before the core high-level happy path validation checks pass.
+- This processor is highly specialized and is invoked exclusively inside the `SimpleObjectMetadata._process_user_interface()` lifecycle block.
+- Any single structural or naming violation immediately terminates class compilation by throwing a pinpoint domain exception, preventing the system from ever settling into a degraded or ambiguous state.
 """

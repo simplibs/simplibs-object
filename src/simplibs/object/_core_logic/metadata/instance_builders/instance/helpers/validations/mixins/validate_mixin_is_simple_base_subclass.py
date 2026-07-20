@@ -1,10 +1,10 @@
 from typing import TYPE_CHECKING
 # Outers
-from ......exceptions import SimpleObjectMixinError
+from ........exceptions import SimpleMixinError
 # Annotations
 if TYPE_CHECKING:
-    from .......protocols.classes import SimpleClassLike
-    from .......protocols.mixins.base_class import SimpleMixinProtocol
+    from ........protocols.classes import SimpleClassLike
+    from ........protocols.mixins.base_class import SimpleMixinProtocol
 
 
 def validate_mixin_is_simple_base_subclass(
@@ -22,7 +22,7 @@ def validate_mixin_is_simple_base_subclass(
 
     if not issubclass(mixin, SimpleMixin):
 
-        raise SimpleObjectMixinError(
+        raise SimpleMixinError(
             error_name="INVALID MIXIN",
             label="Mixin must inherit from SimpleMixin",
             expected="Třídu odvozenou od SimpleMixin.",

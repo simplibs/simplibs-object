@@ -2,7 +2,6 @@ from typing import Any, TYPE_CHECKING
 from simplibs.sentinels import UNSET
 # Inners
 from ._core_logic.metadata import SimpleMeta
-from .settings import SimpleSettings
 # Annotations
 if TYPE_CHECKING:
     from .protocols.classes import SimpleBaseProtocol

@@ -9,7 +9,7 @@ P = ParamSpec("P")
 R = TypeVar("R")
 
 
-class LogicSignature(SimpleObjectProtocol, Protocol[P, R]):
+class LogicSignature(Protocol[P, R]):
     """
     Protokol říkající: Jsem třída, která má metodu _logic s parametry P a návratem R.
     Slouží jako typová kotva pro dekorátory a kalkulační metody přenášející signaturu.

@@ -1,56 +1,54 @@
+from typing import TYPE_CHECKING
 # Outers
 from ........exceptions import SimpleMetadataError
+# Annotations
+if TYPE_CHECKING:
+    from ..._exceptions_helpers import ClassMethodExceptionInfoPayload
 
 
 def validate_method_param_match_expected(
     method_params: tuple[str, ...],
     expected_params: tuple[str, ...],
-    base_info: dict[str, str | tuple[str, ...]],
+    base_info: "ClassMethodExceptionInfoPayload",
 ) -> None:
-    """
-    Validuje, že názvy parametrů metody přesně odpovídají očekávání.
+    """Validates that the parameter names and their exact sequence match the framework expectations.
 
-    ═════════════════════════════════════════════════════════════════
-    ⚠️ METHOD SIGNATURE ERROR: Neshoda parametrů
-    ═════════════════════════════════════════════════════════════════
-    Expected:  {repr(expected_params)} (tuple)
-    Got:       {repr(method_params)} ({type(method_params).__name__})
-    Problem:   Zadané parametry neodpovídají očekávanému.
-    Context:   Kontrola a validace metadat pro: {class_name}.{method_name}
-    File info: File: ... | Line: ... | Function: ...
-    File path: ...
-    ─────────────────────────────────────────────────────────────────
-    🔧 How to fix:
-         • Upravte definici metody tak, aby parametry odpovídaly očekávanému.
-         • Prvním parametrem musí být vždy 'cls'.
-         • Názvy dalších parametrů musí přesně odpovídat snake_case názvům vašich '_inners'.
-         • Expected structure:
-         • class {class_name}(SimpleObject):
-         •     ...
-         •     @classmethod
-         •     def {method_name}({', '.join(expected_params)}):
-         •         ...
-    ═════════════════════════════════════════════════════════════════
+    Raises:
+        SimpleMetadataError: If the actual parameter signature names deviate from the expected configuration.
     """
-    # 1. Podmínka výjimky
+
+    # 1. Structural evaluation checkpoint
     if method_params != expected_params:
 
-        # 2. Vypočet proměných
-        excepted_structure = base_info["excepted_structure"]
+        # 2. Extract shared diagnostic elements from context dictionary
+        expected_structure = base_info["expected_structure"]
         context = base_info["context"]
 
-        # 3. Vyvolání výjimky
+        # 3. Raise domain exception with full packed diagnostic payload
         raise SimpleMetadataError(
             error_name="METHOD SIGNATURE ERROR",
-            label=f"Neshoda parametrů",
+            label="Parameter layout mismatch",
             expected=f"{repr(expected_params)} (tuple)",
             value=method_params,
-            problem="Zadané parametry neodpovídají očekávanému.",
+            problem="The declared signature parameters do not match the expected specification layout.",
             context=context,
             how_to_fix=(
-                f"Upravte definici metody tak, aby parametry odpovídaly očekávanému.",
-                "Prvním parametrem musí být vždy 'cls'.",
-                "Názvy dalších parametrů musí přesně odpovídat snake_case názvům vašich '_inners'.",
-            ) + excepted_structure,
+                "Adjust the method definition signature so that every parameter exactly matches expectations.",
+                "The very first signature parameter token must always be declared as 'cls'.",
+                "The names of subsequent parameters must strictly match the snake_case identifiers of your '_inners' components.",
+            ) + expected_structure,
             exception=TypeError
         )
+
+
+_DESIGN_NOTES = """
+# validate_method_param_match_expected
+
+## Purpose
+Enforces strict name compliance and declaration ordering across method signature parameters. It guarantees that the arguments mapped via bytecode align identically with the target orchestrator contract.
+
+## Design Decisions & Layout
+1. **Strict Sequence Matching**: The function evaluates both identity and positions of the parameter strings via direct tuple inequality (`!=`). This blocks swapped positions even if the total argument count is correct.
+2. **Framework Alignment Rules**: The remediation directives explicitly highlight the core requirements: forcing the initial `cls` boundary token and forcing all trailing parameters to bind directly to the snake_case identities of the corresponding system `_inners`.
+3. **Type-Checker Overlay**: Integrates the `expected_structure: tuple[str, ...]` inline hint layer to ensure seamless string/tuple collection merging without static diagnostic alerts.
+"""

@@ -22,7 +22,7 @@ def raise_mixin_init_mixins_missing_super_call(
     # 2. Kontrola přítomnosti super() i init_mixins
     if "super" not in called_names or "init_mixins" not in called_names:
 
-        raise SimpleObjectMixinError(
+        raise SimpleMixinError(
             error_name="MIXIN DEFINITION ERROR",
             label="Missing super() call in init_mixins",
             expected="Metoda init_mixins musí volat super().init_mixins().",

@@ -2,61 +2,61 @@ from typing import Any, TYPE_CHECKING
 from simplibs.sentinels import UNSET
 # Outers
 from ........exceptions import SimpleMetadataError
-from .._exceptions_helpers import exception_info_for_type
+from .._exception_info_for_type import _exception_info_for_type
 # Annotations
 if TYPE_CHECKING:
     from ........protocols.classes import SimpleClassLike
 
 
 def validate_type_is_defined(
-    atrribut_value: Any,
+    attribute_value: Any,
     owner_class: "SimpleClassLike"
 ) -> None:
-    """
-    Validuje, že atribut _type je na třídě definovaný.
+    """Validates that the required '_type' attribute is explicitly defined on the class."""
 
-    ═════════════════════════════════════════════════════════════════
-    ⚠️ INVALID TYPE DEFINITION: Attribut '_type' není definovaný
-    ═════════════════════════════════════════════════════════════════
-    Expected:  Třída musí deklarovat svůj datový typ pro zajištění integrity.
-    Problem:   Třída atribut '_type' vůbec nedefinuje.
-    Context:   Kontrola a validace metadat pro: {class_name}.{attribute_name}
-    File info: File: ... | Line: ... | Function: ...
-    File path: ...
-    ─────────────────────────────────────────────────────────────────
-    🔧 How to fix:
-         • Definujte atribut '_type' ve třídě '{class_name}'.
-         . Třídní typ musí odpovídat hodnotě kterou třída reprezentuje.
-         • Acceptable definitions:
-         • class {class_name}(class_parrent):
-         •     _type: type = samostatně definované typy jako je 'str', 'int', atd.
-         •     _type: UnionType = union type definice pro více povolených typů.
-         •     _type: tuple[type, ...] = tuple obsahujích více povolených typů (bude převedeno na UnionType).
-         •     ...
-    ═════════════════════════════════════════════════════════════════
-    """
+    # 1. Exception condition
+    if attribute_value is UNSET:
 
-    # 1. Podmínka výjimky
-    if atrribut_value is UNSET:
-
-        # 2. Vypočet proměných
+        # 2. Variable resolution
         (class_name,
-         class_parrent,
+         class_parent,
          error_name,
          context,
          acceptable_definitions
-         ) = exception_info_for_type(owner_class)
+         ) = _exception_info_for_type(owner_class)
 
-        # 3. Vyovlání výjimky
+        # 3. Exception invocation
         raise SimpleMetadataError(
             error_name=error_name,
-            label="Attribut '_type' není definovaný",
-            expected="Třída musí deklarovat svůj datový typ pro zajištění integrity.",
-            problem=f"Třída atribut '_type' vůbec nedefinuje.",
+            label="Attribute '_type' is missing",
+            expected="The class must explicitly declare its target data type to guarantee data integrity.",
+            problem=f"The class '{class_name}' completely lacks the mandatory '_type' attribute definition.",
             context=context,
             how_to_fix=(
-                f"Definujte atribut '_type' ve třídě '{class_name}'.",
-                "Třídní typ musí odpovídat hodnotě kterou třída reprezentuje.",
+                f"Define the '_type' attribute directly within the body of class '{class_name}'.",
+                "The defined type must accurately reflect the value structure that this class represents.",
             ) + acceptable_definitions,
             exception=AttributeError
         )
+
+
+_DESIGN_NOTES = """
+# validate_type_is_defined
+
+## Purpose
+Ensures absolute structural integrity by guaranteeing that no data object class 
+definition enters the system without an explicitly declared type boundary constraint.
+
+## Integration & Sentinel Logic
+This guard is executed at the very front of the validation logic within `process_type`. 
+By passing `getattr(owner_class, "_type", UNSET)` down to this function, it checks 
+for reference absence using a dedicated `UNSET` singleton rather than a truthiness 
+or `None` check, protecting against cases where a user might accidentally assign 
+falsy values to the attribute.
+
+## Architectural Enforcement
+Unlike native Python where attributes are completely fluid, this object metadata 
+framework treats type definitions as hard schema declarations. Raising an `AttributeError` 
+wrapped into a domain-specific `SimpleMetadataError` ensures compile-time level 
+rejection during metaclass or descriptor initialization.
+"""

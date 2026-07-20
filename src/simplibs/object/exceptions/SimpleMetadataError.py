@@ -1,17 +1,16 @@
 from .SimpleError import SimpleError
 
+
 class SimpleMetadataError(SimpleError):
-    """Výjimka pro chyby v definici metadat a struktuře SimpleObject tříd."""
+    """Exception for errors in metadata definition and structure of SimpleObject classes."""
 
 
 _DESIGN_NOTES = """
 # SimpleMetadataError
 
-## Účel
-Skupinová výjimka pro chyby vzniklé při deklaraci a validaci tříd. 
-Dědí z `SimpleError`, takže ji lze zachytit i skrze ni.
+## Purpose
+A group exception for errors occurring during class declaration and validation. It inherits from `SimpleError`, allowing it to be caught under the main umbrella exception as well.
 
-## Logika
-Tato výjimka se typicky vyvolává v rámci metatřídy a orchestrátoru metadat. 
-Indikuje, že uživatel špatně definoval svou třídu (např. chybný název, typ nebo inners).
+## Logic
+This exception is typically raised within the metaclass and the metadata orchestrator. It indicates that the user has incorrectly defined their class (e.g., invalid name, type, or inner components).
 """

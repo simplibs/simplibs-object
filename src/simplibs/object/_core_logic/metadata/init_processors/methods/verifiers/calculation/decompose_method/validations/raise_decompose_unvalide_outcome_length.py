@@ -12,52 +12,49 @@ def raise_decompose_unvalide_outcome_length(
     inners: tuple,
     bound_method: "ClassMethodProtocol",
 ) -> None:
-    """
-    Vytváří výjimku, když metoda _decompose vrátila nesprávnyý počet hodnot.
+    """Raises an exception when the _decompose method returns an incorrect number of values.
 
-    ═════════════════════════════════════════════════════════════════
-    ⚠️ METHOD LOGIC ERROR: Vrácen nesprávný počet hodnot
-    ═════════════════════════════════════════════════════════════════
-    Expected:  {repr(inner_names_tuple)} (tuple)
-    Got:       {repr(calculate_default)} (tuple)
-    Problem:   Očekávaný počet položek:{len(inners)}, obdržený počet položek: {len(calculate_default)}.
-    Context:   Kontrola a validace metadat pro: {class_name}.{method_name}
-    File info: File: ... | Line: ... | Function: ...
-    File path: ...
-    ─────────────────────────────────────────────────────────────────
-    🔧 How to fix:
-         • Metoda _decompose musí vracet hodnoty odpovídající prvkům z inners.
-         • Upravte návratovou hodnotu '_decompose' tak, aby obsahovala přesně {expected_count} prvků.
-         • Očekávané pořadí prvků: '{', '.join(inner_names_tuple)}'.
-         • Příklad dle defualtních hodnot z inners:
-         •     return ({', '.join(inner_values_tuple)})
-    ═════════════════════════════════════════════════════════════════
+    Raises:
+        SimpleMetadataError: Always, as this is a dedicated exception raiser.
     """
 
-    # 0. Podmínka výjimky
+    # 0. Exception condition boundary
     # if len(calculate_default) != len(inners):
 
-    # 1. Výpočet proměnných
+    # 1. Compute dynamic diagnostic variables
     _, _, context = exception_context_for_classmethod(bound_method)
     expected_count = len(inners)
     got_count = len(calculate_default)
-    inner_names_tuple = (inner.meta.name_snake for inner in inners)
-    inner_values_tuple = (inner.meta.default for inner in inners)
+    inner_names_tuple = tuple(inner.meta.name_snake for inner in inners)
+    inner_values_tuple = tuple(repr(inner.meta.default) for inner in inners)
 
-    # 2. Vyvolání výjimky
+    # 2. Raise domain exception with full packed diagnostic payload
     raise SimpleMetadataError(
         error_name="METHOD LOGIC ERROR",
-        label="Vrácen nesprávný počet hodnot",
+        label="Incorrect number of returned values",
         expected=f"{repr(inner_names_tuple)} (tuple)",
         value=calculate_default,
-        problem=f"Očekávaný počet položek:{expected_count}, obdržený počet položek: {got_count}.",
+        problem=f"Expected item count: {expected_count}, received item count: {got_count}.",
         context=context,
         how_to_fix=(
-            "Metoda _decompose musí vracet hodnoty odpovídající prvkům z inners."
-            f"Upravte návratovou hodnotu '_decompose' tak, aby obsahovala přesně {expected_count} prvků.",
-            f"Očekávané pořadí prvků: '{', '.join(inner_names_tuple)}'.",
-            "Příklad dle defualtních hodnot z inners:",
+            "The '_decompose' method must return values matching the defined inner elements.",
+            f"Modify the return value of '_decompose' to contain exactly {expected_count} items.",
+            f"Expected item order: '{', '.join(inner_names_tuple)}'.",
+            "Example based on default values from inners:",
             f"    return ({', '.join(inner_values_tuple)})"
         ),
         exception=ValueError
     )
+
+
+_DESIGN_NOTES = """
+# raise_decompose_unvalide_outcome_length
+
+## Purpose
+Acts as a dedicated panic endpoint when a custom `_decompose` structural method returns a tuple whose length mismatches the framework's compiled inner property configuration. It isolates complex diagnostic string building out of the primary test-run execution path.
+
+## Diagnostic Layout & Formatting
+1. **Dynamic Reflection Mapping**: Uses generator expressions cast to tuples to map internal `inner.meta` fields (`name_snake`, `default`) directly into readable execution examples.
+2. **Contextual Introspection**: Employs `exception_context_for_classmethod` to dynamically resolve file, line, and method names from the active runtime frame.
+3. **No-Bypass Execution**: Because this function is dedicated solely to the error path, it skips condition evaluations and immediately executes diagnostic assembly and allocation overhead.
+"""

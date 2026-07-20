@@ -1,103 +1,48 @@
+import pytest
 # Outers
-from .....exceptions import SimpleMetadataError
+from simplibs.object.exceptions import SimpleMetadataError
+from simplibs.object._core_logic.metadata.init_processors.names.validations.validate_class_name_has_no_underscores import (
+    validate_class_name_has_no_underscores,
+)
+from simplibs.exception.testing import (
+    assert_exception_function,
+    assert_function_valid_input,
+)
 
 
-def validate_class_name_has_no_underscores(
-    class_name: str
-) -> None:
-    """
-    Validuje, že jméno třídy neobsahuje podtržítko (_).
-    
-    Doplňková validace po `validate_class_name_is_ascii()`.
-    SimpleObject systém nepovoluje podtržítka v názvech tříd.
-
-    ═════════════════════════════════════════════════════════════════
-    ⚠️ CLASS NAME CONTAINS UNDERSCORE: Invalid character in name
-    ═════════════════════════════════════════════════════════════════
-    Expected:  Pouze písmena a číslice (A-Z, a-z, 0-9)
-    Got:       {repr(value)} (str)
-    Problem:   Název třídy obsahuje podtržítko (_), což není v SimpleObject povoleno.
-    Context:   Kontrola metadat potomka SimpleObject třídy.
-    File info: File: ... | Line: ... | Function: ...
-    File path: ...
-    ─────────────────────────────────────────────────────────────────
-    🔧 How to fix:
-         • Odstraňte podtržítka z názvu třídy.
-         • Příklad: Změňte 'My_Class' na 'MyClass' (použijte PascalCase).
-         • Podtržítka jsou v systému vyhrazena pro interní účely a odvozená pojmenování.
-    ═════════════════════════════════════════════════════════════════
-    """
-
-    if "_" in class_name:
-        raise SimpleMetadataError(
-            error_name="CLASS NAME CONTAINS UNDERSCORE",
-            label="class_name",
-            value=class_name,
-            problem="Název třídy obsahuje podtržítko (_), což není v SimpleObject povoleno.",
-            expected="Pouze písmena a číslice (A-Z, a-z, 0-9)",
-            how_to_fix=(
-                "Odstraňte podtržítka z názvu třídy.",
-                "Příklad: Změňte 'My_Class' na 'MyClass' (použijte PascalCase).",
-                "Podtržítka jsou v systému vyhrazena pro interní účely a odvozená pojmenování."
-            ),
-            context="Kontrola metadat potomka SimpleObject třídy",
-            exception=ValueError
-        )
+@pytest.mark.parametrize(
+    "valid_name",
+    ["ValidClassName", "Class123", "PascalCaseEverywhere"]
+)
+def test_validate_class_name_has_no_underscores_happy_path(subtests, valid_name: str) -> None:
+    """Verify that class names without any underscores pass the validation guard without exceptions."""
+    assert_function_valid_input(
+        subtests,
+        validate_class_name_has_no_underscores,
+        valid_params=(valid_name,),
+        verbose=False
+    )
 
 
-_DESIGN_NOTES = """
-# validate_class_name_not_contain_underscore
-
-## Účel
-Doplňková validace pro kontrolu přítomnosti podtržítka (_) v názvu SimpleObject třídy.
-Určeno pro volání **po** `validate_class_name_is_ascii()`.
-
-SimpleObject systém nepovoluje podtržítka v názvech tříd, protože:
-- Podtržítka jsou vyhrazena pro vnitřní účely systému
-- Název třídy se používá k automatické derivaci dalších pojmenování
-- Podtržítka by mohla kolidovat s odvozovanými atributy a metoda
-
-## Vztah k validate_class_name_is_ascii
-
-Po projití `validate_class_name_is_ascii()` víme, že název obsahuje pouze:
-
-```
-[a-zA-Z0-9_]
-```
-
-Tato druhá validace **dále omezuje** na:
-
-```
-[a-zA-Z0-9]
-```
-
-Jednoduše: Pokud `isascii()` projde, zbývá už jen podtržítko z povolených znaků.
-
-## Separace zájmů
-
-Výhodou oddělení do dvou funkcí je:
-- **validate_class_name_is_ascii()** — Řeší sémantiku diakritiky (ASCII standard)
-- **validate_class_name_not_contain_underscore()** — Řeší projektové pravidlo (SimpleObject convention)
-
-Každá funkce má jasný, jediný zájem — snadno čitelné a testovatelné.
-
-## Příklady
-
-```python
-# OK — bez podtržítka
-validate_class_name_not_contain_underscore("MyClass")    # ✓
-validate_class_name_not_contain_underscore("Class123")   # ✓
-
-# CHYBA — obsahuje podtržítko
-validate_class_name_not_contain_underscore("My_Class")   # ✗
-validate_class_name_not_contain_underscore("_MyClass")   # ✗
-validate_class_name_not_contain_underscore("MyClass_")   # ✗
-```
-
-## Poznámky
-- Tato funkce se volá **po** `validate_class_name_is_ascii()`.
-- V typickém využití se budou obě validace volat za sebou nebo orchestrovat jednou funkcí.
-- Po projití obou validací je zaručeno, že název obsahuje **jen** `[a-zA-Z0-9]`.
-- Podtržítka se v systému automaticky generují pro odvozená pojmenování,
-  proto jejich přítomnost v názvu třídy není povolena.
-"""
+@pytest.mark.parametrize(
+    "invalid_name",
+    ["My_Class", "_LeadingUnderscore", "TrailingUnderscore_", "__DoubleUnderscore__"]
+)
+def test_validate_class_name_has_no_underscores_invalid_inputs(subtests, invalid_name: str) -> None:
+    """Verify that class names containing underscores trigger a properly formatted SimpleMetadataError."""
+    assert_exception_function(
+        subtests,
+        validate_class_name_has_no_underscores,
+        invalid_params=(invalid_name,),
+        exception_type=SimpleMetadataError,
+        value=invalid_name,
+        label="Invalid character in name",
+        expected="Exclusively alphanumeric characters (A-Z, a-z, 0-9).",
+        problem="The class name contains an underscore (_), which is strictly prohibited within the SimpleObject architecture.",
+        context="Structural validation of dynamic class identifiers during metadata extraction.",
+        how_to_fix=(
+            "Remove all underscores from the class name string.",
+            "Example: Convert 'My_Class' to 'MyClass' (adhere strictly to PascalCase convention).",
+            "Underscores are reserved for the framework's internal metadata derivation layers and generated identifiers.",
+        ),
+    )

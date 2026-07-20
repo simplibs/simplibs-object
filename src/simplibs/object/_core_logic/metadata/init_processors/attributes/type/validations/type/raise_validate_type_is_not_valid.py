@@ -1,64 +1,59 @@
 from typing import Any, NoReturn, TYPE_CHECKING
 # Outers
 from ........exceptions import SimpleMetadataError
-from .._exceptions_helpers import exception_info_for_type
+from .._exception_info_for_type import _exception_info_for_type
 # Annotations
 if TYPE_CHECKING:
     from ........protocols.classes import SimpleClassLike
+
 
 def raise_validate_type_is_not_valid(
     value_type: Any,
     owner_class: "SimpleClassLike"
 ) -> NoReturn:
-    """
-    Validuje, že atribut _type je validním typem.
+    """Raises an exception indicating that the provided '_type' attribute is completely unrecognized or invalid."""
 
-    ═════════════════════════════════════════════════════════════════
-    ⚠️ INVALID TYPE DEFINITION: Value not valid
-    ═════════════════════════════════════════════════════════════════
-    Expected:  Typ reprezentující výstupní objekt třídy.
-    Got:       repr(value) (type)
-    Problem:   Třídní atribut '_type' není validní hodotu.
-    Context:   Kontrola a validace metadat pro: {class_name}.{attribute_name}
-    File info: File: ... | Line: ... | Function: ...
-    File path: ...
-    ─────────────────────────────────────────────────────────────────
-    🔧 How to fix:
-         • Změňte atribut '_type' tak aby obsahoval validní definici.
-         • Třídní typ musí odpovídat hodnotě kterou třída reprezentuje.
-         • Atribut '_type' je anotací pro hodnotu kterou reprezentuje třídní default.
-         • Acceptable definitions:
-         • class {class_name}(class_parrent):
-         •     _type: type = samostatně definované typy jako je 'str', 'int', atd.
-         •     _type: UnionType = union type definice pro více povolených typů.
-         •     _type: tuple[type, ...] = tuple obsahujích více povolených typů (bude převedeno na UnionType).
-         •     ...
-    ═════════════════════════════════════════════════════════════════
-    """
-
-    # Podmínka výjimky
-    # if not isinstance(value_type, (type, UnionType, tuple)):
-
-    # 1. Vypočet proměných
+    # 1. Variable resolution
     (class_name,
-     class_parrent,
+     class_parent,
      error_name,
      context,
      acceptable_definitions
-     ) = exception_info_for_type(owner_class)
+     ) = _exception_info_for_type(owner_class)
 
-    # 2. Vyovlání výjimky
+    # 2. Exception invocation
     raise SimpleMetadataError(
         error_name=error_name,
-        label="Value not valid",
+        label="Invalid type definition value",
         value=value_type,
-        expected="Typ reprezentující výstupní objekt třídy.",
-        problem="Třídní atribut '_type' není validní hodotu.",
+        expected="A valid type, UnionType, or flat tuple of types.",
+        problem=f"The class attribute '_type' contains an unrecognized value that cannot be interpreted as a valid type constraint.",
         context=context,
         how_to_fix=(
-            "Změňte atribut '_type' tak aby obsahoval validní definici.",
-            "Třídní typ musí odpovídat hodnotě kterou třída reprezentuje.",
-            "Atribut '_type' je anotací pro hodnotu kterou reprezentuje třídní default.",
+            "Modify the '_type' attribute so that it contains a valid structural type definition.",
+            "The defined type must accurately reflect the actual concrete instances the class represents.",
+            "Ensure you are not passing a string representation, instance data, or complex nested containers.",
         ) + acceptable_definitions,
         exception=TypeError
     )
+
+
+_DESIGN_NOTES = """
+# raise_validate_type_is_not_valid
+
+## Purpose
+Acts as the final generic fallback guard (the "catch-all") within the `process_type` 
+orchestration workflow. If a user provides an attribute definition that completely 
+evades all structured parsing paths, this function halts initialization.
+
+## Pipeline Integration & Strategy
+This block is intentionally decoupled from an active conditional statement because 
+it is invoked natively at the very end of the `process_type` evaluation sequence. 
+If `_type` is neither an atomic `type`, a modern `UnionType`, nor a Python `tuple`, 
+control falls through directly into this exception factory.
+
+## Diagnostic Value
+By printing out the exact structural blueprint from `_exception_info_for_type`, the 
+framework instantly shows developers what forms are acceptable, correcting attempts 
+to use unsupported meta-expressions or literal instances as type annotations.
+"""

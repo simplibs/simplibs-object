@@ -1,96 +1,48 @@
+import pytest
 # Outers
-from .....exceptions import SimpleMetadataError
+from simplibs.object.exceptions import SimpleMetadataError
+from simplibs.object._core_logic.metadata.init_processors.names.validations.validate_class_name_is_identifier import (
+    validate_class_name_is_identifier,
+)
+from simplibs.exception.testing import (
+    assert_exception_function,
+    assert_function_valid_input,
+)
 
 
-def validate_class_name_is_identifier(
-    class_name: str
-) -> None:
-    """
-    Validuje, že jméno třídy je platným identifikátorem Pythonu.
-
-    Určeno pro zachycení nekorektních názvů u dynamicky tvořených tříd přes type(),
-    které by jinak neprošly standardním parserem při statickém zápisu.
-
-    ═════════════════════════════════════════════════════════════════
-    ⚠️ CLASS NAME NOT IDENTIFIER: Invalid Python name
-    ═════════════════════════════════════════════════════════════════
-    Expected:  Název začínající písmenem, obsahující pouze alfanumerické znaky.
-    Got:       {repr(value)} (str)
-    Problem:   Název třídy '{class_name}' není platným identifikátorem.
-    Context:   Strukturální kontrola jména dynamické třídy.
-    File info: File: ... | Line: ... | Function: ...
-    File path: ...
-    ─────────────────────────────────────────────────────────────────
-    🔧 How to fix:
-         • Ujistěte se, že název neobsahuje mezery, pomlčky nebo tečky.
-         • Název nesmí začínat číslicí.
-         • Při dynamické tvorbě přes type(name, ...) zkontrolujte parametr 'name'.
-    ═════════════════════════════════════════════════════════════════
-    """
-
-    if not class_name.isidentifier():
-        raise SimpleMetadataError(
-            error_name="CLASS NAME NOT IDENTIFIER",
-            label="class_name",
-            value=class_name,
-            problem=f"Název třídy '{class_name}' není platným identifikátorem.",
-            expected="Název začínající písmenem, obsahující pouze alfanumerické znaky.",
-            how_to_fix=(
-                "Ujistěte se, že název neobsahuje mezery, pomlčky nebo tečky.",
-                "Název nesmí začínat číslicí.",
-                "Při dynamické tvorbě přes type(name, ...) zkontrolujte parametr 'name'."
-            ),
-            context="Strukturální kontrola jména dynamické třídy",
-            exception=ValueError
-        )
+@pytest.mark.parametrize(
+    "valid_name",
+    ["ValidClassName", "WithDiacriticsČeština", "Contains_Underscores"]
+)
+def test_validate_class_name_is_identifier_happy_path(subtests, valid_name: str) -> None:
+    """Verify that valid Python identifiers pass the validation guard without exceptions."""
+    assert_function_valid_input(
+        subtests,
+        validate_class_name_is_identifier,
+        valid_params=(valid_name,),
+        verbose=False
+    )
 
 
-_DESIGN_NOTES = """
-# validate_class_name_is_identifier
-
-## Účel
-Tato validace je "technickým filtrem" pro jména tříd. Jejím hlavním úkolem je zajistit, 
-že jméno třídy splňuje syntaktická pravidla Pythonu pro identifikátory. 
-
-## Proč je tato validace nutná (Dynamický kontext)
-I když statický zápis `class MyClass:` hlídá parser Pythonu, dynamická tvorba pomocí 
-`type("Název", ...)` je benevolentnější. Dovolí vytvořit třídu se jménem, které 
-obsahuje mezery, pomlčky nebo začíná číslem. 
-
-Tato funkce garantuje, že i dynamicky vytvořená třída bude mít jméno, které:
-1. Nezačíná číslicí.
-2. Neobsahuje mezery, pomlčky, tečky ani jiné zakázané symboly.
-3. Je technicky použitelné pro další generování atributů a kódu.
-
-## Pozice v řetězci validací
-V rámci inicializace metadat tato kontrola předchází ostatním, protože definuje 
-základní strukturu. Celý proces tvoří tyto tři pilíře:
-
-1. **validate_class_name_is_identifier** (Tato funkce):
-   Eliminuje mezery, pomlčky a čísla na začátku. 
-   Povoluje: `[a-zA-Z0-9_]` (včetně diakritiky).
-
-2. **validate_class_name_is_ascii**:
-   Eliminuje diakritiku a Unicode symboly. 
-   Povoluje: `[a-zA-Z0-9_]`.
-
-3. **validate_class_name_no_underscores**:
-   Eliminuje podtržítka. 
-   Povoluje: `[a-zA-Z0-9]`.
-
-## Co Python garantuje vždy
-I u dynamické tvorby přes `type()` máme garantováno (vyvolá TypeError/ValueError):
-- Vstupem je vždy `str`.
-- Vstup není nikdy prázdný řetězec `""`.
-
-## Příklady
-```python
-# OK
-validate_class_name_is_identifier("MyClass")      # ✓
-validate_class_name_is_identifier("Třída_1")      # ✓ (diakritiku řeší až další krok)
-
-# CHYBA
-validate_class_name_is_identifier("123Class")     # ✗ začíná číslem
-validate_class_name_is_identifier("My-Class")     # ✗ obsahuje pomlčku
-validate_class_name_is_identifier("My Class")     # ✗ obsahuje mezeru
-"""
+@pytest.mark.parametrize(
+    "invalid_name",
+    ["123Class", "My-Class", "My Class", "My.Class"]
+)
+def test_validate_class_name_is_identifier_invalid_inputs(subtests, invalid_name: str) -> None:
+    """Verify that invalid Python identifiers trigger a properly formatted SimpleMetadataError."""
+    assert_exception_function(
+        subtests,
+        validate_class_name_is_identifier,
+        invalid_params=(invalid_name,),
+        exception_type=SimpleMetadataError,
+        value=invalid_name,
+        label="Invalid Python name",
+        expected="A valid identifier starting with a letter or underscore, containing only alphanumeric characters and underscores.",
+        problem="The class name '",
+        context="Structural validation of dynamic class identifiers during metadata extraction.",
+        how_to_fix=(
+            "Ensure the class name does not contain spaces, dashes, or dots.",
+            "The name must not begin with a digit.",
+            "When creating classes dynamically via type(name, ...), verify that the 'name' parameter complies with Python identifier rules.",
+        ),
+    )
