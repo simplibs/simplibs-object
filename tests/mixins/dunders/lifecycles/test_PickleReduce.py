@@ -3,8 +3,8 @@ from typing import TYPE_CHECKING
 from .PickleState import PickleState
 # Annotations
 if TYPE_CHECKING:
-    from ....protocols.mixins.dunders.lifecycles import PickleReduceProtocol
-    from ....protocols.mixins.dunders.lifecycles.internal_types import PicklePlan
+    from ...._core.protocols.mixins.dunders.lifecycles import PickleReduceProtocol
+    from ...._core.protocols.mixins.dunders.lifecycles.internal_types import PicklePlan
 
 
 class PicleReduce(PickleState):

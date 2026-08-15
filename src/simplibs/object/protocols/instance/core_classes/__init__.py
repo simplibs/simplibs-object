@@ -1,3 +1,0 @@
-from .InstanceBaseProtocol import InstanceBaseProtocol
-from .AtomInstanceProtocol import AtomInstanceProtocol
-from .CompositeInstanceProtocol import CompositeInstanceProtocol

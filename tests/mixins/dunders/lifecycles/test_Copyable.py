@@ -2,10 +2,10 @@ from typing import Any, TYPE_CHECKING
 import copy as _copy
 # Outers
 from ...core_mixins import NodesDicts, Snapshot
-from ..._common.immutability import create_new_instance
+from ..._commons.immutability import create_new_instance
 # Annotations
 if TYPE_CHECKING:
-    from ....protocols.mixins.dunders.lifecycles import CopyableProtocol
+    from ...._core.protocols.mixins.dunders.lifecycles import CopyableProtocol
 
 
 class Copyable(NodesDicts, Snapshot):

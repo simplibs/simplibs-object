@@ -1,5 +1,5 @@
-from ..NodesDicts import NodesDicts
-from ..Snapshot import Snapshot
+from .NodesDicts import NodesDicts
+from .Snapshot import Snapshot
 
 class Infrastructure(NodesDicts, Snapshot):
     """

@@ -1,24 +1,50 @@
 # Inners
-from .SimpleError import SimpleError
+from .base_exception import SimpleObjectError
 
 
-class SimpleLogicError(SimpleError):
-    """Exception for errors occurring during data manipulation (validation, creation, update)."""
+class SimpleLogicError(SimpleObjectError):
+    """
+    Exception raised when provided data or operations fail logic, validation,
+    or state rules during object execution.
+
+    This error indicates that the class definition and instance setup are valid,
+    but the runtime value or operation violates declared domain logic.
+    """
 
 
 _DESIGN_NOTES = """
-# SimpleLogicError
+# SimpleLogicError — Data & Operational Runtime Exception
 
 ## Purpose
-This exception covers the entire data lifecycle inside `SimpleObject`. It is raised when the metadata is perfectly valid, but the specific data (values) provided do not comply with the defined rules.
+`SimpleLogicError` represents errors caused by **runtime data or invalid user operations**.
+It is raised when values passed to or operations performed on a `SimpleConstant` or
+`SimpleObject` fail to satisfy domain rules.
 
-## Logic
-Inherits from `SimpleError`. It is used within `base_logic` mixins for:
-- Type check failures (ValidateType).
-- User validation failures (Validate).
-- Normalization errors (Normalize).
-- Issues during value decomposition or composition (Create/Update/Decompose).
+This is the primary public-facing exception that end users will encounter when
+interacting with instantiated Simple objects in application logic.
+
+---
+
+## When It Occurs
+Typical situations include:
+
+- type mismatches during property assignment or setter calls,
+- custom validation failures inside `_validate` methods,
+- normalization or conversion errors during data assignment,
+- illegal state modifications (e.g., writing to a locked/immutable instance),
+- calculation or decomposition failures during value propagation.
+
+---
+
+## Distinction from Other Exceptions
+- `SimpleDefinitionError` → definition-time errors (invalid declarative blueprint)
+- `SimpleInitializationError`   → instantiation-time errors (failed instance/mixin setup)
+- `SimpleLogicError`    → **runtime data & logic errors** (invalid user input/state)
+- `SimpleLogicError`    → test utility failures (fuzzing/filler issues)
+
+---
 
 ## Notes
-By separating this from `SimpleMetadataError`, we provide the user with a clear tool to distinguish between a poorly written class definition (code issue) and incorrectly provided data (runtime instance issue).
+- Inherits from `SimpleObjectError`, so it can be caught via `except SimpleObjectError`.
+- Main exception meant for application-level `try...except` blocks handling user data.
 """

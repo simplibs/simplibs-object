@@ -1,2 +1,0 @@
-from .ValueDisplayProtocol import ValueDisplayProtocol
-from .ValueFormattingProtocol import ValueFormattingProtocol

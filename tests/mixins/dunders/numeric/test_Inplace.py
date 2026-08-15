@@ -7,7 +7,7 @@ from ...base_class import SimpleMixin
 from ._utils import execute_inplace_op
 # Annotations
 if TYPE_CHECKING:
-    from ....protocols.mixins.dunders.numeric import InplaceProtocol
+    from ...._core.protocols.mixins.dunders.numeric import InplaceProtocol
 
 
 class Inplace(SimpleMixin):

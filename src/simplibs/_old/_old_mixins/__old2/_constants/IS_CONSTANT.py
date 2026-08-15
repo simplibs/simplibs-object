@@ -1,1 +1,0 @@
-IS_CONSTANT = "_is_constant"

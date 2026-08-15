@@ -30,9 +30,9 @@ classifiers = [
     "Topic :: Software Development :: Quality Assurance",
 ]
 dependencies = [
-    "simplibs-exception>=0.2.0",
-    "simplibs-signature>=0.2.2",
+    "simplibs-exception>=1.0.0",
     "simplibs-sentinels>=0.1.0",
+    "simplibs-randomize>=0.1.0",
 ]
 
 [[project.authors]]

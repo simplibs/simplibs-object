@@ -1,2 +1,0 @@
-from .class_name_splitter import class_name_splitter
-from .create_names import create_names

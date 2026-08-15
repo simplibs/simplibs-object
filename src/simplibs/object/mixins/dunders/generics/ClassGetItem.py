@@ -5,26 +5,28 @@ from ...base_class import SimpleMixin
 
 class ClassGetItem(SimpleMixin):
     """
-    Mixin poskytující podporu pro syntaxi generik typu:
+    Mixin providing support for generic-style subscript syntax:
 
         MyClass[int]
         MyClass[str]
         MyClass[tuple[int, str]]
 
-    Tato metoda je čistě syntaktická pomůcka pro type hints, IDE a statickou
-    analýzu. Nemá žádný vliv na runtime chování instance ani na konstrukci
-    instanční třídy.
+    This method is purely a syntactic aid for type hints, IDEs, and
+    static analysis. It has no effect on the instance's runtime behavior
+    or on the construction of the instance class.
 
-    Logika:
-    - Pokud nadřazená třída (__class_getitem__) existuje, použije se.
-    - Pokud neexistuje (což je běžné u běžných tříd), vrací se samotná třída.
+    Logic:
+    - If a parent class already implements __class_getitem__, that
+      implementation is used.
+    - If it doesn't exist (the common case for plain classes), the class
+      itself is returned.
     """
 
     # ----------------------------------------
-    # Základní rozhraní
+    # Basic interface
     # ----------------------------------------
 
-    # Definice slotů
+    # Slot definition
     __slots__ = ()
 
     # ----------------------------------------
@@ -37,20 +39,56 @@ class ClassGetItem(SimpleMixin):
         item: Any
     ) -> type[Self] | Any:
         """
-        Umožňuje zápis MyClass[T] bez nutnosti dědit z typing.Generic.
+        Enables the MyClass[T] syntax without having to inherit from
+        typing.Generic.
 
-        Pokud nadřazená třída implementuje __class_getitem__, použije se její
-        implementace. Pokud ne, vrací se samotná třída, což je standardní
-        fallback používaný v Pythonu pro jednoduché generické zápisy.
+        If the parent class implements __class_getitem__, its
+        implementation is used. Otherwise the class itself is returned,
+        which is the standard fallback Python uses for simple generic
+        subscript syntax.
         """
 
-        # 1. Načtení metody z nadřazené třídy
+        # 1. Look up the method on the parent class
         super_cls = super(ClassGetItem, cls)
         method = getattr(super_cls, "__class_getitem__", None)
 
-        # 2. Navrácení metody a nebo třídy jako fallbacku
+        # 2. Return the method's result, or the class as a fallback
         return (
             method(item)
             if method is not None
             else cls
         )
+
+
+_DESIGN_NOTES = """
+# ClassGetItem
+
+## Purpose
+Lets a Simple class be subscripted like `MyClass[int]` without having to
+inherit from `typing.Generic`. Purely cosmetic/typing sugar — it doesn't
+change what the class does at runtime.
+
+> For newcomers: `__class_getitem__` is what makes `list[int]` or
+> `dict[str, int]` work in modern Python type hints. Adding it here means
+> a Simple blueprint can be written or annotated the same familiar way,
+> even though it isn't a generic class in the `typing.Generic` sense.
+
+## Compatibility
+- No compatibility flags — purely additive, has no interaction with
+  value, mutability, or composite/atom distinctions.
+
+## Logic
+- Looks up `__class_getitem__` on the parent class via `super()`.
+- If the parent defines one (e.g. because it *does* inherit from
+  `Generic`), that implementation wins — this mixin steps out of the way.
+- If not, it falls back to returning the class itself unchanged, which is
+  the same fallback CPython uses internally for plain classes.
+
+## Notes
+- No `TYPE_CHECKING` import block, unlike most other mixins in this
+  package — the method takes no protocol-typed `self` parameter since
+  it's a `classmethod` operating on `cls`, not on an instance.
+- Has zero effect on instance creation, validation, or the
+  `create_instance` pipeline — it only affects what `MyClass[...]`
+  returns when read by a type checker or at import time.
+"""

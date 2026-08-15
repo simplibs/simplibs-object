@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Any
 from ...base_class import SimpleMixin
 # Annotations
 if TYPE_CHECKING:
-    from ....protocols.mixins.dunders.comparison import OrderingProtocol
+    from ...._core.protocols.mixins.dunders.comparison import OrderingProtocol
 
 
 # noinspection PyUnresolvedReferences

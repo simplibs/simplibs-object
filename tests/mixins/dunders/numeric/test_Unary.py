@@ -7,7 +7,7 @@ from ...core_mixins import NodesDicts, Snapshot
 from ._utils import execute_unary_op
 # Annotations
 if TYPE_CHECKING:
-    from ....protocols.mixins.dunders.numeric import UnaryProtocol
+    from ...._core.protocols.mixins.dunders.numeric import UnaryProtocol
 
 
 class Unary(NodesDicts, Snapshot):

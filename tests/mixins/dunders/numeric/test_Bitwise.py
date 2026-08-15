@@ -3,12 +3,12 @@ import operator
 from numbers import Integral
 # Outers
 from ...core_mixins import NodesDicts, Snapshot
-from ..._common.immutability import with_constant
+from ..._commons.immutability import with_constant
 # Inners
 from ._utils import execute_bitwise_op
 # Annotations
 if TYPE_CHECKING:
-    from ....protocols.mixins.dunders.numeric import BitwiseProtocol
+    from ...._core.protocols.mixins.dunders.numeric import BitwiseProtocol
 
 
 class Bitwise(NodesDicts, Snapshot):

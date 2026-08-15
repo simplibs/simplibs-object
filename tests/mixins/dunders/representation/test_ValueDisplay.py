@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 from ...base_class import SimpleMixin
 # Annotations
 if TYPE_CHECKING:
-    from ....protocols.mixins.dunders.representation import ValueDisplayProtocol
+    from ...._core.protocols.mixins.dunders.representation import ValueDisplayProtocol
 
 
 class ValueDisplay(SimpleMixin):

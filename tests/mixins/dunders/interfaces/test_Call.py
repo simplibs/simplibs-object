@@ -1,10 +1,10 @@
 from typing import TYPE_CHECKING,Any
 # Outers
-from ..._common.immutability import with_any
+from ..._commons.immutability import with_any
 from ...core_mixins import Infrastructure
 # Annotations
 if TYPE_CHECKING:
-    from ....protocols.mixins.dunders.interfaces import CallProtocol
+    from ...._core.protocols.mixins.dunders.interfaces import CallProtocol
 
 
 class Call(Infrastructure):

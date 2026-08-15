@@ -1,3 +1,0 @@
-from .SimpleInstanceBaseProtocol import SimpleInstanceBaseProtocol
-from .SimpleAtomInstanceProtocol import SimpleAtomInstanceProtocol
-from .SimpleCompositeInstanceProtocol import SimpleCompositeInstanceProtocol

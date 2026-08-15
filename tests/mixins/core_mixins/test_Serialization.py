@@ -5,8 +5,8 @@ from .Infrastructure import Infrastructure
 from ._utils.serialization import to_dict, from_dict, from_dict_constants
 # Annotations
 if TYPE_CHECKING:
-    from ...protocols.mixins.core_mixins import SerializationProtocol
-    from ...protocols.alias_typings import StateDict
+    from ..._core.protocols.mixins.core_mixins import SerializationProtocol
+    from ..._core.protocols.alias_typings import StateDict
 
 
 class Serialization(Infrastructure):

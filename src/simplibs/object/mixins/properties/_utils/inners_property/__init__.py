@@ -1,1 +1,0 @@
-from .collect_all_nested_properties import collect_all_nested_properties

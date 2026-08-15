@@ -7,7 +7,7 @@ from ...base_class import SimpleMixin
 from ._utils import execute_conversion
 # Annotations
 if TYPE_CHECKING:
-    from ....protocols.mixins.dunders.numeric import ConversionProtocol
+    from ...._core.protocols.mixins.dunders.numeric import ConversionProtocol
 
 
 class Conversion(SimpleMixin):

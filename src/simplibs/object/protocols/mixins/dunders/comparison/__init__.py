@@ -1,2 +1,0 @@
-from .EqualityProtocol import EqualityProtocol
-from .OrderingProtocol import OrderingProtocol

@@ -3,36 +3,36 @@ from typing import TYPE_CHECKING, Any
 from ...base_class import SimpleMixin
 # Annotations
 if TYPE_CHECKING:
-    from ....protocols.mixins.dunders.comparison import EqualityProtocol
+    from ...._core.protocols.mixins.dunders.comparison import EqualityProtocol
 
 
 class Equality(SimpleMixin):
     """
-    Rovnost a hashování pro Simple instance.
+    Equality and hashing for Simple instances.
 
-    Rovnost (__eq__) je založená na hodnotě:
-    - Pokud je druhý operand Simple instance stejného blueprintu,
-      porovnají se jejich hodnoty.
-    - Pokud je druhý operand surová hodnota, porovnává se přímo s ní.
+    Equality (__eq__) is value-based:
+    - If the other operand is a Simple instance of the same blueprint,
+      their values are compared.
+    - If the other operand is a raw value, it is compared directly.
 
-    Hashování (__hash__) je řízené mutabilitou instance:
-    - U mutovatelných instancí (__is_mutable__ = True) se používá
-      hash podle identity (id(self)), aby byla zaručena stabilita
-      i při změně hodnoty.
-    - U neměnných instancí (__is_mutable__ = False) se používá
-      hash podle hodnoty (hash(self.value)), protože hodnota je
-      garantovaně neměnná a hashovatelná.
+    Hashing (__hash__) is driven by instance mutability:
+    - For mutable instances (__is_mutable__ = True), identity-based hash
+      (id(self)) is used, to guarantee stability even when the value
+      changes.
+    - For immutable instances (__is_mutable__ = False), value-based hash
+      (hash(self.value)) is used, because the value is guaranteed to be
+      immutable and hashable.
 
-    Tento mixin je univerzální — lze jej použít pro mutable i immutable
-    instance, protože hashovací strategie se volí dynamicky podle
-    příznaku __is_mutable__.
+    This mixin is universal — it can be used for both mutable and
+    immutable instances, since the hashing strategy is chosen dynamically
+    based on the __is_mutable__ flag.
     """
 
     # ----------------------------------------
-    # Základní rozhraní
+    # Basic interface
     # ----------------------------------------
 
-    # Definice slotů
+    # Slot definition
     __slots__ = ()
 
     # ----------------------------------------
@@ -44,39 +44,85 @@ class Equality(SimpleMixin):
         other: Any
     ) -> bool:
         """
-        Rovnost podle hodnoty.
-        - Pokud je druhý operand Simple instance stejného blueprintu,
-          porovnají se jejich hodnoty.
-        - Pokud je druhý operand surová hodnota, porovná se přímo.
+        Value-based equality.
+        - If the other operand is a Simple instance of the same
+          blueprint, their values are compared.
+        - If the other operand is a raw value, it is compared directly.
         """
-        # 1. Porovnání dvou Simple instancí
+        # 1. Comparing two Simple instances
         if hasattr(other, "meta") and hasattr(other, "value"):
             if self.meta.blueprint_path == other.meta.blueprint_path:
                 return self.value == other.value
             return False
 
-        # 2. Porovnání s přímou hodnotou
+        # 2. Comparing against a raw value
         return self.value == other
 
     def __hash__(
         self: "EqualityProtocol"
     ) -> int:
        """
-       Vrací hash podle mutability instance.
+       Returns a hash based on the instance's mutability.
 
-       - U mutovatelných instancí (__is_mutable__ = True) vrací hash založený
-         na identitě objektu (id(self)), aby byla zaručena stabilita i při
-         změně hodnoty.
+       - For mutable instances (__is_mutable__ = True), returns a hash
+         based on object identity (id(self)), to guarantee stability even
+         when the value changes.
 
-       - U neměnných instancí (__is_mutable__ = False) vrací hash hodnoty
-         (hash(self.value)), protože hodnota je garantovaně neměnná a
-         hashovatelná.
+       - For immutable instances (__is_mutable__ = False), returns a
+         value-based hash (hash(self.value)), because the value is
+         guaranteed to be immutable and hashable.
 
-       Tato metoda tak sjednocuje hashování pro mutable i immutable režim
-       v rámci jednoho mixinu.
+       This method thus unifies hashing for both mutable and immutable
+       mode within a single mixin.
        """
        return (
            id(self)
            if self.__is_mutable__ else
            hash(self.value)
        )
+
+
+_DESIGN_NOTES = """
+# Equality
+
+## Purpose
+Gives a Simple instance sensible `==` and `hash()` behavior, so instances
+can be compared to each other, compared to raw values, and used as dict
+keys or set members.
+
+> For newcomers: Python requires that if two objects compare equal, their
+> hashes must also match (otherwise `dict`/`set` break). This mixin's job
+> is to keep that contract true for both mutable and immutable instances,
+> which need very different hashing strategies.
+
+## Compatibility
+- No compatibility flags — works for atoms and composites, mutable and
+  immutable alike. The logic branches internally on `__is_mutable__`
+  instead of being restricted to one variant.
+
+## Logic
+`__eq__`:
+- Comparing two Simple instances checks they share the same
+  `meta.blueprint_path` (same definition) before comparing `.value` —
+  two unrelated classes with an equal value are *not* equal.
+- Comparing against a raw value compares `.value` directly, so
+  `age == 20` works without unwrapping.
+
+`__hash__` branches on `__is_mutable__`:
+- **Mutable** → `id(self)` (identity hash). A mutable instance's value can
+  change after being hashed; if the hash also changed, it would silently
+  break in `dict`/`set`. Identity hash sidesteps that at the cost of
+  `obj == obj_with_same_value` not implying `hash()` equality for two
+  *different* mutable instances — which is expected, standard Python
+  behavior for mutable objects.
+- **Immutable** → `hash(self.value)`. The value can never change again,
+  so it's safe and gives the intuitive result: two immutable instances
+  with equal values hash equally too.
+
+## Notes
+- Defining `__eq__` without `__hash__` would make instances unhashable by
+  default in Python — this mixin deliberately pairs both together.
+- `blueprint_path` equality (not just type equality) means two instances
+  built from structurally identical but differently-named blueprints are
+  still treated as unequal.
+"""

@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Any
 from .CollectionBase import CollectionBase
 # Annotations
 if TYPE_CHECKING:
-    from ....protocols.mixins.dunders.collections import MappingProtocol
+    from ...._core.protocols.mixins.dunders.collections import MappingProtocol
 
 
 class Mapping(CollectionBase):

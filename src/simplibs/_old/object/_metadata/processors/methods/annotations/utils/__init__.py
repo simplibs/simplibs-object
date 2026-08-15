@@ -1,1 +1,0 @@
-from .convert_annotation_to_type_set import convert_annotation_to_type_set

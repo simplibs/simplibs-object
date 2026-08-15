@@ -4,7 +4,7 @@ from types import TracebackType
 from ...base_class import SimpleMixin
 # Annotations
 if TYPE_CHECKING:
-    from ....protocols.mixins.dunders.interfaces import ContextProtocol
+    from ...._core.protocols.mixins.dunders.interfaces import ContextProtocol
 
 
 class ContextManager(SimpleMixin):

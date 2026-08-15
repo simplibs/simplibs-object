@@ -1,14 +1,14 @@
 from typing import TYPE_CHECKING
 # Outers
 from ..base_class import SimpleMixin
-from .._common.constants import VALUE
+from .._commons.constants import VALUE
 # Inners
 from ._utils.nodes_tuple import build_nodes_tuple
 # Annotations
 if TYPE_CHECKING:
-    from ...protocols.mixins.core_mixins import NodesTupleProtocol
-    from ...protocols.alias_typings import NamesTuple, NamesSet
-    from ...protocols.alias_typings import NodesTuple as _NodesTuple
+    from ..._core.protocols.mixins.core_mixins import NodesTupleProtocol
+    from ..._core.protocols.alias_typings import NamesTuple, NamesSet
+    from ..._core.protocols.alias_typings import NodesTuple as _NodesTuple
 
 
 class NodesTuple(SimpleMixin):

@@ -3,8 +3,8 @@ from typing import TYPE_CHECKING
 from ...core_mixins import Serialization
 # Annotations
 if TYPE_CHECKING:
-    from ....protocols.mixins.dunders.lifecycles import PickleStateProtocol
-    from ....protocols.alias_typings import StateDict
+    from ...._core.protocols.mixins.dunders.lifecycles import PickleStateProtocol
+    from ...._core.protocols.alias_typings import StateDict
 
 
 class PickleState(Serialization):

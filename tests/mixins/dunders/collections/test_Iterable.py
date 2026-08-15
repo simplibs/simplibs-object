@@ -4,7 +4,7 @@ from collections.abc import Iterator
 from .CollectionBase import CollectionBase
 # Annotations
 if TYPE_CHECKING:
-    from ....protocols.mixins.dunders.collections import IterableProtocol
+    from ...._core.protocols.mixins.dunders.collections import IterableProtocol
 
 
 class Iterable(CollectionBase):

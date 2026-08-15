@@ -4,8 +4,8 @@ from types import MappingProxyType
 from .NodesTuple import NodesTuple
 # Annotations
 if TYPE_CHECKING:
-    from ...protocols.mixins.core_mixins import NodesDictsProtocol
-    from ...protocols.alias_typings import NodesDict, NodesInstanceDict, NodesPathDict, NodesIndexMap
+    from ..._core.protocols.mixins.core_mixins import NodesDictsProtocol
+    from ..._core.protocols.alias_typings import NodesDict, NodesInstanceDict, NodesPathDict, NodesIndexMap
 
 
 class NodesDicts(NodesTuple):

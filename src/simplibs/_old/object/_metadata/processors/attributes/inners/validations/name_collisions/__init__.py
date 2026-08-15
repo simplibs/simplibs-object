@@ -1,2 +1,0 @@
-from .validate_collision_within_inners import validate_collision_within_inners
-from .validate_if_collision_with_owner_class import validate_if_collision_with_owner_class

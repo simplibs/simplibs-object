@@ -3,8 +3,8 @@ from typing import TYPE_CHECKING
 from ...base_class import SimpleMixin
 # Annotations
 if TYPE_CHECKING:
-    from ....protocols.mixins.dunders import CollectionBaseProtocol
-    from ....protocols.alias_typings import NamesSet, NamesTuple
+    from ...._core.protocols.mixins.dunders import CollectionBaseProtocol
+    from ...._core.protocols.alias_typings import NamesSet, NamesTuple
 
 
 class CollectionBase(SimpleMixin):

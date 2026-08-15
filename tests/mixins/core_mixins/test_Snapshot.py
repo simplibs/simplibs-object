@@ -4,8 +4,8 @@ from .NodesTuple import NodesTuple
 from ._utils.snapshot import compare_snapshots
 # Annotations
 if TYPE_CHECKING:
-    from ...protocols.mixins.core_mixins import SnapshotProtocol
-    from ...protocols.alias_typings import SnapshotTuple, SnapshotDiffTuple
+    from ..._core.protocols.mixins.core_mixins import SnapshotProtocol
+    from ..._core.protocols.alias_typings import SnapshotTuple, SnapshotDiffTuple
 
 
 class Snapshot(NodesTuple):

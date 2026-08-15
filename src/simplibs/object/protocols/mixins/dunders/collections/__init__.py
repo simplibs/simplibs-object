@@ -1,4 +1,0 @@
-from .CollectionBaseProtocol import CollectionBaseProtocol
-from .IterableProtocol import IterableProtocol
-from .MappingProtocol import MappingProtocol
-from .CollectionProtocol import CollectionProtocol

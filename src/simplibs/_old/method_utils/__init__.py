@@ -1,2 +1,0 @@
-from .create_simple_class_instance import create_simple_class_instance
-from .create_simple_class_metadata import create_simple_class_metadata

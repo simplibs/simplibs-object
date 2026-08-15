@@ -7,7 +7,7 @@ from ...core_mixins import NodesDicts, Snapshot
 from ._utils import execute_arithmetic_op
 # Annotations
 if TYPE_CHECKING:
-    from ....protocols.mixins.dunders.numeric import ArithmeticProtocol
+    from ...._core.protocols.mixins.dunders.numeric import ArithmeticProtocol
 
 
 class Arithmetic(NodesDicts, Snapshot):
