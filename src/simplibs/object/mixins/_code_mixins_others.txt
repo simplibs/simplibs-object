@@ -1,0 +1,1815 @@
+# >>> src/simplibs/object/mixins/others/immutable/ImmutableMethods.py
+from typing import Any, TYPE_CHECKING
+# Outers
+from ...core_mixins import Infrastructure
+from ..._common_logic.immutability import (
+    with_constants,
+    with_constant,
+    with_composite,
+    with_any,
+    create_new_instance
+)
+# Inners
+from ._validations import raise_with_changes_input_not_dict
+# Annotations
+if TYPE_CHECKING:
+    from ...._core.protocols.mixins.immutable import ImmutableMethodsProtocol
+    from ...._core.protocols.alias_typings import ChangesTuple, ChangesDict
+
+
+class ImmutableMethods(Infrastructure):
+    """
+    Mixin providing the immutable API for working with instances:
+
+    - with_constants(...)
+    - with_constant(...)
+    - with_composite(...)
+
+    Construction of immutable classes (getter-only value, removal of
+    setters, removal of mutating methods, immutable inners) is now
+    handled directly in make_atom_class / make_composite_class.
+    """
+
+    # ----------------------------------------
+    # Basic interface
+    # ----------------------------------------
+
+    # Compatibility declaration
+    _immutable_only = True
+
+    # Slot definition
+    __slots__ = ()
+
+    # ----------------------------------------
+    # Methods - Immutable API (core)
+    # ----------------------------------------
+
+    def with_constants(
+        self: "ImmutableMethodsProtocol",
+        changes_tuple: "ChangesTuple | None" = None
+    ) -> "ImmutableMethodsProtocol":
+        """Creates a new immutable instance based on multiple changes."""
+        return with_constants(self, changes_tuple)
+
+    def with_constant(
+        self: "ImmutableMethodsProtocol",
+        name: str,
+        new_value: Any
+    ) -> "ImmutableMethodsProtocol":
+        """Creates a new immutable instance by changing a single constant."""
+        return with_constant(self, name, new_value)
+
+    def with_composite(
+        self: "ImmutableMethodsProtocol",
+        name: str,
+        new_value: Any
+    ) -> "ImmutableMethodsProtocol":
+        """Creates a new immutable instance by changing a single composite."""
+        return with_composite(self, name, new_value)
+
+    # ----------------------------------------
+    # Methods - Immutable API (extended)
+    # ----------------------------------------
+
+    def with_changes(
+        self: "ImmutableMethodsProtocol",
+        changes_dict: "ChangesDict"
+    ) -> "ImmutableMethodsProtocol":
+        """Method allowing multiple constant changes to be given as a dict."""
+        if not isinstance(changes_dict, dict):
+            raise_with_changes_input_not_dict(self, changes_dict)
+        return with_any(self, tuple(changes_dict.items()))
+
+    def with_value(
+        self: "ImmutableMethodsProtocol",
+        new_value: Any
+    ) -> "ImmutableMethodsProtocol":
+        """Method for changing the main value - a convenience alias."""
+        return self.with_composite(self.meta.name_snake, new_value)
+
+    def duplicate(
+        self: "ImmutableMethodsProtocol"
+    ) -> "ImmutableMethodsProtocol":
+        """Method returning a new instance with the same values."""
+        return create_new_instance(self, self._build_snapshot())libs/object/mixins/others/immutable/ImmutableMethods.py
+
+
+# >>> src/simplibs/object/mixins/others/immutable/ImmutableMethodsWithInners.py
+from typing import Any, TYPE_CHECKING
+# Inners
+from .ImmutableMethods import ImmutableMethods
+# Annotations
+if TYPE_CHECKING:
+    from ...._core.protocols.mixins.immutable import ImmutableMethodsWithInnersProtocol
+    from ...._core.protocols.instance import SimpleInstanceLike
+
+
+class ImmutableWithInners(ImmutableMethods):
+    """
+    Adds, on top of the base class's basic methods, dedicated methods for
+    every inner.
+
+    Guarantees the presence of dynamically generated immutable methods
+    (setters) for each inner element (e.g. `obj.with_uzel(value)`).
+    Every one of these methods produces a new, transformed instance (Self).
+    """
+
+    # ----------------------------------------
+    # Basic interface
+    # ----------------------------------------
+
+    # Compatibility declaration
+    _immutable_only = True
+    _composite_only = True
+
+    # Slot definition
+    __slots__ = ()
+
+    # ----------------------------------------
+    # Hook for modifying the instance class
+    # ----------------------------------------
+
+    @staticmethod
+    def __extend_instance_class__(
+        instance_cls: "SimpleInstanceLike"
+    ) -> "SimpleInstanceLike":
+        """
+        Internal method for attaching elements to the class, before the
+        initialization process.
+        """
+
+        # 1. Iterate over nodes
+        for name in instance_cls.meta.node_names_set:
+
+            # 2. Method definition
+            # (All use the composite method, since it forwards constants to with_constant)
+            def method(self: "ImmutableMethodsWithInnersProtocol", value: Any, _name: str=name):
+                return self.with_composite(_name, value)
+
+            # 3. Set the inner element's attributes
+            method_name = f"with_{name}"
+            method.__name__ = method_name
+            method.__doc__ = (
+                f"Immutable setter for the value `{name}`.\n"
+                f"Returns a new immutable instance with `{name}` changed."
+            )
+
+            # 4. Create the method attribute
+            setattr(instance_cls, method_name, method)
+
+        # 5. Return the modified class
+        return instance_cls
+
+# >>> src/simplibs/object/mixins/others/numerical/_stepper_class/methods/processors/process_step_value.py
+from typing import Any, TYPE_CHECKING
+from simplibs.sentinels import UNSET
+# Outers
+from ...processors import process_value
+# Annotations
+if TYPE_CHECKING:
+    from ......._core.protocols.mixins.numerical.stepper import StepperProtocol
+
+
+def process_step_value(
+    self: "StepperProtocol",
+    value: Any = UNSET,
+    *,
+    validate: bool = True
+) -> Any:
+    """
+    Prepares and normalizes the step value for use in step_up and step_down.
+
+    If the value is UNSET, returns the default step of the stepper.
+    If the value is provided, it undergoes standard normalization and optional validation.
+    """
+    return (
+        self._step if value is UNSET
+        else process_value(self, value, validate=validate)
+    )
+
+# >>> src/simplibs/object/mixins/others/numerical/_stepper_class/methods/processors/verify_down_limit.py
+from typing import Any, TYPE_CHECKING
+from simplibs.sentinels import UNSET
+# Inners
+from .validations import raise_stepper_down_limit_reached
+# Annotations
+if TYPE_CHECKING:
+    from ......._core.protocols.mixins.numerical.stepper import StepperProtocol
+
+
+def verify_down_limit(
+    self: "StepperProtocol",
+    new_value: Any,
+    *,
+    raise_exception: bool = False
+) -> bool:
+    """
+    Verifies that the new value does not fall below the stepper's down limit.
+
+    If the down limit is set and the new value is below it,
+    triggers the optional limit action and optionally raises a structured error.
+    """
+
+    # 1. Check whether the DOWN limit is set and violated
+    if self.down_limit is not UNSET and new_value < self.down_limit:
+
+        # 2. Trigger limit action if present
+        if self.down_limit_action:
+            self.down_limit_action()
+
+        # 3. Raise structured error if requested
+        if raise_exception:
+            raise_stepper_down_limit_reached(self, new_value)
+
+        return False
+
+    # 4. Successful validation
+    return True
+
+# >>> src/simplibs/object/mixins/others/numerical/_stepper_class/methods/processors/verify_up_limit.py
+from typing import Any, TYPE_CHECKING
+from simplibs.sentinels import UNSET
+# Inners
+from .validations import raise_stepper_up_limit_reached
+# Annotations
+if TYPE_CHECKING:
+    from ......._core.protocols.mixins.numerical.stepper import StepperProtocol
+
+
+def verify_up_limit(
+    self: "StepperProtocol",
+    new_value: Any,
+    *,
+    raise_exception: bool = False
+) -> bool:
+    """
+    Verifies that the new value does not exceed the stepper's upper limit.
+
+    If the upper limit is set and the new value exceeds it,
+    triggers the optional limit action and optionally raises a structured error.
+    """
+
+    # 1. Check whether the UP limit is set and violated
+    if self.up_limit is not UNSET and new_value > self.up_limit:
+
+        # 2. Trigger limit action if present
+        if self.up_limit_action:
+            self.up_limit_action()
+
+        # 3. Raise structured error if requested
+        if raise_exception:
+            raise_stepper_up_limit_reached(self, new_value)
+
+        return False
+
+    # 4. Successful validation
+    return True
+
+# >>> src/simplibs/object/mixins/others/numerical/_stepper_class/methods/set_value.py
+from typing import Any, TYPE_CHECKING
+# Outers
+from ..processors import process_value
+# Inners
+from .processors import verify_up_limit, verify_down_limit
+# Annotations
+if TYPE_CHECKING:
+    from ......_core.protocols.mixins.numerical.stepper import StepperProtocol
+
+
+def set_value(
+    self: "StepperProtocol",
+    value: Any,
+    *,
+    validate: bool = True,
+    raise_exception: bool = False
+) -> Any:
+    """
+    Safely writes a new value into the instance with full limit and action control.
+    """
+
+    # 1. Normalize and validate the value
+    _value = process_value(self, value, validate=validate)
+
+    # 2. Handle identical value (no-op)
+    # noinspection PyProtectedMember
+    if _value == self._instance._value:
+        return True
+
+    # 3. Limit checks
+    # noinspection PyProtectedMember
+    if _value > self._instance._value:
+        if not verify_up_limit(self, _value, raise_exception=raise_exception):
+            return False
+    else:
+        if not verify_down_limit(self, _value, raise_exception=raise_exception):
+            return False
+
+    # 4. Write the value
+    self._instance._value = _value
+    return True
+
+# >>> src/simplibs/object/mixins/others/numerical/_stepper_class/methods/step_down.py
+from typing import Any, TYPE_CHECKING
+from simplibs.sentinels import UNSET
+# Inners
+from .processors import process_step_value, verify_down_limit
+# Annotations
+if TYPE_CHECKING:
+    from ......_core.protocols.mixins.numerical.stepper import StepperProtocol
+    from ......_core.protocols.mixins.numerical.stepper.internal_types import StepValue
+
+
+def step_down(
+    self: "StepperProtocol",
+    value: "StepValue" = UNSET,
+    *,
+    validate: bool = True,
+    raise_exception: bool = False
+) -> Any:
+    """
+    Decreases the instance’s value by the defined step (or a provided value).
+    Enforces configured limits and triggers optional actions.
+    """
+
+    # 1. Normalize and validate the step value
+    _value = process_step_value(self, value, validate=validate)
+
+    # 2. Compute the new value
+    # noinspection PyProtectedMember
+    new_value = self._instance._value - _value
+
+    # 3. Check lower limit
+    if not verify_down_limit(self, new_value, raise_exception=raise_exception):
+        return False
+
+    # 4. Write the new value
+    self._instance._value = new_value
+    return True
+
+# >>> src/simplibs/object/mixins/others/numerical/_stepper_class/methods/step_up.py
+from typing import Any, TYPE_CHECKING
+from simplibs.sentinels import UNSET
+# Inners
+from .processors import process_step_value, verify_up_limit
+# Annotations
+if TYPE_CHECKING:
+    from ......_core.protocols.mixins.numerical.stepper import StepperProtocol
+    from ......_core.protocols.mixins.numerical.stepper.internal_types import StepValue
+
+
+def step_up(
+    self: "StepperProtocol",
+    value: "StepValue" = UNSET,
+    *,
+    validate: bool = True,
+    raise_exception: bool = False
+) -> Any:
+    """
+    Increases the instance’s value by the defined step (or a provided value).
+    Enforces configured limits and triggers optional actions.
+    """
+
+    # 1. Normalize and validate the step value
+    _value = process_step_value(self, value, validate=validate)
+
+    # 2. Compute the new value
+    # noinspection PyProtectedMember
+    new_value = self._instance._value + _value
+
+    # 3. Check upper limit
+    if not verify_up_limit(self, new_value, raise_exception=raise_exception):
+        return False
+
+    # 4. Write the new value
+    self._instance._value = new_value
+    return True
+
+# >>> src/simplibs/object/mixins/others/numerical/_stepper_class/processors/process_down_limit_value.py
+from typing import Any, TYPE_CHECKING
+# Inners
+from .process_value import process_value
+from .validations import raise_stepper_invalid_down_limit
+# Annotations
+if TYPE_CHECKING:
+    from ......_core.protocols.mixins.numerical.stepper import StepperProtocol
+
+
+def process_down_limit_value(
+    self: "StepperProtocol",
+    value: Any
+) -> Any:
+    """
+    Prepares and validates the down‑limit value for the stepper.
+
+    Normalizes the provided value to the correct type and verifies
+    that the down limit is not higher than the currently configured up limit.
+    """
+
+    # 1. Normalize the value
+    _value = process_value(self, value)
+
+    # 2. Validate boundary consistency
+    if self.up_limit < _value:
+        raise_stepper_invalid_down_limit(self, value)
+
+    return _value
+
+# >>> src/simplibs/object/mixins/others/numerical/_stepper_class/processors/process_limit_action.py
+from typing import Any, TYPE_CHECKING
+# Inners
+from .validations import raise_stepper_invalid_action
+# Annotations
+if TYPE_CHECKING:
+    from ......_core.protocols.mixins.numerical.stepper import StepperProtocol
+    from ......_core.protocols.mixins.numerical.stepper.internal_types import LimitAction
+
+
+def process_limit_action(
+    self: "StepperProtocol",
+    value: Any
+) -> "LimitAction":
+    """
+    Validates and returns the limit action for the stepper.
+
+    Ensures that the provided value is a callable object that can be executed
+    when the upper or lower limit is reached.
+    """
+
+    # 1. Validate callable
+    if not callable(value):
+        raise_stepper_invalid_action(self, value)
+
+    # 2. Return the validated action
+    return value
+
+
+# >>> src/simplibs/object/mixins/others/numerical/_stepper_class/processors/process_up_limit_value.py
+from typing import Any, TYPE_CHECKING
+# Inners
+from .process_value import process_value
+from .validations import raise_stepper_invalid_up_limit
+# Annotations
+if TYPE_CHECKING:
+    from ......_core.protocols.mixins.numerical.stepper import StepperProtocol
+
+
+def process_up_limit_value(
+    self: "StepperProtocol",
+    value: Any
+) -> Any:
+    """
+    Prepares and validates the upper‑limit value for the stepper.
+
+    Normalizes the provided value to the correct type and verifies
+    that the upper limit is not lower than the currently configured down limit.
+    """
+
+    # 1. Normalize the value
+    _value = process_value(self, value)
+
+    # 2. Validate boundary consistency
+    if self.down_limit > _value:
+        raise_stepper_invalid_up_limit(self, value)
+
+    return _value
+
+# >>> src/simplibs/object/mixins/others/numerical/_stepper_class/processors/process_value.py
+from typing import Any, TYPE_CHECKING
+# Annotations
+if TYPE_CHECKING:
+    from ......_core.protocols.mixins.numerical.stepper import StepperProtocol
+
+
+def process_value(
+    self: "StepperProtocol",
+    value: Any,
+    *,
+    validate: bool = True
+) -> Any:
+    """
+    Normalizes and optionally validates a value for use in the stepper.
+
+    Converts the provided value to the correct instance type and optionally
+    validates it using the instance’s validation logic.
+    """
+
+    # 1. Normalize the value
+    _value = (
+        value if isinstance(value, self._value_type)
+        else self._value_type(value)
+    )
+
+    # 2. Validate the value
+    if validate:
+        self._instance.validate(_value)
+
+    # 3. Return the normalized value
+    return _value
+
+# >>> src/simplibs/object/mixins/others/numerical/_stepper_class/processors/validate_instance.py
+from typing import TYPE_CHECKING
+from numbers import Number
+# Outers
+from ......_core.protocols.instance import SimpleInstanceType
+# Inners
+from .validations import (
+    raise_stepper_invalid_instance,
+    raise_stepper_non_numeric_value
+)
+# Annotations
+if TYPE_CHECKING:
+    from ......_core.protocols.instance import SimpleInstanceLike
+
+
+def validate_instance(
+    instance: "SimpleInstanceLike"
+) -> None:
+    """
+    Validates that the provided instance is suitable for use with the stepper.
+
+    Ensures that the instance implements the SimpleInstanceType protocol
+    and that its value supports numeric operations.
+    """
+
+    # 1. Validate instance protocol
+    if not isinstance(instance, SimpleInstanceType):
+        raise_stepper_invalid_instance(instance, SimpleInstanceType)
+
+    # 2. Validate that the instance value is numeric
+    if not isinstance(instance.value, Number):
+        raise_stepper_non_numeric_value(instance, instance.value)
+
+# >>> src/simplibs/object/mixins/others/numerical/_stepper_class/Stepper.py
+from typing import Any, TYPE_CHECKING
+from simplibs.sentinels import UNSET
+# Inners
+from .processors import (
+    validate_instance,
+    process_value,
+    process_up_limit_value,
+    process_down_limit_value,
+    process_limit_action,
+)
+from .methods import step_up, step_down, set_value
+# Annotations
+if TYPE_CHECKING:
+    from ....._core.protocols.mixins.numerical.stepper import StepperProtocol
+    from ....._core.protocols.mixins.numerical.stepper.internal_types import StepValue, LimitAction
+    from ....._core.protocols.instance import SimpleInstanceLike
+
+
+class Stepper:
+    """
+    Service class for controlled numeric value manipulation.
+
+    Provides an encapsulated interface for incrementing, decrementing, and
+    enforcing numeric limits on the value of a bound instance.
+    """
+
+    __slots__ = (
+        "_instance",
+        "_step",
+        "_up_limit",
+        "_down_limit",
+        "_up_limit_action",
+        "_down_limit_action",
+        "_value_type"
+    )
+
+    def __init__(
+        self: "StepperProtocol",
+        instance: "SimpleInstanceLike"
+    ) -> None:
+
+        # 1. Validate instance
+        validate_instance(instance)
+
+        # 2. Bind instance
+        self._instance: "SimpleInstanceLike" = instance
+
+        # 3. Determine numeric type
+        self._value_type: type = type(instance.value)
+
+        # 4. Default step value
+        self._step: Any = self._value_type(1)
+
+        # 5. Default limits and actions
+        self._up_limit: Any = UNSET
+        self._down_limit: Any = UNSET
+        self._up_limit_action: "LimitAction" = UNSET
+        self._down_limit_action: "LimitAction" = UNSET
+
+    # ----------------------------------------
+    # Property - getters
+    # ----------------------------------------
+    @property
+    def step(self: "StepperProtocol") -> Any:
+        """Step value used for increment/decrement operations."""
+        return self._step
+
+    @property
+    def up_limit(self: "StepperProtocol") -> Any:
+        """Upper limit for the value (or UNSET)."""
+        return self._up_limit
+
+    @property
+    def down_limit(self: "StepperProtocol") -> Any:
+        """Lower limit for the value (or UNSET)."""
+        return self._down_limit
+
+    @property
+    def up_limit_action(self: "StepperProtocol") -> "LimitAction":
+        """Callback executed when the upper limit is exceeded (or UNSET)."""
+        return self._up_limit_action
+
+    @property
+    def down_limit_action(self: "StepperProtocol") -> "LimitAction":
+        """Callback executed when the lower limit is exceeded (or UNSET)."""
+        return self._down_limit_action
+
+    # ----------------------------------------
+    # Property - setters
+    # ----------------------------------------
+    @step.setter
+    def step(self: "StepperProtocol", value: Any) -> None:
+        """Step value used for increment/decrement operations."""
+        self._step = process_value(self, value)
+
+    @up_limit.setter
+    def up_limit(self: "StepperProtocol", value) -> None:
+        """Upper limit for the value (or UNSET)."""
+        self._up_limit = process_up_limit_value(self, value)
+
+    @down_limit.setter
+    def down_limit(self: "StepperProtocol", value: Any) -> None:
+        """Lower limit for the value (or UNSET)."""
+        self._down_limit = process_down_limit_value(self, value)
+
+    @up_limit_action.setter
+    def up_limit_action(self: "StepperProtocol", value: "LimitAction") -> None:
+        """Callback executed when the upper limit is exceeded (or UNSET)."""
+        self._up_limit_action = process_limit_action(self, value)
+
+    @down_limit_action.setter
+    def down_limit_action(self: "StepperProtocol", value: "LimitAction") -> None:
+        """Callback executed when the lower limit is exceeded (or UNSET)."""
+        self._down_limit_action = process_limit_action(self, value)
+
+    # ----------------------------------------
+    # Methods
+    # ----------------------------------------
+    def step_up(
+        self: "StepperProtocol",
+        value: "StepValue" = UNSET,
+        *,
+        validate: bool = True,
+        raise_exception: bool = False
+    ) -> Any:
+        """Increase the instance value by a step or custom amount."""
+        return step_up(self, value, validate=validate, raise_exception=raise_exception)
+
+    def step_down(
+        self: "StepperProtocol",
+        value: "StepValue" = UNSET,
+        *,
+        validate: bool = True,
+        raise_exception: bool = False
+    ) -> Any:
+        """Decrease the instance value by a step or custom amount."""
+        return step_down(self, value, validate=validate, raise_exception=raise_exception)
+
+    def set_value(
+        self: "StepperProtocol",
+        value: Any,
+        *,
+        validate: bool = True,
+        raise_exception: bool = False
+    ) -> Any:
+        """Safely assign a new value with full limit enforcement."""
+        return set_value(self, value, validate=validate, raise_exception=raise_exception)
+
+    # ----------------------------------------
+    # Dunders
+    # ----------------------------------------
+    def __repr__(self: "StepperProtocol") -> str:
+        """String representation of the Stepper."""
+        return f"<Stepper value={self._instance.value!r} step={self._step}>"
+
+# >>> src/simplibs/object/mixins/others/numerical/Equalizer.py
+from typing import TYPE_CHECKING
+from numbers import Number
+# Outers
+from ..._common_logic.constants import STEPPER
+from ...core_mixins import NodesTuple
+# Inners
+from ._stepper_class import Stepper
+# Annotations
+if TYPE_CHECKING:
+    from ...._core.protocols.mixins.numerical import EqualizerProtocol
+    from ...._core.protocols.mixins.numerical.internal_types import SteppersMap
+    from ...._core.protocols.instance import SimpleInstanceLike
+
+
+class Equalizer(NodesTuple):
+    """
+    Provides access to a stepper for every inner.
+
+    Guarantees the presence of numeric controllers (steppers) for every
+    sub-node element of the composite. These controllers are generated
+    dynamically based on the blueprint and are exposed via dynamic
+    properties with a suffix.
+    """
+
+    # ----------------------------------------
+    # Basic interface
+    # ----------------------------------------
+
+    # Compatibility declaration
+    _composite_only = True
+    _mutable_only = True
+    _only_types = Number
+
+    # Slot definition
+    __slots__ = ("_steppers",)
+
+    # ----------------------------------------
+    # Hook for modifying the instance class
+    # ----------------------------------------
+
+    @staticmethod
+    def __extend_instance_class__(
+        instance_cls: "SimpleInstanceLike"
+    ) -> "SimpleInstanceLike":
+        """
+        Internal method for attaching elements to the class, before the
+        initialization process.
+        """
+
+        # 1. Build the required properties
+        for name in instance_cls.meta.node_names_set:
+
+            # 1.1 Getter definition
+            def getter(self: "EqualizerProtocol", _name: str = name):
+                return self._steppers[_name]
+
+            # 1.2 Set the getter's name and docstring
+            prop_name = f"{name}{STEPPER}"
+            getter.__name__ = f"get_{prop_name}"
+            getter.__doc__ = (
+                f"Returns the Stepper object for node `{name}`.\n"
+                f"Generated dynamically based on the object's structure."
+            )
+
+            # 1.3 Create the property and store it on the class
+            setattr(instance_cls, prop_name, property(getter))
+
+        # 2. Return the modified class
+        return instance_cls
+
+    # ----------------------------------------
+    # Initialization hook
+    # ----------------------------------------
+
+    # noinspection PyAttributeOutsideInit
+    def init_mixins(
+        self: "EqualizerProtocol"
+    ) -> None:
+        """
+        Method forwarding its logic into the instance's initialization
+        process.
+        """
+
+        # 1. Initialize parents
+        super().init_mixins()
+
+        # 2. Dict of steppers for every element
+        self._steppers: "SteppersMap" = {
+            instance.meta.name_snake: Stepper(instance)
+            for instance, _ in self._nodes_tuple
+        }
+
+
+# >>> src/simplibs/object/mixins/others/numerical/Volume.py
+from typing import TYPE_CHECKING
+from numbers import Number
+# Outers
+from ...base_class import SimpleMixin
+# Innser
+from ._stepper_class import Stepper
+# Annotations
+if TYPE_CHECKING:
+    from ...._core.protocols.mixins.numerical import VolumeProtocol
+    from ...._core.protocols.mixins.numerical.stepper import StepperProtocol
+
+
+class Volume(SimpleMixin):
+    """
+    Provides access to a stepper for the main value.
+
+    Guarantees the presence of a numeric controller (stepper) attached
+    directly to the instance's main value, enabling safe stepping and
+    limit enforcement.
+    """
+
+    # ----------------------------------------
+    # Basic interface
+    # ----------------------------------------
+
+    # Compatibility declaration
+    _mutable_only = True
+    _only_types = Number
+
+    # Slot definition
+    __slots__ = ("_value_stepper",)
+
+    # ----------------------------------------
+    # Initialization hook
+    # ----------------------------------------
+
+    # noinspection PyAttributeOutsideInit
+    def init_mixins(
+        self: "VolumeProtocol"
+    ) -> None:
+        """
+        Method forwarding its logic into the instance's initialization
+        process.
+        """
+
+        # 1. Initialize parents
+        super().init_mixins()
+
+        # 2. Stepper for the base value
+        self._value_stepper: "StepperProtocol" = Stepper(self)
+
+    # ----------------------------------------
+    # Property - getters
+    # ----------------------------------------
+
+    @property
+    def value_stepper(
+        self: "VolumeProtocol"
+    ) -> "StepperProtocol":
+        """
+        Returns the numeric controller (stepper) for safely manipulating
+        this instance's main value.
+        """
+        return self._value_stepper
+
+# >>> src/simplibs/object/mixins/others/properties/_inners_property_utils/_collect_nested_inner_properties.py
+from typing import TYPE_CHECKING
+# Inners
+from ....._core.logic.property_builders import create_properties_for_inner
+# Annotations
+if TYPE_CHECKING:
+    from ....._core.protocols.metadata import SimpleMetadataLike
+    from ....._core.protocols.alias_typings import PathTuple
+
+
+def _collect_nested_inner_properties(
+    meta: "SimpleMetadataLike",
+    path: "PathTuple",
+    result: dict[str, property]
+) -> None:
+    """
+    Recursively traverses all nested inners and adds their properties
+    into the `result` dictionary.
+    """
+
+    # 1. Iterate through inner elements
+    for inner in meta.inners:
+
+        # 1.1 Extract metadata and extend path
+        inner_meta = inner.meta
+        new_path = path + (inner_meta.name_private,)
+
+        # 1.2 Create properties (for constants and composites)
+        props = create_properties_for_inner(inner_meta, new_path)
+        result.update(props)
+
+        # 1.3 Recursively process composite inners
+        if not inner_meta.is_constant:
+            _collect_nested_inner_properties(inner_meta, new_path, result)
+
+# >>> src/simplibs/object/mixins/others/properties/_inners_property_utils/collect_all_nested_properties.py
+from typing import TYPE_CHECKING
+# Inners
+from ._collect_nested_inner_properties import _collect_nested_inner_properties
+# Annotations
+if TYPE_CHECKING:
+    from ......_core.protocols.metadata import SimpleMetadataLike
+
+
+def collect_all_nested_properties(
+    meta: "SimpleMetadataLike"
+) -> dict[str, property]:
+    """
+    Returns a dictionary of properties for all nested inner elements.
+    Direct inners are ignored (they already have their own properties).
+    """
+
+    # 1. Initialize result container
+    result = {}
+
+    # 2. Iterate through direct inners
+    for inner in meta.inners:
+
+        # 2.1 Extract metadata
+        inner_meta = inner.meta
+        inner_meta: "SimpleMetadataLike"
+
+        # 2.2 Process only composite inners
+        if not inner_meta.is_constant:
+
+            # 2.2.1 Build initial path tuple
+            path = (inner_meta.name_private,)
+
+            # 2.2.2 Recursively collect nested properties
+            _collect_nested_inner_properties(inner_meta, path, result)
+
+    # 3. Return collected properties
+    return result
+
+# >>> src/simplibs/object/mixins/others/properties/InnersProperty.py
+from typing import TYPE_CHECKING
+# Outers
+from ...base_class import SimpleMixin
+# Inners
+from ._inners_property_utils import collect_all_nested_properties
+# Annotations
+if TYPE_CHECKING:
+    from ...._core.protocols.instance import SimpleInstanceLike
+
+
+class InnersProperty(SimpleMixin):
+    """
+    Mixin adding properties for inner elements.
+
+    Dynamically extends composite instances with properties for direct,
+    convenient access to their inner elements (inners), based on the
+    blueprint definition.
+    """
+
+    # ----------------------------------------
+    # Basic interface
+    # ----------------------------------------
+
+    # Compatibility declaration
+    _composite_only = True
+
+    # Slot definition
+    __slots__ = ()
+
+    # ----------------------------------------
+    # Hook for modifying the instance class
+    # ----------------------------------------
+
+    @staticmethod
+    def __extend_instance_class__(
+        instance_cls: "SimpleInstanceLike"
+    ) -> "SimpleInstanceLike":
+        """
+        Internal method for attaching elements to the class, before the
+        initialization process.
+        """
+
+        # 1. Build the required properties
+        nested_props = collect_all_nested_properties(instance_cls.meta)
+
+        # 2. Attach the attributes to the class
+        for name, prop in nested_props.items():
+            setattr(instance_cls, name, prop)
+
+        # 3. Return the modified class
+        return instance_cls
+
+# >>> src/simplibs/object/mixins/others/properties/MetaShortcuts.py
+from typing import TYPE_CHECKING, Any
+# Outers
+from ...base_class import SimpleMixin
+# Annotations
+if TYPE_CHECKING:
+    from ...._core.protocols.instance import SimpleInstanceLike
+    from ...._core.protocols.alias_typings import ValidTypes
+
+
+class MetaShortcuts(SimpleMixin):
+    """
+    Ergonomic shortcuts for frequently used items from the object's
+    metadata. Adds no logic of its own — it only exposes selected
+    information directly on the instance.
+    """
+
+    # ----------------------------------------
+    # Basic interface
+    # ----------------------------------------
+
+    # Slot definition
+    __slots__ = ()
+
+    # -------------------------
+    # Property - Object identity
+    # -------------------------
+    @property
+    def name_snake(
+        self: "SimpleInstanceLike"
+    ) -> str:
+        """Snake_case name of the object's class."""
+        return self.meta.name_snake
+
+    # -------------------------
+    # Property - Type information
+    # -------------------------
+    @property
+    def value_type(
+        self: "SimpleInstanceLike"
+    ) -> "ValidTypes":
+        """The Python type of the value the object holds."""
+        return self.meta.value_type
+
+    @property
+    def default(
+        self: "SimpleInstanceLike"
+    ) -> Any:
+        """The object's default value, as defined in its metadata."""
+        return self.meta.default
+
+    # -------------------------
+    # Property - Object structure
+    # -------------------------
+    @property
+    def is_atom(
+        self: "SimpleInstanceLike"
+    ) -> bool:
+        """True if the object represents an atom (has no inners)."""
+        return self.meta.is_constant
+
+    @property
+    def is_composite(
+        self: "SimpleInstanceLike"
+    ) -> bool:
+        """True if the object represents a composite (has inners)."""
+        return not self.meta.is_constant
+
+    @property
+    def is_decomposeable(
+        self: "SimpleInstanceLike"
+    ) -> bool:
+        """True if the object's value can be changed via decomposition."""
+        return getattr(self.meta, "is_decomposeable", False)
+
+# >>> src/simplibs/object/mixins/others/state/_history_utils/core/find_snapshot.py
+from typing import TYPE_CHECKING
+from datetime import datetime
+# Outers
+from .validations import (
+    raise_unvalide_snapshot_index,
+    raise_unvalide_timestamp,
+    raise_unvalide_snopshot_timestamp,
+    raise_unvalide_snopshot_reference,
+)
+# Annotations
+if TYPE_CHECKING:
+    from ......_core.protocols.mixins.state import HistoryProtocol
+    from ......_core.protocols.alias_typings import SnapshotTuple
+
+
+def find_snapshot(
+    self: "HistoryProtocol",
+    ref: int | datetime
+) -> "SnapshotTuple":
+    """
+    Resolves an index or timestamp reference into a snapshot tuple.
+    """
+
+    # 1. Handle integer reference
+    if isinstance(ref, int):
+
+        # 1.1 Validate index
+        if not (0 <= ref < self._history_count):
+            raise_unvalide_snapshot_index(self, ref)
+
+        # 1.2 Return snapshot
+        return self._history[ref][1]
+
+    # 2. Handle datetime reference
+    if isinstance(ref, datetime):
+
+        # 2.1 Validate timestamp type
+        if not isinstance(ref, datetime):
+            raise_unvalide_timestamp(self, ref)
+
+        # 2.2 Search for matching timestamp
+        for ts, snapshot in self._history:
+            if ts == ref:
+                return snapshot
+
+        # 2.3 Timestamp not found
+        raise_unvalide_snopshot_timestamp(self, ref)
+
+    # 3. Invalid reference type
+    raise_unvalide_snopshot_reference(self, ref)
+
+# >>> src/simplibs/object/mixins/others/state/_history_utils/core/record_state.py
+from typing import TYPE_CHECKING
+from datetime import datetime
+# Annotations
+if TYPE_CHECKING:
+    from ......_core.protocols.mixins.state import HistoryProtocol
+    from ......_core.protocols.alias_typings import HistoryEntry
+
+
+def record_state(
+    self: "HistoryProtocol"
+) -> "HistoryEntry":
+    """
+    Creates a snapshot of the current instance state and stores it in history.
+    """
+
+    # 1. Create timestamp and snapshot
+    timestamp = datetime.now()
+    snapshot = self._build_snapshot()
+
+    # 2. Enforce history limit
+    if self._history_limit and self._history_count >= self._history_limit:
+        self._history.pop(0)
+
+    # 3. Store entry
+    history_entry = (timestamp, snapshot)
+    self._history.append(history_entry)
+    self._history_count = len(self._history)
+    self._history_index = self._history_count - 1
+
+    # 4. Return entry
+    return history_entry
+
+# >>> src/simplibs/object/mixins/others/state/_history_utils/core/set_history_limit.py
+from typing import TYPE_CHECKING
+# Outers
+from .validations import raise_history_limit_not_positive_integer
+# Annotations
+if TYPE_CHECKING:
+    from ......_core.protocols.mixins.state import HistoryProtocol
+
+
+def set_history_limit(
+    self: "HistoryProtocol",
+    value: int
+) -> None:
+    """
+    Sets the maximum allowed size of the history list.
+    """
+
+    # 1. Validate value
+    if not isinstance(value, int) or value < 1:
+        raise_history_limit_not_positive_integer(self, value)
+
+    # 2. Adjust history to the new limit
+    if self._history_count > value:
+        del self._history[:(self._history_count - value)]
+        self._history_count = len(self._history)
+        self._history_index = self._history_count - 1
+
+    # 3. Store limit
+    self._history_limit = value
+
+# >>> src/simplibs/object/mixins/others/state/_history_utils/navigations/go_to_history_on_index.py
+from typing import TYPE_CHECKING
+# Outers
+from ..core.validations import raise_unvalide_snapshot_index
+# Annotations
+if TYPE_CHECKING:
+    from ......_core.protocols.mixins.state import HistoryProtocol
+
+
+def go_to_history_on_index(
+    self: "HistoryProtocol",
+    index: int
+) -> None:
+    """
+    Navigates to a specific history entry by index and restores its snapshot.
+    """
+
+    # 1. Validate index
+    if not (0 <= index < self._history_count):
+        raise_unvalide_snapshot_index(self, index)
+
+    # 2. Switch to the selected entry
+    self._history_index = index
+    _, snapshot = self._history[self._history_index]
+    self._restore_snapshot(snapshot)
+
+# >>> src/simplibs/object/mixins/others/state/_history_utils/navigations/go_to_history_on_timestamp.py
+from typing import TYPE_CHECKING
+from datetime import datetime
+# Outers
+from ..core.validations import raise_unvalide_timestamp, raise_unvalide_snopshot_timestamp
+# Annotations
+if TYPE_CHECKING:
+    from ......_core.protocols.mixins.state import HistoryProtocol
+
+
+def go_to_history_on_timestamp(
+    self: "HistoryProtocol",
+    timestamp: datetime
+) -> None:
+    """
+    Navigates to a specific history entry by timestamp and restores its snapshot.
+    """
+
+    # 1. Validate timestamp type
+    if not isinstance(timestamp, datetime):
+        raise_unvalide_timestamp(self, timestamp)
+
+    # 2. Search for matching timestamp
+    for i, (ts, snapshot) in enumerate(self._history):
+        if ts == timestamp:
+            self._history_index = i
+            self._restore_snapshot(snapshot)
+            return
+
+    # 3. Timestamp not found
+    raise_unvalide_snopshot_timestamp(self, timestamp)
+
+# >>> src/simplibs/object/mixins/others/state/_history_utils/navigations/go_to_last_history.py
+from typing import TYPE_CHECKING
+# Annotations
+if TYPE_CHECKING:
+    from ......_core.protocols.mixins.state import HistoryProtocol
+
+
+def go_to_last_history(
+    self: "HistoryProtocol"
+) -> None:
+    """
+    Navigates to the last history entry and restores its snapshot.
+    """
+
+    # 1. Check if already at the last entry
+    last_index = self._history_count - 1
+    if self._history_index != last_index:
+
+        # 2. Switch to the last entry
+        self._history_index = last_index
+        _, snapshot = self._history[self._history_index]
+        self._restore_snapshot(snapshot)
+
+# >>> src/simplibs/object/mixins/others/state/_history_utils/navigations/history_redo.py
+from typing import TYPE_CHECKING
+# Annotations
+if TYPE_CHECKING:
+    from ......_core.protocols.mixins.state import HistoryProtocol
+
+
+def history_redo(
+    self: "HistoryProtocol"
+) -> bool:
+    """
+    Moves forward to the next history entry (if available) and restores its snapshot.
+    """
+
+    # 1. Check if a forward move is possible
+    if self._history_index >= self._history_count - 1:
+        return False
+
+    # 2. Move to the next entry
+    self._history_index += 1
+    _, snapshot = self._history[self._history_index]
+    self._restore_snapshot(snapshot)
+    return True
+
+
+# >>> src/simplibs/object/mixins/others/state/_history_utils/navigations/history_undo.py
+from typing import TYPE_CHECKING
+# Annotations
+if TYPE_CHECKING:
+    from ......_core.protocols.mixins.state import HistoryProtocol
+
+
+def history_undo(
+    self: "HistoryProtocol"
+) -> bool:
+    """
+    Moves backward to the previous history entry (if available) and restores its snapshot.
+    """
+
+    # 1. Check if a backward move is possible
+    if self._history_index <= 0:
+        return False
+
+    # 2. Move to the previous entry
+    self._history_index -= 1
+    _, snapshot = self._history[self._history_index]
+    self._restore_snapshot(snapshot)
+    return True
+
+
+# >>> src/simplibs/object/mixins/others/state/_history_utils/transfer/export_history_to_dict.py
+from typing import TYPE_CHECKING
+# Outers
+from ....._common_logic.constants import OWNER_CLASS, HISTORY
+# Annotations
+if TYPE_CHECKING:
+    from ......_core.protocols.mixins.state import HistoryProtocol
+    from ......_core.protocols.alias_typings import HistoryDict
+
+
+def export_history_to_dict(
+    self: "HistoryProtocol"
+) -> "HistoryDict":
+    """
+    Exports the history into a portable dictionary format:
+        { _owner_class: ..., history: ( (timestamp, [values...]), ... ) }
+    """
+    return {
+        OWNER_CLASS: self.meta.owner_class,
+        HISTORY: self.history
+    }
+
+
+# >>> src/simplibs/object/mixins/others/state/_history_utils/transfer/import_history_from_dict.py
+from typing import TYPE_CHECKING, Any
+from simplibs.sentinels import UNSET
+# Outers
+from ....._common_logic.constants import OWNER_CLASS, HISTORY
+# Inners
+from .validations import (
+    raise_unvalide_history_import_file,
+    raise_unvalide_owner_class_mismatch,
+)
+# Annotations
+if TYPE_CHECKING:
+    from ......_core.protocols.mixins.state import HistoryProtocol
+
+
+def import_history_from_dict(
+    self: "HistoryProtocol",
+    history_dict: dict[str, Any]
+) -> None:
+    """
+    Imports history from a portable dictionary format with owner_class validation.
+    """
+
+    # 1. Validate input type
+    if not isinstance(history_dict, dict):
+        raise_unvalide_history_import_file(self, history_dict)
+
+    # 2. Validate owner class
+    owner_class = history_dict.get(OWNER_CLASS, UNSET)
+    if self.meta.owner_class != owner_class:
+        raise_unvalide_owner_class_mismatch(self, owner_class)
+
+    # 3. Backup previous history
+    backup = self._history
+
+    # 4. Replace history
+    try:
+        # 4.1 Load new history
+        self._history = list(history_dict[HISTORY])
+        self.go_to_last()
+
+        # 4.2 Apply limit trimming (if configured)
+        if self.history_limit:
+            self.history_limit = self.history_limit
+
+    # 5. Restore previous state on failure
+    except Exception as e:
+        self._history = backup
+        self.go_to_last()
+        raise e
+
+# >>> src/simplibs/object/mixins/others/state/DefaultState.py
+from typing import TYPE_CHECKING
+# Outers
+from ...core_mixins import Snapshot
+from ..._common_logic.immutability import create_new_instance
+# Annotations
+if TYPE_CHECKING:
+    from ...._core.protocols.mixins.state import DefaultStateProtocol
+    from ...._core.protocols.alias_typings import SnapshotTuple
+
+
+# noinspection PyProtectedMember
+class DefaultState(Snapshot):
+    """
+    Mixin providing the instance with:
+    - a stored default state (_default_state)
+    - the methods clone_instance(), reset_to_default_values(),
+      create_new_default_instance()
+    """
+
+    # ----------------------------------------
+    # Basic interface
+    # ----------------------------------------
+
+    # Compatibility declaration
+    _mutable_only = True
+
+    # Slot definition
+    __slots__ = ("_default_state_snapshot",)
+
+    # ----------------------------------------
+    # Initialization hook
+    # ----------------------------------------
+
+    # noinspection PyAttributeOutsideInit
+    def init_mixins(
+        self: "DefaultStateProtocol"
+    ) -> None:
+        """
+        Method forwarding its logic into the instance's initialization
+        process.
+        """
+
+        # 1. Initialize parents
+        super().init_mixins()
+
+        # 2. Build a snapshot of the default state
+        self._default_state_snapshot: "SnapshotTuple" = self._build_snapshot()
+
+    # ----------------------------------------
+    # Methods - CLONE / RESET / NEW
+    # ----------------------------------------
+
+    def clone_instance(
+        self: "DefaultStateProtocol"
+    ) -> "DefaultStateProtocol":
+        """Creates a new instance with the same state as this instance."""
+        new_instance = self.create_new_default_instance()
+        new_instance._restore_snapshot(self._build_snapshot())
+        return new_instance
+
+    def reset_to_default_values(
+        self: "DefaultStateProtocol"
+    ) -> None:
+        """Resets the instance to its default state (_default_state)."""
+        self._restore_snapshot(self._default_state_snapshot)
+
+    # noinspection PyTypeChecker
+    def create_new_default_instance(
+        self: "DefaultStateProtocol"
+    ) -> "DefaultStateProtocol":
+        """
+        Returns a new instance of the same type, with the same default
+        state this instance had when it was created.
+        """
+        return create_new_instance(self, self._default_state_snapshot)
+
+
+# >>> src/simplibs/object/mixins/others/state/DirtyTracking.py
+from typing import TYPE_CHECKING
+# Outers
+from ...core_mixins import Snapshot
+# Annotations
+if TYPE_CHECKING:
+    from ...._core.protocols.mixins.state import DirtyTrackingProtocol
+    from ...._core.protocols.alias_typings import SnapshotDiffTuple, SnapshotTuple
+
+
+class DirtyTracking(Snapshot):
+    """
+    Modern snapshot-based dirty tracking.
+    Works for atoms, composites, and nested structures.
+    """
+
+    # ----------------------------------------
+    # Basic interface
+    # ----------------------------------------
+
+    # Compatibility declaration
+    _mutable_only = True
+
+    # Slot definition
+    __slots__ = ("_clean_snapshot",)
+
+    # ----------------------------------------
+    # Initialization hook
+    # ----------------------------------------
+
+    # noinspection PyAttributeOutsideInit
+    def init_mixins(
+        self: "DirtyTrackingProtocol"
+    ) -> None:
+        """
+        Method forwarding its logic into the instance's initialization
+        process.
+        """
+
+        # 1. Initialize parents
+        super().init_mixins()
+
+        # 2. Build a snapshot of the default state
+        self._clean_snapshot = self._build_snapshot()
+
+    # ----------------------------------------
+    # Property - getters
+    # ----------------------------------------
+
+    @property
+    def is_dirty(
+        self: "DirtyTrackingProtocol"
+    ) -> bool:
+        """True if the current state differs from the clean snapshot."""
+        current_snapshot = self._build_snapshot()
+        return current_snapshot != self._clean_snapshot
+
+    @property
+    def dirty_paths(
+        self: "DirtyTrackingProtocol"
+    ) -> "SnapshotDiffTuple":
+        """Returns a tuple of changed paths (path, old_value, new_value)."""
+        current_snapshot = self._build_snapshot()
+        return self._compare_snapshots(
+            self._clean_snapshot,
+            current_snapshot,
+            constants_only=True
+        )
+
+    @property
+    def clean_snapshot(
+        self: "DirtyTrackingProtocol"
+    ) -> "SnapshotTuple":
+        return self._clean_snapshot
+
+    # ----------------------------------------
+    # Methods - GET DIRTY / RESET / MARK CLEAN
+    # ----------------------------------------
+
+    def get_dirty_paths(
+        self: "DirtyTrackingProtocol",
+        *,
+        constants_only: bool = True
+    ) -> "SnapshotDiffTuple":
+        """Returns changed paths, with the option to include only constants or everything."""
+        return self._compare_snapshots(
+            self._clean_snapshot,
+            self._build_snapshot(),
+            constants_only=constants_only
+        )
+
+    def reset_to_clean(
+        self: "DirtyTrackingProtocol"
+    ) -> None:
+        """Restores the object to its clean snapshot."""
+        self._restore_snapshot(self._clean_snapshot)
+
+    def mark_clean(
+        self: "DirtyTrackingProtocol"
+    ) -> None:
+        """Marks the current state as the new clean snapshot."""
+        # noinspection PyAttributeOutsideInit
+        self._clean_snapshot = self._build_snapshot()
+
+# >>> src/simplibs/object/mixins/others/state/History.py
+from typing import TYPE_CHECKING, Any
+from datetime import datetime
+# Outers
+from ...core_mixins import Serialization
+# Inners
+from ._history_utils.core import set_history_limit, record_state, find_snapshot
+from ._history_utils.transfer import export_history_to_dict, import_history_from_dict
+from ._history_utils.navigations import (
+    history_undo,
+    history_redo,
+    go_to_last_history,
+    go_to_history_on_timestamp,
+    go_to_history_on_index
+)
+# Annotations
+if TYPE_CHECKING:
+    from ...._core.protocols.mixins.state import HistoryProtocol
+    from ...._core.protocols.alias_typings import HistoryEntry, HistoryDict, SnapshotDiffTuple
+
+
+class History(Serialization):
+    """
+    Provides a full undo/redo history for a mutable instance.
+
+    Every state-changing action can be recorded as a timestamped snapshot.
+    The history can be navigated step by step (undo/redo), jumped to by
+    index or timestamp, diffed between any two recorded points, and
+    exported to / imported from a dict for persistence.
+    """
+
+    # ----------------------------------------
+    # Basic interface
+    # ----------------------------------------
+
+    # Compatibility declaration
+    _mutable_only = True
+
+    # Slot definition
+    __slots__ = (
+        "_history",
+        "_history_index",
+        "_history_limit",
+        "_history_count"
+    )
+
+    # ----------------------------------------
+    # Initialization hook
+    # ----------------------------------------
+
+    # noinspection PyAttributeOutsideInit
+    def init_mixins(
+        self: "HistoryProtocol"
+    ) -> None:
+        """
+        Method forwarding its logic into the instance's initialization
+        process.
+        """
+
+        # 1. Initialize parents
+        super().init_mixins()
+
+        # 2. Create internal elements
+        self._history: list["HistoryEntry"] = []
+        self._history_limit: int | None  = None
+        self._history_index: int = 0
+        self._history_count: int = 0
+
+        # 3. Create the first entry
+        self.record_state()
+
+    # ----------------------------------------
+    # Initialization-related method
+    # ----------------------------------------
+
+    def record_state(
+        self: "HistoryProtocol"
+    ) -> "HistoryEntry":
+        """Creates a snapshot of the current state and saves it to history."""
+        return record_state(self)
+
+    # ----------------------------------------
+    # Property - getters
+    # ----------------------------------------
+
+    @property
+    def history(
+        self: "HistoryProtocol"
+    ) -> tuple["HistoryEntry", ...]:
+        """Returns the history as a tuple."""
+        return tuple(self._history)
+
+    @property
+    def history_index(
+        self: "HistoryProtocol"
+    ) -> int | None:
+        """Returns the index of the latest history entry."""
+        return self._history_index
+
+    @property
+    def history_limit(
+        self: "HistoryProtocol"
+    ) -> int | None:
+        """Returns the history size limit."""
+        return self._history_limit
+
+    # ----------------------------------------
+    # Property - setters
+    # ----------------------------------------
+
+    @history_limit.setter
+    def history_limit(
+        self: "HistoryProtocol",
+        value: int
+    ) -> None:
+        """Sets the history size limit."""
+        set_history_limit(self, value)
+
+    # ----------------------------------------
+    # Methods - UNDO / REDO
+    # ----------------------------------------
+
+    def undo(
+        self: "HistoryProtocol"
+    ) -> bool:
+        """Method for moving to the previous entry (if it exists)."""
+        return history_undo(self)
+
+    def redo(
+        self: "HistoryProtocol"
+    ) -> bool:
+        """Method for moving to the next entry (if it exists)."""
+        return history_redo(self)
+
+    # ----------------------------------------
+    # Methods - GOTO
+    # ----------------------------------------
+
+    def go_to_last(
+        self: "HistoryProtocol"
+    ) -> None:
+        """Method for moving to the last history entry."""
+        go_to_last_history(self)
+
+    def go_to_index(
+        self: "HistoryProtocol",
+        index: int
+    ) -> None:
+        """Method for moving to a specific index."""
+        go_to_history_on_index(self, index)
+
+    def go_to_timestamp(
+        self: "HistoryProtocol",
+        timestamp: datetime
+    ) -> None:
+        """Method for moving to a specific timestamp."""
+        go_to_history_on_timestamp(self, timestamp)
+
+    # ----------------------------------------
+    # Methods - EXPORT / IMPORT
+    # ----------------------------------------
+
+    def export_history_to_dict(
+        self: "HistoryProtocol"
+    ) -> "HistoryDict":
+        """Exports the history to a dict."""
+        return export_history_to_dict(self)
+
+    def import_history_from_dict(
+        self: "HistoryProtocol",
+        history_dict: "HistoryDict"
+    ) -> None:
+        """Imports the history from a dict."""
+        import_history_from_dict(self, history_dict)
+
+    # ----------------------------------------
+    # Methods - REMOVE / DIFF
+    # ----------------------------------------
+
+    def remove_history_limit(
+        self: "HistoryProtocol"
+    ) -> None:
+        """Removes the history size limit."""
+        # noinspection PyAttributeOutsideInit
+        self._history_limit = None
+
+    def diff(
+        self: "HistoryProtocol",
+        snap1: int | datetime,
+        snap2: int | datetime,
+        *,
+        constants_only: bool = False
+    ) -> "SnapshotDiffTuple":
+        """Compares two snapshots — returns a tuple of changed (path, old_value, new_value)."""
+        return self._compare_snapshots(
+            find_snapshot(self, snap1),
+            find_snapshot(self, snap2),
+            constants_only=constants_only
+        )
+
+# >>> src/simplibs/object/mixins/others/state/Permission.py
+from typing import TYPE_CHECKING
+# Outers
+from ...base_class import SimpleMixin
+# Annotations
+if TYPE_CHECKING:
+    from ...._core.protocols.mixins.state import PermissionProtocol
+
+
+class Permission(SimpleMixin):
+    """
+    Read-only mode — locking against changes.
+
+    Example:
+        obj.lock()
+        obj.value = 10  # → ValueError
+    """
+
+    # ----------------------------------------
+    # Basic interface
+    # ----------------------------------------
+
+    # Compatibility declaration
+    _mutable_only = True
+
+    # Slot definition
+    __slots__ = ()
+
+    # ----------------------------------------
+    # Property - getters
+    # ----------------------------------------
+
+    @property
+    def is_locked(
+        self: "PermissionProtocol"
+    ) -> bool:
+        """Returns a bool indicating whether the lock is active."""
+        return self._locked
+
+    # ----------------------------------------
+    # Methods - LOCK / UNLOCK
+    # ----------------------------------------
+
+    def lock(
+        self: "PermissionProtocol"
+    ) -> None:
+        """Engages the lock."""
+        object.__setattr__(self, "_locked", True)
+
+    def unlock(
+        self: "PermissionProtocol"
+    ) -> None:
+        """Releases the lock."""
+        object.__setattr__(self, "_locked", False)

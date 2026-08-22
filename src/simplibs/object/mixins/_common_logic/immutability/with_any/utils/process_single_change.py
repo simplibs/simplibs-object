@@ -39,9 +39,9 @@ def process_single_change(
         or len(change) != 2
         or not isinstance(change[0], str)
     ):
-        validate_inner_tuple_is_tuple(self, inner_tuple)
-        validate_inner_tuple_has_length_two(self, inner_tuple)
-        validate_inner_tuple_name_is_str(self, inner_tuple)
+        validate_inner_tuple_is_tuple(self, change)
+        validate_inner_tuple_has_length_two(self, change)
+        validate_inner_tuple_name_is_str(self, change)
 
     name, value = change
 

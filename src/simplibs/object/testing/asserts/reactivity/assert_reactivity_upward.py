@@ -43,15 +43,20 @@ def assert_reactivity_upward(
         original_composite_value = instance.value
 
     # 2. Input parameter MUST be an InnerValue container
+    is_inner_value = isinstance(new_value, InnerValue)
     with maybe_subtest(
         subtests,
         name=f"{intro}{subintro}validate_input_type",
         verbose=verbose,
     ):
-        if not isinstance(new_value, InnerValue):
+        if not is_inner_value:
             pytest.fail(
                 "Upward reactivity assertion requires an InnerValue container; direct values cannot be used."
             )
+
+    # 2.1 Guard clause: Halt execution if input is not an InnerValue container
+    if not is_inner_value:
+        return
 
     # 3. Apply inner value change via shared value change assertion
     with maybe_subtest(
@@ -90,8 +95,8 @@ recompute the parent composite state, propagating updated values up to the root 
 
 ## Execution Pipeline Steps
 1. **Initial State Snapshot:** Captures the root instance's current composite value (`instance.value`).
-2. **Type Gate:** Validates that `new_value` is explicitly provided as an `InnerValue` container, failing fast 
-   if a raw non-inner value is passed.
+2. **Type & Guard Gate:** Validates that `new_value` is explicitly provided as an `InnerValue` container, 
+   halting execution early via a guard clause if a raw non-inner value is passed.
 3. **Inner Node Mutation:** Passes the `InnerValue` payload to `assert_value_change`. The base assertion resolves 
    the inner target attribute, pre-validates the candidate inner state, and executes the setter on the child object.
 4. **Root State Mutation Assertion:** Asserts that `instance.value != original_composite_value`, confirming that 

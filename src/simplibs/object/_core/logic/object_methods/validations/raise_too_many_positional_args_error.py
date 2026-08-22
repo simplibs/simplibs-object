@@ -1,6 +1,6 @@
 from typing import NoReturn, TYPE_CHECKING
 # Outers
-from .....exceptions import SimpleLogicError
+from .....exceptions import SimpleRuntimeError
 # Annotations
 if TYPE_CHECKING:
     from ....protocols.classes import SimpleObjectProtocol
@@ -15,7 +15,7 @@ def raise_too_many_positional_args_error(
 
     class_name = cls.__name__
 
-    raise SimpleLogicError(
+    raise SimpleRuntimeError(
         error_name="INVALID PARAMETERS",
         label="args",
         value=f"{given_count} positional arguments",
@@ -52,7 +52,7 @@ to composite objects.
 ## Behavior
 - Compares the number of provided positional arguments with the number of
   declared inner elements.
-- Raises a structured `SimpleLogicError` when the count exceeds the allowed
+- Raises a structured `SimpleRuntimeError` when the count exceeds the allowed
   limit.
 - Explains the mismatch and provides actionable guidance.
 

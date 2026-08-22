@@ -1,6 +1,5 @@
 from typing import Any
 from simplibs.sentinels import UNSET
-from simplibs.exception.testing import maybe_subtest
 # Inners
 from .containers import ObjectCase, MixinCase
 from .assert_simple_object import assert_simple_object
@@ -124,8 +123,7 @@ def bulk_test(
         # ------------------------------------------------------------
         # 5. Unsupported / Unrecognized Test Item Schema
         # ------------------------------------------------------------
-        with maybe_subtest(subtests, name="unknown_item", verbose=verbose):
-            raise AssertionError(f"Unsupported bulk test item provided to bulk_test: {item!r}")
+        raise AssertionError(f"Unsupported bulk test item provided to bulk_test: {item!r}")
 
 
 _DESIGN_NOTES = """
@@ -143,8 +141,8 @@ and tuples—and automatically routes them to the appropriate test orchestrator.
 4. **Tuple Pair Resolution:**
    - **Object + Mixins (`(SimpleConstant, tuple[SimpleMixin, ...])`):** Dispatches to `assert_simple_object(cls, mixins=mixins)`.
    - **Mixin + Base Target (`(SimpleMixin, SimpleConstant)`):** Dispatches to `assert_simple_mixin(mixin_class, test_class=test_class)`.
-5. **Fallback / Invalid Item Intercept:** Raises an `AssertionError` wrapped in a subtest context when an invalid 
-   item schema is encountered.
+5. **Fallback / Invalid Item Intercept:** Directly raises an `AssertionError` to immediately halt execution when an invalid 
+   item schema is encountered (fail-fast contract validation).
 
 ## Pipeline Lifecycle Role
 Provides a lightweight, zero-boilerplate batch testing runner for test suites, allowing entire packages of objects 

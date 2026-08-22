@@ -1,6 +1,6 @@
 # create_simple_object_bulk.py
 from typing import Any
-from .data_classes.bulk_dict import BulkCase
+from .BulkCase import BulkCase
 from .specific_bulks.create_simple_object_bulk_from_csv import create_simple_object_bulk_from_csv
 from .specific_bulks.create_simple_object_bulk_from_dicts import create_simple_object_bulk_from_dicts
 from .specific_bulks.create_simple_object_bulk_from_json import create_simple_object_bulk_from_json
@@ -30,10 +30,10 @@ def create_simple_object_bulk(source: Any):
 
         # A) List instancí BulkCase
         if isinstance(first_item, BulkCase):
-            from .create_simple_object_bulk_from_bulk_calse_class import (
-                create_simple_object_bulk_from_bulk_calse_class,
+            from .specific_bulks.create_simple_object_bulk_from_bulk_case_class import (
+                create_simple_object_bulk_from_bulk_case_class,
             )
-            return create_simple_object_bulk_from_bulk_calse_class(tuple(source))
+            return create_simple_object_bulk_from_bulk_case_class(tuple(source))
 
         # B) List slovníků
         if isinstance(first_item, dict):
@@ -53,8 +53,9 @@ def create_simple_object_bulk(source: Any):
         if cleaned.startswith("["):
             return create_simple_object_bulk_from_json(cleaned)
 
-        # B) Detekce CSV (podle hlavičky 'class_name')
-        if "class_name" in cleaned.splitlines()[0]:
+        # B) Detekce CSV (první řádek obsahuje 'class_name' A ZÁROVEŇ oddělovač ',' nebo ';')
+        first_line = cleaned.splitlines()[0] if cleaned else ""
+        if "class_name" in first_line and ("," in first_line or ";" in first_line):
             return create_simple_object_bulk_from_csv(cleaned)
 
         # C) Záložní pokus o YAML

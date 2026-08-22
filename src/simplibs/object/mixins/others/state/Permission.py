@@ -1,9 +1,9 @@
 from typing import TYPE_CHECKING
 # Outers
-from ..base_class import SimpleMixin
+from ...base_class import SimpleMixin
 # Annotations
 if TYPE_CHECKING:
-    from ..._core.protocols.mixins.state import PermissionProtocol
+    from ...._core.protocols.mixins.state import PermissionProtocol
 
 
 class Permission(SimpleMixin):

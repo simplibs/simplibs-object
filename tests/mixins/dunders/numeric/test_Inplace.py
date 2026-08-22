@@ -1,85 +1,71 @@
-import operator
-from typing import TYPE_CHECKING, Any
+"""
+Tests for `Inplace` mixin.
+"""
+import pytest
 from numbers import Number
-# Outers
-from ...base_class import SimpleMixin
-#Inners
-from ._utils import execute_inplace_op
-# Annotations
-if TYPE_CHECKING:
-    from ...._core.protocols.mixins.dunders.numeric import InplaceProtocol
+from simplibs.object.mixins.dunders.numeric import Inplace
+from simplibs.object.testing import assert_simple_mixin
 
 
-class Inplace(SimpleMixin):
-    """
-    Poskytuje in‑place aritmetické operace (+=, -=, *=, /=, //=, %=, **=)
-    pro SimpleObject atomy a mutable instance.
+class TestInplaceStructure:
 
-    Operace:
-    - mění hodnotu instance přes self.value = ...
-    - aktivují validaci a reaktivitu
-    - vrací self
-    """
+    def test_mutable_only_flag(self):
+        assert Inplace._mutable_only is True
 
-    # ----------------------------------------
-    # Základní rozhraní
-    # ----------------------------------------
+    def test_only_types_is_number(self):
+        assert Inplace._only_types is Number
 
-    # Definice určení
-    _mutable_only = True
-    _only_types = Number
+    def test_assert_simple_mixin_shallow(self, subtests, IntLeaf):
+        assert_simple_mixin(
+            subtests,
+            Inplace,
+            test_class=IntLeaf,
+            method_names=(
+                "__iadd__",
+                "__isub__",
+                "__imul__",
+                "__itruediv__",
+                "__ifloordiv__",
+                "__imod__",
+                "__ipow__",
+            ),
+        )
 
-    # Definice slotů
-    __slots__ = ()
 
-    # ----------------------------------------
-    # Methods - Operátory (+=, -=, *=, /=, //=, %=, **=)
-    # ----------------------------------------
-    def __iadd__(
-        self: "InplaceProtocol",
-        other: Any
-    ) -> "InplaceProtocol":
-        """In‑place: self.value += other."""
-        return execute_inplace_op(self, operator.add, other)
+class TestInplaceOperators:
 
-    def __isub__(
-        self: "InplaceProtocol",
-        other: Any
-    ) -> "InplaceProtocol":
-        """In‑place: self.value -= other."""
-        return execute_inplace_op(self, operator.sub, other)
+    def test_iadd_modifies_value(self, IntLeaf):
+        instance = IntLeaf(mixins=(Inplace,), as_atom=True, mutable=True)
+        original = instance.value
+        instance += 5
+        assert instance.value == original + 5
 
-    def __imul__(
-        self: "InplaceProtocol",
-        other: Any
-    ) -> "InplaceProtocol":
-        """In‑place: self.value *= other."""
-        return execute_inplace_op(self, operator.mul, other)
+    def test_isub_modifies_value(self, IntLeaf):
+        instance = IntLeaf(mixins=(Inplace,), as_atom=True, mutable=True)
+        original = instance.value
+        instance -= 2
+        assert instance.value == original - 2
 
-    def __itruediv__(
-        self: "InplaceProtocol",
-        other: Any
-    ) -> "InplaceProtocol":
-        """In‑place: self.value /= other."""
-        return execute_inplace_op(self, operator.truediv, other)
+    def test_imul_modifies_value(self, IntLeaf):
+        instance = IntLeaf(mixins=(Inplace,), as_atom=True, mutable=True)
+        original = instance.value
+        instance *= 3
+        assert instance.value == original * 3
 
-    def __ifloordiv__(
-        self: "InplaceProtocol",
-        other: Any
-    ) -> "InplaceProtocol":
-        """In‑place: self.value //= other."""
-        return execute_inplace_op(self, operator.floordiv, other)
+    def test_ipow_modifies_value(self, IntLeaf):
+        instance = IntLeaf(mixins=(Inplace,), as_atom=True, mutable=True)
+        original = instance.value
+        instance **= 2
+        assert instance.value == original**2
 
-    def __imod__(
-        self: "InplaceProtocol",
-        other: Any
-    ) -> "InplaceProtocol":
-        """In‑place: self.value %= other."""
-        return execute_inplace_op(self, operator.mod, other)
+    def test_iadd_returns_same_instance(self, IntLeaf):
+        instance = IntLeaf(mixins=(Inplace,), as_atom=True, mutable=True)
+        result = instance.__iadd__(1)
+        assert result is instance
 
-    def __ipow__(
-        self: "InplaceProtocol",
-        other: Any
-    ) -> "InplaceProtocol":
-        """In‑place: self.value **= other."""
-        return execute_inplace_op(self, operator.pow, other)
+
+class TestInplaceCompatibility:
+
+    def test_rejects_immutable_instance(self, IntLeaf):
+        with pytest.raises(Exception):
+            IntLeaf(mixins=(Inplace,), as_atom=True, mutable=False)

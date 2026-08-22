@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 from numbers import Number
 # Outers
-from ......_core.protocols.instance import SimpleInstanceType
+from ......_core.metadata.instance_builders.atom_class import InstanceBase
 # Inners
 from .validations import (
     raise_stepper_invalid_instance,
@@ -23,10 +23,11 @@ def validate_instance(
     """
 
     # 1. Validate instance protocol
-    if not isinstance(instance, SimpleInstanceType):
-        raise_stepper_invalid_instance(instance, SimpleInstanceType)
+    if not isinstance(instance, InstanceBase):
+        raise_stepper_invalid_instance(instance, InstanceBase)
 
     # 2. Validate that the instance value is numeric
+    instance: "SimpleInstanceLike"
     if not isinstance(instance.value, Number):
         raise_stepper_non_numeric_value(instance, instance.value)
 

@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, NoReturn, Any
 # Outers
-from .......exceptions import SimpleLogicError
+from .......exceptions import SimpleRuntimeError
 # Annotations
 if TYPE_CHECKING:
     from ......._core.protocols.mixins.numerical.stepper import StepperProtocol
@@ -15,7 +15,7 @@ def raise_stepper_invalid_up_limit(
     than the currently configured down limit.
     """
 
-    raise SimpleLogicError(
+    raise SimpleRuntimeError(
         error_name="STEPPER LIMIT CONFIGURATION ERROR",
         label="up limit",
         value=up_limit_value,
@@ -121,5 +121,5 @@ Simple’s structured error system.
 - This is a pure `raise_...` function: it performs no branching logic.
 - It is internal and not part of the public API.
 - All limit configuration errors must use this function.
-- The error type is `SimpleLogicError` with `ValueError` as the underlying exception.
+- The error type is `SimpleRuntimeError` with `ValueError` as the underlying exception.
 """

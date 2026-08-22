@@ -1,44 +1,56 @@
-from typing import Any, TYPE_CHECKING
+"""
+Tests for `testing/asserts/mixins/assert_mixin_inheritance.py`.
+"""
 import pytest
-from simplibs.exception.testing import maybe_subtest
-# Outers
-from ....mixins.base_class import SimpleMixin
-# Annotations
-if TYPE_CHECKING:
-    from ...._core.protocols import SimpleMixinType
+from simplibs.object.testing.asserts.mixins.assert_mixin_inheritance import (
+    assert_mixin_inheritance,
+)
 
 
-def assert_mixin_inheritance(
-    subtests: Any,
-    mixin_class: "SimpleMixinType",
-    *,
-    verbose: bool = True,
-    intro: str = "",
-) -> None:
-    """
-    Validates that the provided mixin class inherits from SimpleMixin.
+class TestAssertMixinInheritanceHappyPath:
 
-    This is the first structural gate for mixin testing.
-    """
+    def test_passes_for_valid_mixin(self, subtests):
+        from simplibs.object.testing.containers.TestMixin import TestMixin
 
-    subintro = "assert_mixin_inheritance::"
+        assert_mixin_inheritance(subtests, TestMixin)
 
-    with maybe_subtest(
-        subtests,
-        name=f"{intro}{subintro}inherits_from_simplemixin",
-        verbose=verbose,
-    ):
-        # 1) Must be a class
-        if not isinstance(mixin_class, type):
-            pytest.fail(
-                f"Provided mixin '{mixin_class!r}' is not a class. "
-                f"Mixins must be class types inheriting from SimpleMixin."
+    def test_passes_for_freshly_defined_mixin_subclass(self, subtests):
+        from simplibs.object.mixins.base_class import SimpleMixin
+
+        class MyMixin(SimpleMixin):
+            __slots__ = ()
+
+        assert_mixin_inheritance(subtests, MyMixin)
+
+
+class TestAssertMixinInheritanceNotAClass:
+
+    def test_fails_for_non_class_value(self, subtests):
+        with pytest.raises(pytest.fail.Exception, match="is not a class"):
+            assert_mixin_inheritance(
+                subtests,
+                "not-a-class",  # type: ignore[arg-type]
+                verbose=False,
             )
 
-        # 2) Must inherit from SimpleMixin
-        if not issubclass(mixin_class, SimpleMixin):
-            pytest.fail(
-                f"Mixin '{mixin_class.__name__}' does not inherit from SimpleMixin. "
-                f"All mixins must subclass SimpleMixin to be compatible with the "
-                f"Simplibs instance builder."
+    def test_fails_for_instance_instead_of_class(self, subtests):
+        with pytest.raises(pytest.fail.Exception, match="is not a class"):
+            assert_mixin_inheritance(
+                subtests,
+                object(),  # type: ignore[arg-type]
+                verbose=False,
+            )
+
+
+class TestAssertMixinInheritanceWrongBase:
+
+    def test_fails_for_class_not_inheriting_simple_mixin(self, subtests):
+        class NotAMixin:
+            pass
+
+        with pytest.raises(pytest.fail.Exception, match="does not inherit from SimpleMixin"):
+            assert_mixin_inheritance(
+                subtests,
+                NotAMixin,  # type: ignore[arg-type]
+                verbose=False,
             )

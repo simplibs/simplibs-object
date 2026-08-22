@@ -41,7 +41,7 @@ def randomize_value(
         The mutated instance carrying a new valid value.
 
     Raises:
-        SimpleLogicError: If parameter validation fails or retry attempts are exhausted.
+        SimpleRuntimeError: If parameter validation fails or retry attempts are exhausted.
         RandomizeError: If the target value type hint is unregistered and ``skip_unregistered`` is ``False``.
     """
 

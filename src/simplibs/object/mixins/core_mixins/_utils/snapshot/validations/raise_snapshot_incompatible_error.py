@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, NoReturn
 # Outers
-from .......exceptions import SimpleLogicError
+from ......exceptions import SimpleRuntimeError
 # Annotations
 if TYPE_CHECKING:
     from ......_core.protocols.alias_typings import SnapshotTuple, NodesTuple
@@ -17,7 +17,7 @@ def raise_snapshot_incompatible_error(
     incompatible structure, length, or types.
     """
 
-    raise SimpleLogicError(
+    raise SimpleRuntimeError(
         error_name="SNAPSHOT COMPARISON ERROR",
         label="Incompatible snapshots",
         expected=(

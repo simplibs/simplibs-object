@@ -1,77 +1,61 @@
-from typing import Any, TYPE_CHECKING
-from types import UnionType
-# Outers
-from .........exceptions import SimpleMetadataError
-from ...._exceptions_helpers import exception_info_for_classmethod
-# Annotations
-if TYPE_CHECKING:
-    from ........protocols.methods import ClassMethodProtocol
-    from ........protocols.classes import SimpleClassLike
+from unittest.mock import Mock
+from simplibs.object.exceptions.SimpleDefinitionError import SimpleDefinitionError
+from simplibs.exception.testing.assert_exception_function import assert_exception_function
+from simplibs.object._core.metadata.init_processors.methods.verifiers.calculation.decompose_method.validations.validate_decompose_unvalide_item_type import (
+    validate_decompose_unvalide_item_type,
+)
 
 
-def validate_decompose_unvalide_item_type(
-    value: Any,
-    expected_type: type | UnionType,
-    inner: "SimpleClassLike",
-    inners: tuple["SimpleClassLike", ...],
-    bound_method: "ClassMethodProtocol",
-) -> None:
-    """Validates that a decomposed item matches its expected type."""
+def test_validate_decompose_unvalide_item_type_pass() -> None:
+    """Tests that matching type passes validation."""
 
-    # 1. Structural evaluation checkpoint
-    if isinstance(value, expected_type):
-        return
+    mock_bound_method = Mock()
+    inner = Mock()
+    inners = (inner,)
 
-    # 2. Extract diagnostic context
-    class_name, method_name, context = exception_info_for_classmethod(bound_method)
-
-    meta = inner.meta
-    expected_type_name = (
-        expected_type.__name__
-        if hasattr(expected_type, "__name__")
-        else str(expected_type)
+    validate_decompose_unvalide_item_type(
+        value=100,
+        expected_type=int,
+        inner=inner,
+        inners=inners,
+        bound_method=mock_bound_method,
     )
 
-    inner_defaults = tuple(repr(i.meta.default) for i in inners)
-    inner_names = tuple(i.meta.name_snake for i in inners)
 
-    # 3. Raise domain exception
-    raise SimpleMetadataError(
+def test_validate_decompose_unvalide_item_type_raises_error(subtests) -> None:
+    """Tests that mismatched item type raises SimpleDefinitionError."""
+
+    mock_self = Mock(__name__="MyObject")
+    mock_func = Mock(__name__="_decompose")
+    mock_bound_method = Mock()
+    mock_bound_method.__self__ = mock_self
+    mock_bound_method.__func__ = mock_func
+
+    inner1 = Mock()
+    inner1.meta.name_snake = "target_param"
+    inner1.meta.default = 42
+
+    inners = (inner1,)
+
+    assert_exception_function(
+        subtests,
+        validate_decompose_unvalide_item_type,
+        invalid_params=("invalid_string_value", int, inner1, inners, mock_bound_method),
+        exception_type=SimpleDefinitionError,
         error_name="METHOD LOGIC ERROR",
         label="_decompose_item_type",
-        value=value,
-        expected=expected_type_name,
-        problem=f"Item '{meta.name_snake}' does not match its expected type.",
-        context=context,
+        value="invalid_string_value",
+        expected="int",
+        problem="Item 'target_param' does not match its expected type.",
+        context="Metadata validation for: MyObject._decompose",
         how_to_fix=(
-            f"Ensure that '{meta.name_snake}' is computed as an instance of '{expected_type_name}'.",
-            f"Received type: '{type(value).__name__}'.",
+            "Ensure that 'target_param' is computed as an instance of 'int'.",
+            "Received type: 'str'.",
             "Verify that the returned tuple preserves the exact order defined in '_inners'.",
-            f"Expected order: {', '.join(inner_names)}.",
+            "Expected order: target_param.",
             "Example based on default values:",
-            f"    return ({', '.join(inner_defaults)})",
+            "    return (42)",
         ),
         exception=TypeError,
+        verbose=False,
     )
-
-
-_DESIGN_NOTES = """
-# validate_decompose_unvalide_item_type
-
-## Purpose
-Ensures that each item returned by `_decompose` matches the expected type
-defined in the corresponding inner metadata (`inner.meta.value_type`).
-
-## Behavior
-1. Performs a fast `isinstance` check.
-2. If the value is invalid:
-   - extracts diagnostic context
-   - determines expected type name
-   - builds example default tuple
-   - raises a structured `SimpleMetadataError`
-
-## Notes
-This validator is used inside `verify_decompose_outcome` immediately after the
-length check.  
-It is the first type-level validation before checking default-value compliance.
-"""

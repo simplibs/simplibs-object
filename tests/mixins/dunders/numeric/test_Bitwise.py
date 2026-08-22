@@ -1,131 +1,91 @@
-from typing import TYPE_CHECKING, Any
-import operator
+"""
+Tests for `Bitwise` mixin.
+"""
+import pytest
 from numbers import Integral
-# Outers
-from ...core_mixins import NodesDicts, Snapshot
-from ..._commons.immutability import with_constant
-# Inners
-from ._utils import execute_bitwise_op
-# Annotations
-if TYPE_CHECKING:
-    from ...._core.protocols.mixins.dunders.numeric import BitwiseProtocol
+from simplibs.object.mixins.dunders.numeric import Bitwise
+from simplibs.object.testing import assert_simple_mixin
 
 
-class Bitwise(NodesDicts, Snapshot):
-    """
-    Poskytuje bitové operace (&, |, ^, <<, >>, ~) pro SimpleObject atomy.
+class TestBitwiseStructure:
 
-    Vlastnosti:
-    - funguje pouze pro atomy (konstanty)
-    - funguje pouze pro integrální typy (int, vlastní integer-like typy)
-    - operace jsou čisté → vrací novou instanci přes with_constant pipeline
-    """
+    def test_constant_only_flag(self):
+        assert Bitwise._constant_only is True
 
-    # ----------------------------------------
-    # Základní rozhraní
-    # ----------------------------------------
+    def test_only_types_is_integral(self):
+        assert Bitwise._only_types is Integral
 
-    # Definice určení
-    _constant_only = True
-    _only_types = Integral
+    def test_assert_simple_mixin_shallow(self, subtests, IntLeaf):
+        assert_simple_mixin(
+            subtests,
+            Bitwise,
+            test_class=IntLeaf,
+            method_names=(
+                "__and__",
+                "__rand__",
+                "__or__",
+                "__ror__",
+                "__xor__",
+                "__rxor__",
+                "__lshift__",
+                "__rlshift__",
+                "__rshift__",
+                "__rrshift__",
+                "__invert__",
+            ),
+        )
 
-    # Definice slotů
-    __slots__ = ()
 
-    # ----------------------------------------
-    # Methods - & (Bitwise AND)
-    # ----------------------------------------
-    def __and__(
-        self: "BitwiseProtocol",
-        other: Any
-    ) -> "BitwiseProtocol":
-        """Vrací novou instanci s hodnotou self.value & other."""
-        return execute_bitwise_op(self, operator.and_, other)
+class TestBitwiseOperators:
 
-    def __rand__(
-        self: "BitwiseProtocol",
-        other: Any
-    ) -> "BitwiseProtocol":
-        """Vrací novou instanci s hodnotou other & self.value."""
-        return execute_bitwise_op(self, operator.and_, other, is_reversed=True)
+    def test_and(self, IntLeaf):
+        instance = IntLeaf(mixins=(Bitwise,), as_atom=True, mutable=False)
+        result = instance & 3
+        assert result.value == (instance.value & 3)
 
-    # ----------------------------------------
-    # Methods - | (Bitwise OR)
-    # ----------------------------------------
-    def __or__(
-        self: "BitwiseProtocol",
-        other: Any
-    ) -> "BitwiseProtocol":
-        """Vrací novou instanci s hodnotou self.value | other."""
-        return execute_bitwise_op(self, operator.or_, other)
+    def test_or(self, IntLeaf):
+        instance = IntLeaf(mixins=(Bitwise,), as_atom=True, mutable=False)
+        result = instance | 8
+        assert result.value == (instance.value | 8)
 
-    def __ror__(
-        self: "BitwiseProtocol",
-        other: Any
-    ) -> "BitwiseProtocol":
-        """Vrací novou instanci s hodnotou other | self.value."""
-        return execute_bitwise_op(self, operator.or_, other, is_reversed=True)
+    def test_xor(self, IntLeaf):
+        instance = IntLeaf(mixins=(Bitwise,), as_atom=True, mutable=False)
+        result = instance ^ 5
+        assert result.value == (instance.value ^ 5)
 
-    # ----------------------------------------
-    # Methods - ^ (Bitwise XOR)
-    # ----------------------------------------
-    def __xor__(
-        self: "BitwiseProtocol",
-        other: Any
-    ) -> "BitwiseProtocol":
-        """Vrací novou instanci s hodnotou self.value ^ other."""
-        return execute_bitwise_op(self, operator.xor, other)
+    def test_lshift(self, IntLeaf):
+        instance = IntLeaf(mixins=(Bitwise,), as_atom=True, mutable=False)
+        result = instance << 2
+        assert result.value == (instance.value << 2)
 
-    def __rxor__(
-        self: "BitwiseProtocol",
-        other: Any
-    ) -> "BitwiseProtocol":
-        """Vrací novou instanci s hodnotou other ^ self.value."""
-        return execute_bitwise_op(self, operator.xor, other, is_reversed=True)
+    def test_rshift(self, IntLeaf):
+        instance = IntLeaf(mixins=(Bitwise,), as_atom=True, mutable=False)
+        result = instance >> 1
+        assert result.value == (instance.value >> 1)
 
-    # ----------------------------------------
-    # Methods - << (Bitwise Left Shift)
-    # ----------------------------------------
-    def __lshift__(
-        self: "BitwiseProtocol",
-        other: Any
-    ) -> "BitwiseProtocol":
-        """Vrací novou instanci s hodnotou self.value << other."""
-        return execute_bitwise_op(self, operator.lshift, other)
+    def test_invert(self, IntLeaf):
+        instance = IntLeaf(mixins=(Bitwise,), as_atom=True, mutable=False)
+        result = ~instance
+        assert result.value == ~instance.value
 
-    def __rlshift__(
-        self: "BitwiseProtocol",
-        other: Any
-    ) -> "BitwiseProtocol":
-        """Vrací novou instanci s hodnotou other << self.value."""
-        return execute_bitwise_op(self, operator.lshift, other, is_reversed=True)
+    def test_operations_return_new_instance(self, IntLeaf):
+        instance = IntLeaf(mixins=(Bitwise,), as_atom=True, mutable=False)
+        result = instance | 0
+        assert result is not instance
 
-    # ----------------------------------------
-    # Methods - >> (Bitwise Right Shift)
-    # ----------------------------------------
-    def __rshift__(
-        self: "BitwiseProtocol",
-        other: Any
-    ) -> "BitwiseProtocol":
-        """Vrací novou instanci s hodnotou self.value >> other."""
-        return execute_bitwise_op(self, operator.rshift, other)
 
-    def __rrshift__(
-        self: "BitwiseProtocol",
-        other: Any
-    ) -> "BitwiseProtocol":
-        """Vrací novou instanci s hodnotou other >> self.value."""
-        return execute_bitwise_op(self, operator.rshift, other, is_reversed=True)
+class TestBitwiseCompatibility:
 
-    # ----------------------------------------
-    # Methods - ~x (Bitwise Invert / Unární operátor)
-    # ----------------------------------------
-    def __invert__(
-        self: "BitwiseProtocol",
-    ) -> Any:
-        """Vrací novou instanci s hodnotou ~self.value."""
-        try:
-            value = ~self.value
-            return with_constant(self, self.meta.name_snake, value)
-        except TypeError:
-            return NotImplemented
+    def test_rejects_composite_instance(self, Outer):
+        with pytest.raises(Exception):
+            Outer(mixins=(Bitwise,))
+
+    def test_rejects_float_type(self):
+        from simplibs.object import SimpleConstant
+
+        class FloatLeaf(SimpleConstant):
+            _type = float
+            _default = 1.5
+
+        with pytest.raises(Exception):
+            FloatLeaf(mixins=(Bitwise,), as_atom=True)

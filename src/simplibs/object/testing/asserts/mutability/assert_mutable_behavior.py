@@ -31,6 +31,7 @@ def assert_mutable_behavior(
     subintro = "test_mutable_behavior::"
 
     # 1. Create mutable instance
+    instance = None
     with maybe_subtest(
         subtests,
         name=f"{intro}{subintro}create_mutable_instance",
@@ -42,6 +43,10 @@ def assert_mutable_behavior(
             pytest.fail(f"Failed to create mutable instance for '{test_class.__name__}': {exc}")
 
         assert instance is not None
+
+    # 1.1 Guard clause: Halt execution if mutable instance creation failed
+    if instance is None:
+        return
 
     # 2. Capture original Python object identity
     with maybe_subtest(
@@ -87,7 +92,9 @@ It guarantees that in-place state updates succeed via property setters while pre
 Python object identity (`id(instance)`), ensuring no hidden instance re-creation occurs.
 
 ## Execution Pipeline Steps
-1. **Mutable Instantiation:** Instantiates `test_class(mutable=True)` within a protected interception block.
+1. **Mutable Instantiation & Guard Gate:** Instantiates `test_class(mutable=True)` within a protected 
+   interception block. Halts execution early via a guard clause if instance creation fails to prevent 
+   uninitialized attribute access in downstream steps.
 2. **Identity Snapshot:** Captures the memory address / identity of the newly created instance (`id(instance)`).
 3. **In-Place Mutation Intercept:** Delegates value validation, setter invocation, and state update 
    verification to `assert_value_change`.

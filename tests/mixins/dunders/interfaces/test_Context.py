@@ -1,66 +1,41 @@
-from typing import Literal, TYPE_CHECKING
-from types import TracebackType
-# Outers
-from ...base_class import SimpleMixin
-# Annotations
-if TYPE_CHECKING:
-    from ...._core.protocols.mixins.dunders.interfaces import ContextProtocol
+"""
+Tests for `ContextManager` mixin.
+"""
+import pytest
+from simplibs.object.mixins.dunders.interfaces import ContextManager
+from simplibs.object.testing import assert_simple_mixin
 
 
-class ContextManager(SimpleMixin):
-    """
-    Mixin poskytující základní podporu pro kontextový manažer (`with obj:`).
+class TestContextManagerStructure:
 
-    Tento mixin umožňuje použít instanci v konstrukci `with`, aniž by
-    prováděl jakékoli vedlejší efekty. Je plně univerzální — funguje pro
-    mutable i immutable objekty, pro atomy i kompozity, protože nijak
-    nemění stav instance.
+    def test_slots_empty(self):
+        assert ContextManager.__slots__ == ()
 
-    Chování:
-    - `__enter__` vrací instanci samotnou.
-    - `__exit__` neignoruje výjimky (vrací False), takže případné chyby
-      se normálně propagují dál.
+    def test_assert_simple_mixin_shallow(self, subtests, IntLeaf):
+        assert_simple_mixin(
+            subtests,
+            ContextManager,
+            test_class=IntLeaf,
+            method_names=("__enter__", "__exit__"),
+        )
 
-    Tento mixin slouží čistě jako syntaktické rozšíření API a nezasahuje
-    do logiky hodnot, snapshotů, mutability ani immutable režimu.
-    """
 
-    # ----------------------------------------
-    # Základní rozhraní
-    # ----------------------------------------
+class TestContextManagerBehavior:
 
-    # Definice slotů
-    __slots__ = ()
+    def test_enter_returns_self(self, IntLeaf):
+        instance = IntLeaf(mixins=(ContextManager,), as_atom=True)
+        with instance as ctx:
+            assert ctx is instance
 
-    # ----------------------------------------
-    # Methods - ENTER / EXIT
-    # ----------------------------------------
+    def test_exit_does_not_suppress_exceptions(self, IntLeaf):
+        instance = IntLeaf(mixins=(ContextManager,), as_atom=True)
+        with pytest.raises(ValueError):
+            with instance:
+                raise ValueError("boom")
 
-    def __enter__(
-        self: "ContextProtocol"
-    ) -> "ContextProtocol":
-        """
-        Vrací instanci při vstupu do kontextu.
-
-        Umožňuje konstrukci:
-            with obj as x:
-                ...
-
-        Bez jakékoli změny stavu instance.
-        """
-        return self
-
-    def __exit__(
-        self: "ContextProtocol",
-        exc_type: type[BaseException] | None,
-        exc_val: BaseException | None,
-        exc_tb: TracebackType | None
-    ) -> Literal[False]:
-        """
-        Ukončuje kontextový blok.
-
-        Vrací False, což znamená, že případné výjimky NEJSOU potlačeny
-        a normálně se propagují dál. Mixin neprovádí žádné čištění ani
-        změny stavu — je čistě syntaktický.
-        """
-        return False
+    def test_no_state_change_from_context_usage(self, IntLeaf):
+        instance = IntLeaf(mixins=(ContextManager,), as_atom=True)
+        original_value = instance.value
+        with instance:
+            pass
+        assert instance.value == original_value

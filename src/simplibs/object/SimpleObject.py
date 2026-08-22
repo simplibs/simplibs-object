@@ -124,7 +124,7 @@ class SimpleObject(SimpleConstant):
             The computed composite value.
 
         Raises:
-            SimpleLogicError: If parameter processing or validation fails.
+            SimpleRuntimeError: If parameter processing or validation fails.
         """
         return _calculate_value(cls, *args, **kwargs)
 
@@ -148,7 +148,7 @@ class SimpleObject(SimpleConstant):
             The decomposed representation of the value.
 
         Raises:
-            SimpleLogicError: If the composite is not decomposable or
+            SimpleRuntimeError: If the composite is not decomposable or
                 if validation fails.
         """
         return _decompose_value(cls, value)

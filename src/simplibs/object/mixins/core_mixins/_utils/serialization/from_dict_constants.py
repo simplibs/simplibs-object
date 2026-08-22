@@ -30,20 +30,26 @@ def from_dict_constants(
     # 2. Prepare list for collecting changes (immutable mode)
     changes: list[tuple[str, object]] = []
 
-    # 3. Traverse all nodes and search for values according to their paths
+    # 3. Traverse all nodes and search for values
     for instance, path in self._nodes_tuple:
 
         # 3.1 Skip composite VALUE nodes (only pure constants matter)
-        if path[-1] == VALUE:
+        if path and path[-1] == VALUE:
             continue
 
-        # 3.2 Search for the value deep inside the user dictionary
-        current = user_dict
-        for key in path:
-            current = current.get(key, UNSET)
-            if not isinstance(current, dict) and key != path[-1]:
-                current = UNSET
-                break
+        name = instance.meta.name_snake
+
+        # 3.2 Direct lookup by atom name first, then fallback to nested path traversal
+        if name in user_dict:
+            current = user_dict[name]
+        else:
+            target_path = path if path else (name,)
+            current = user_dict
+            for key in target_path:
+                current = current.get(key, UNSET)
+                if not isinstance(current, dict) and key != target_path[-1]:
+                    current = UNSET
+                    break
 
         # 3.3 If a value was found → branch based on mutability
         if current is not UNSET:
@@ -54,7 +60,6 @@ def from_dict_constants(
 
             # 3.3.2 IMMUTABLE MODE → collect changes for batch update
             else:
-                name = instance.meta.name_snake
                 changes.append((name, current))
 
     # 4. Handle mutable mode (and immutable mode with no changes)
@@ -96,12 +101,14 @@ composite structure.
 The function walks through `_nodes_tuple` and:
 
 1. **skips composite VALUE nodes**, because constants are the only target  
-2. **traverses the user dictionary** according to each node’s path  
-3. **validates dictionary structure**  
-4. **detects missing or malformed paths**  
-5. **collects or applies values** depending on mutability  
+2. **supports both flat and nested keys**:
+   - first checks for the direct node name (`instance.meta.name_snake`) at top-level
+   - falls back to traversing full structural path (`target_path`)
+3. **safely handles standalone atoms** with empty paths
+4. **collects or applies values** depending on mutability  
 
-This ensures that updates respect the object’s structural layout.
+This flexibility allows callers to pass either flat updates (`{"first": 10}`)
+or deeply nested structures (`{"pair": {"first": 10}}`).
 
 ## Mutable vs immutable behavior
 ### Mutable mode
@@ -141,5 +148,4 @@ Therefore, `from_dict_constants` is treated as a **structural invariant**.
 - This function is intentionally low-level and not part of the public API.  
 - All structural logic is delegated to `_nodes_tuple`.  
 - All immutable update logic is delegated to `with_constants`.  
-
 """

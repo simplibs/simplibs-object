@@ -19,8 +19,8 @@ def to_dict(
     structural path in `nodes_tuple`.
     """
 
-    # 1. Define base variables
-    result = {OWNER_CLASS: self.meta.owner_class}
+    # 1. Define base variables with serializable class name
+    result = {OWNER_CLASS: self.meta.class_name}
     last_composite_key = UNSET
     last_composite_dict = {}
 
@@ -30,7 +30,7 @@ def to_dict(
         # 2.1 Define per-node variables
         value = instance._value
         current_dict = result
-        last_key = path[0]
+        last_key = path[0] if path else instance.meta.name_snake
 
         # 2.2 Handle composite nodes (non-root)
         if len(path) > 1:
@@ -72,8 +72,11 @@ Converts an instance into a structured dictionary representation based on
 snapshot creation, debugging tools, immutability pipelines, and history
 tracking.
 
-The function expands composite nodes into nested dictionaries according to
-their structural path, while constants remain as flat key-value pairs.
+The function stores `self.meta.class_name` under the `OWNER_CLASS` key ensuring
+complete JSON serialization compatibility. Composite nodes are expanded into nested
+dictionaries according to their structural path, while constants remain as flat
+key-value pairs (or fallback to their `name_snake` identity for standalone atoms with
+empty paths).
 
 ## Architectural role
 `to_dict` is a core export mechanism used by:
@@ -94,8 +97,9 @@ pairs describing the full object structure.
 
 For each node:
 
-1. **Determine the dictionary level**  
-   Composite nodes require nested dictionaries based on their path.
+1. **Determine the dictionary level & key**  
+   Standalone atom nodes (`path == ()`) resolve their key from `instance.meta.name_snake`.
+   Composite nodes require nested dictionaries based on their structural path.
 
 2. **Reuse composite dictionaries**  
    To avoid repeatedly reconstructing nested structures, the function caches
@@ -115,7 +119,7 @@ The resulting dictionary is:
 - **stable** — identical for identical instance structures,
 - **ordered** — follows the order of `nodes_tuple`,
 - **structurally faithful** — mirrors the composite hierarchy,
-- **safe for JSON** — contains only primitive values and nested dicts.
+- **safe for JSON** — contains only primitive values, strings, and nested dicts.
 
 This determinism is essential for snapshot comparison, diffing, and immutability.
 
@@ -149,5 +153,6 @@ Therefore, `to_dict` is treated as a **core invariant** of the Simple system.
 ## Notes
 - This function is intentionally low-level and not part of the public API.
 - All structural logic is delegated to `nodes_tuple`.
+- Supports standalone atoms where `path` is empty (`()`).
 - All composite logic is based on the `VALUE` constant.
 """

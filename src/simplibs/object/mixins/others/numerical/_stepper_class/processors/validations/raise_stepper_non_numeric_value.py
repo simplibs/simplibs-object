@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, NoReturn, Any
 # Outers
-from .......exceptions import SimpleLogicError
+from .......exceptions import SimpleRuntimeError
 # Annotations
 if TYPE_CHECKING:
     from ......._core.protocols.instance import SimpleInstanceLike
@@ -15,7 +15,7 @@ def raise_stepper_non_numeric_value(
     Stepper requires numeric values to perform stepping operations.
     """
 
-    raise SimpleLogicError(
+    raise SimpleRuntimeError(
         error_name="STEPPER VALUE TYPE ERROR",
         label="instance.value",
         value=value,
@@ -118,5 +118,5 @@ Simple’s structured error system.
 - This is a pure `raise_...` function: it performs no branching logic.
 - It is internal and not part of the public API.
 - All non-numeric instance values must use this function.
-- The error type is `SimpleLogicError` with `TypeError` as the underlying exception.
+- The error type is `SimpleRuntimeError` with `TypeError` as the underlying exception.
 """

@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, NoReturn
 # Outers
-from ......exceptions import SimpleLogicError
+from ......exceptions import SimpleRuntimeError
 # Annotations
 if TYPE_CHECKING:
     from ......_core.protocols.mixins.core_mixins import InfrastructureProtocol
@@ -17,7 +17,7 @@ def validate_inner_tuple_name_is_str(
     if isinstance(inner_tuple, tuple) and isinstance(inner_tuple[0], str):
         return
 
-    raise SimpleLogicError(
+    raise SimpleRuntimeError(
         error_name="IMMUTABILITY BATCH UPDATE ERROR",
         label="change item name",
         expected="First element of tuple must be a string representing the node name.",

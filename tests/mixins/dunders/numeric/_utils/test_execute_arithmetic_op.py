@@ -1,145 +1,55 @@
-from typing import TYPE_CHECKING, Any
-# Outers
-from ...._commons.immutability import with_composite
-# Inners
-from ._align_operand_type import _align_operand_type
-# Annotations
-if TYPE_CHECKING:
-    from ....._core.protocols.mixins.dunders.numeric import ArithmeticProtocol
-    from ....._core.protocols.mixins.dunders.numeric.internal_types import Operator
-
-
-def execute_arithmetic_op(
-    self: "ArithmeticProtocol",
-    operator: "Operator",
-    other: Any,
-    *,
-    is_reversed: bool = False
-) -> Any:
-    """
-    Modular executor for standard and right‑hand arithmetic operations.
-    """
-
-    # 1. Extract second operand
-    other_value = getattr(other, "value", other)
-
-    # 2. Attempt direct computation and create a new instance
-    try:
-        value = (
-            operator(other_value, self.value)
-            if is_reversed
-            else operator(self.value, other_value)
-        )
-        return with_composite(self, self.meta.name_snake, value)
-
-    # 3. Attempt safe type alignment on failure
-    except TypeError:
-
-        # 3.1 Align operand type
-        coerced = _align_operand_type(self, other_value)
-
-        # 3.2 Retry computation with aligned operand
-        try:
-            value = (
-                operator(coerced, self.value)
-                if is_reversed
-                else operator(self.value, coerced)
-            )
-            return with_composite(self, self.meta.name_snake, value)
-
-        # 3.3 Give up if still invalid
-        except TypeError:
-            return NotImplemented
-
-
-_DESIGN_NOTES = """
-# execute_arithmetic_op
-
-## Purpose
-Provides a unified, modular executor for all arithmetic dunder operations
-(`__add__`, `__sub__`, `__mul__`, `__truediv__`, `__floordiv__`, `__mod__`,
-`__pow__`, and their reversed variants).
-
-It ensures that arithmetic operations:
-
-- work seamlessly with both raw values and Simple instances,
-- support lazy fallback type alignment,
-- return new composite instances,
-- behave consistently across all numeric mixins.
-
----
-
-## Architectural Role
-This helper is used internally by the Arithmetic mixin to implement all arithmetic dunders.
-
-It provides:
-
-- operand extraction,
-- safe type alignment,
-- reversed‑operation support,
-- composite instance creation.
-
-It is the core arithmetic engine for Simple numeric objects.
-
----
-
-## Behavior
-
-### 1. Operand extraction
-The function supports both:
-
-- raw Python values (`int`, `float`, `Decimal`, …)
-- Simple objects (`other.value`)
-
-It resolves the operand via:
-
-```
-other_value = getattr(other, "value", other)
-```
-
-### 2. Direct computation
-The operator is executed in the correct direction:
-
-- normal: `self.value OP other_value`
-- reversed: `other_value OP self.value`
-
-If successful, a new composite instance is created using:
-
-```
-with_composite(self, self.meta.name_snake, value)
-```
-
-### 3. Lazy fallback type alignment
-If the operation fails with `TypeError`, the function attempts safe alignment:
-
-```
-coerced = _align_operand_type(self, other_value)
-```
-
-This allows operations like:
-
-- `int + Decimal`
-- `int + Fraction`
-- `int + float`
-
-but avoids unsafe conversions (e.g., `float → Decimal`).
-
-### 4. Second attempt
-The operator is retried with the aligned operand.
-
-If it still fails, the function returns:
-
-```
-NotImplemented
-```
-
-which correctly signals Python to try the reversed dunder or raise an error.
-
----
-
-## Notes
-- This function is internal and not part of the public API.
-- It guarantees deterministic arithmetic behavior across all numeric mixins.
-- It centralizes error handling, type alignment, and composite creation.
-- It keeps mixin implementations minimal and declarative.
 """
+Tests for `execute_arithmetic_op(self, operator, other, *, is_reversed=False)`.
+"""
+import operator as op
+import pytest
+from simplibs.object.mixins.dunders.numeric import Arithmetic
+from simplibs.object.mixins.dunders.numeric._utils import execute_arithmetic_op
+
+
+class TestExecuteArithmeticOpAtom:
+
+    def test_simple_addition_returns_new_instance(self, IntLeaf):
+        instance = IntLeaf(mixins=(Arithmetic,), as_atom=True, mutable=False)
+        result = execute_arithmetic_op(instance, op.add, 5)
+        assert result is not instance
+        assert result.value == instance.value + 5
+
+    def test_other_as_instance_extracts_value(self, IntLeaf):
+        instance = IntLeaf(mixins=(Arithmetic,), as_atom=True, mutable=False)
+        other = IntLeaf(mixins=(Arithmetic,), as_atom=True, mutable=False)
+        result = execute_arithmetic_op(instance, op.add, other)
+        assert result.value == instance.value + other.value
+
+    def test_is_reversed_flips_operand_order(self, IntLeaf):
+        instance = IntLeaf(mixins=(Arithmetic,), as_atom=True, mutable=False)
+        result = execute_arithmetic_op(instance, op.sub, 100, is_reversed=True)
+        assert result.value == 100 - instance.value
+
+
+class TestExecuteArithmeticOpComposite:
+
+    def test_addition_on_composite_root(self, Outer):
+        instance = Outer(mixins=(Arithmetic,), mutable=False)
+        original = instance.value
+        result = execute_arithmetic_op(instance, op.add, 10)
+        assert result.value == original + 10
+
+
+class TestExecuteArithmeticOpFallback:
+
+    def test_incompatible_type_returns_not_implemented(self, IntLeaf):
+        instance = IntLeaf(mixins=(Arithmetic,), as_atom=True, mutable=False)
+        result = execute_arithmetic_op(instance, op.add, "not_a_number")
+        assert result is NotImplemented
+
+    def test_safe_type_alignment_recovers_operation(self):
+        from simplibs.object import SimpleConstant
+
+        class FloatLeaf(SimpleConstant):
+            _type = float
+            _default = 1.5
+
+        instance = FloatLeaf(mixins=(Arithmetic,), as_atom=True, mutable=False)
+        result = execute_arithmetic_op(instance, op.add, 1)
+        assert result.value == 2.5

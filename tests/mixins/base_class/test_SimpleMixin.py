@@ -1,153 +1,74 @@
-from typing import TYPE_CHECKING
-from simplibs.sentinels import UNSET
-# Inners
-from .validations import verify_mixin_definition
-# Annotations
-if TYPE_CHECKING:
-    from ..._core.protocols.mixins.base_class import SimpleMixinProtocol
-    from ..._core.protocols.alias_typings import ValidTypes
-
-
-class SimpleMixin:
-    """
-    Base class representing the structural interface for all mixins in the
-    Simple system.
-
-    Mixins may extend instance behavior, participate in initialization, and
-    declare compatibility constraints that determine which instance types they
-    may be applied to.
-    """
-
-    # ----------------------------------------
-    # Declarative compatibility flags
-    # ----------------------------------------
-
-    _constant_only = False
-    _composite_only = False
-    _mutable_only = False
-    _immutable_only = False
-    _only_types: "ValidTypes" = UNSET
-
-    # ----------------------------------------
-    # Slot definition
-    # ----------------------------------------
-
-    __slots__ = ()
-
-    # ----------------------------------------
-    # Initialization hook
-    # ----------------------------------------
-
-    def init_mixins(
-        self: "SimpleMixinProtocol",
-    ) -> None:
-        """
-        Default initialization hook for mixins.
-
-        Mixins overriding this method must call super().init_mixins() to
-        preserve the initialization chain.
-        """
-        # noinspection PyUnresolvedReferences
-        super().init_mixins()
-
-    # ----------------------------------------
-    # Class definition validator
-    # ----------------------------------------
-
-    def __init_subclass__(
-        cls: "SimpleMixinProtocol",
-        **kwargs,
-    ) -> None:
-        """
-        Validates the structural correctness of the mixin definition whenever
-        a new mixin subclass is created.
-        """
-
-        # 1. Run parent class initialization
-        super().__init_subclass__(**kwargs)
-
-        # 2. Validate mixin definition
-        verify_mixin_definition(cls)
-
-
-_DESIGN_NOTES = """
-# SimpleMixin
-
-## Purpose
-`SimpleMixin` defines the foundational interface for all mixins in the Simple
-system. Mixins extend instance behavior, participate in initialization, and
-declare compatibility constraints that determine which instance types they may
-be applied to.
-
-This base class ensures that every mixin:
-
-- defines its own memory layout (`__slots__`),
-- participates correctly in the initialization chain,
-- declares compatibility flags in a consistent manner,
-- passes structural validation during class creation.
-
-## Architectural reasoning
-Mixins in the Simple system are dynamically merged into runtime-generated
-instance classes. Because they directly modify instance behavior and memory
-layout, they must follow strict structural rules.
-
-`SimpleMixin` provides:
-
-### 1. Declarative compatibility flags
-These flags restrict mixin applicability based on instance type:
-
-- `_constant_only`
-- `_composite_only`
-- `_mutable_only`
-- `_immutable_only`
-- `_only_types`
-
-They allow mixins to express structural constraints without embedding logic
-inside the instance builder.
-
-### 2. Explicit slot definition
-Mixins must define their own `__slots__` to ensure:
-
-- predictable memory layout,
-- safe merging with other mixins,
-- prevention of accidental attribute creation.
-
-### 3. Initialization hook
-`init_mixins` allows mixins to participate in instance initialization.  
-Overriding mixins must call `super().init_mixins()` to preserve the chain.
-
-### 4. Automatic structural validation
-`__init_subclass__` invokes `verify_mixin_definition`, ensuring that every mixin
-subclass is validated at creation time. This prevents invalid mixins from ever
-entering the system.
-
-## Validation pipeline
-The validator checks:
-
-1. presence of `__slots__`,
-2. slot type correctness,
-3. slot item correctness,
-4. forbidden slot names,
-5. forbidden class attributes,
-6. boolean restriction flags,
-7. structural correctness of `_only_types`,
-8. presence of `super().init_mixins()` in overridden hooks.
-
-This guarantees that mixins are safe, deterministic, and compatible.
-
-## Diagnostic value
-Any structural mistake results in a structured `SimpleMixinError` with:
-
-- clear explanation,
-- actionable guidance,
-- examples,
-- contextual metadata.
-
-This makes debugging mixin definitions fast and predictable.
-
-## Notes
-- `SimpleMixin` is not intended to be instantiated directly.
-- All mixins in the Simple system must inherit from this class.
-- The class is intentionally minimal; all heavy logic is delegated to the
-  validator and mixin-specific implementations.
 """
+Tests for `SimpleMixin` base class.
+"""
+import pytest
+from simplibs.object.exceptions import SimpleRuntimeError
+from simplibs.object.mixins.base_class import SimpleMixin
+from simplibs.sentinels import UNSET
+
+
+class TestSimpleMixinDefaults:
+
+    def test_default_compatibility_flags(self):
+        assert SimpleMixin._constant_only is False
+        assert SimpleMixin._composite_only is False
+        assert SimpleMixin._mutable_only is False
+        assert SimpleMixin._immutable_only is False
+        assert SimpleMixin._only_types is UNSET
+
+    def test_default_slots_is_empty_tuple(self):
+        assert SimpleMixin.__slots__ == ()
+
+    def test_default_init_mixins_is_callable_noop(self):
+        instance = SimpleMixin()
+        # Should execute cleanly without raising any errors
+        assert instance.init_mixins() is None
+
+
+class TestSimpleMixinSubclassing:
+
+    def test_valid_subclass_declaration_succeeds(self):
+        class CustomMixin(SimpleMixin):
+            __slots__ = ("_mx_value",)
+            _constant_only = True
+            _only_types = (int, float)
+
+            def init_mixins(self):
+                self._mx_value = 0
+
+        assert issubclass(CustomMixin, SimpleMixin)
+        assert CustomMixin._constant_only is True
+        assert CustomMixin._only_types == (int, float)
+
+    def test_subclass_missing_slots_raises_runtime_error(self):
+        with pytest.raises(SimpleRuntimeError) as exc_info:
+            class InvalidMixin(SimpleMixin):
+                pass
+
+        assert exc_info.value.label == "__slots__"
+
+    def test_subclass_with_forbidden_slot_raises(self):
+        with pytest.raises(SimpleRuntimeError) as exc_info:
+            class InvalidMixin(SimpleMixin):
+                __slots__ = ("_owner",)
+
+        assert exc_info.value.label == "Forbidden slot names in __slots__"
+
+    def test_subclass_with_super_in_init_mixins_raises(self):
+        with pytest.raises(SimpleRuntimeError) as exc_info:
+            class InvalidMixin(SimpleMixin):
+                __slots__ = ()
+
+                def init_mixins(self):
+                    super().init_mixins()
+
+        assert exc_info.value.label == "Forbidden super() call in init_mixins"
+
+    def test_subclass_with_isolated_init_mixins_succeeds(self):
+        class ValidHookMixin(SimpleMixin):
+            __slots__ = ("_mx_data",)
+
+            def init_mixins(self):
+                self._mx_data = []
+
+        assert issubclass(ValidHookMixin, SimpleMixin)

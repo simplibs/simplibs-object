@@ -1,81 +1,39 @@
-from typing import TYPE_CHECKING, Any
-# Inners
-from ._process_calculate_value_params import _process_calculate_value_params
-# Annotations
-if TYPE_CHECKING:
-    from ...protocols.classes import SimpleObjectProtocol
-
-
-def calculate_value(
-    cls: "SimpleObjectProtocol",
-    *args,
-    **kwargs,
-) -> Any:
-    """Computes the composite value by invoking the user-defined `_logic` method."""
-
-    # 1. Process incoming parameters
-    params_dict = _process_calculate_value_params(cls, *args, **kwargs)
-
-    # 2. Compute the value using the class's logic function
-    outcome = cls.meta.logic(cls, **params_dict)
-
-    # 3. Return the computed value
-    return outcome
-
-
-_DESIGN_NOTES = """
-# calculate_value
-
-## Purpose
-Serves as the public-facing entry point for computing the value of a composite
-object. It connects user-provided parameters with the class’s `_logic` method,
-ensuring correct parameter mapping, validation, and execution.
-
----
-
-## Pipeline Overview
-
-### 1. Parameter Processing
-All positional and keyword arguments are normalized and validated through
-`_process_calculate_value_params`. This step ensures:
-
-- correct mapping to inner elements,
-- default value substitution,
-- validation of each inner value,
-- structured error reporting for invalid parameters.
-
-### 2. Logic Execution
-After parameters are processed, the function invokes:
-
-```
-cls.meta.logic(cls, **params_dict)
-```
-
-This calls the user-defined `_logic` method with:
-
-- the class itself (`cls`) as the first argument,
-- validated parameters as keyword arguments.
-
-### 3. Result Delivery
-The return value of `_logic` becomes the composite’s computed value.
-
----
-
-## Why this function exists
-Composite objects must compute their value dynamically based on inner elements.
-This function provides:
-
-- a stable API for users,
-- full type inference via `ParamSpec`,
-- predictable behavior,
-- separation of concerns (parameter processing vs. logic execution).
-
----
-
-## Notes
-- This function is attached to `SimpleObject` as a class method.
-- The public-facing documentation belongs to `SimpleObject.calculate_value`.
-- All diagnostics are delegated to `_process_calculate_value_params` and the
-  validation pipeline.
-```
 """
+Tests for `_core/logic/object_methods/calculate_value.py`.
+
+Verifies integration between parameter resolution and class logic calculation.
+"""
+import pytest
+from simplibs.object.exceptions import SimpleRuntimeError
+
+
+class TestCalculateValueHappyPath:
+
+    def test_calculates_via_positional_args(self, PairObject) -> None:
+        """Verifies value calculation using positional arguments."""
+        assert PairObject.calculate_value(2, 3) == 5
+
+    def test_calculates_via_keyword_args(self, PairObject) -> None:
+        """Verifies value calculation using keyword arguments."""
+        assert PairObject.calculate_value(first=2, second=3) == 5
+
+    def test_calculates_via_mixed_args(self, PairObject) -> None:
+        """Verifies value calculation using combined positional and keyword arguments."""
+        assert PairObject.calculate_value(2, second=3) == 5
+
+    def test_missing_args_use_inner_defaults(self, PairObject) -> None:
+        """Verifies calculation falls back to inner defaults when arguments are omitted."""
+        assert PairObject.calculate_value() == 0
+
+
+class TestCalculateValuePropagatesParamErrors:
+
+    def test_unknown_kwarg_raises(self, PairObject) -> None:
+        """Verifies unknown keyword arguments propagate error from parameter processing."""
+        with pytest.raises(SimpleRuntimeError):
+            PairObject.calculate_value(unknown=1)
+
+    def test_too_many_positional_args_raises(self, PairObject) -> None:
+        """Verifies excessive positional arguments propagate error from parameter processing."""
+        with pytest.raises(SimpleRuntimeError):
+            PairObject.calculate_value(1, 2, 3)

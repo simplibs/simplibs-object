@@ -1,13 +1,13 @@
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING
 # Outers
 from ...constants import BASE_CLASS_NAMES
 # Inners
-from .helpers import get_base_class, create_instance_class
+from .helpers.create_instance_class import create_instance_class
+from .helpers.get_base_class import get_base_class
 from .validations import (
     validate_class_is_not_base_class,
     validate_param_is_bool,
     validate_hashing_for_immutable_value,
-    validate_mixins
 )
 # Annotations
 if TYPE_CHECKING:
@@ -22,16 +22,18 @@ def create_instance(
     mixins: "MixinsTuple",
     as_atom: bool,
     mutable: bool = True,
-    validate: bool = True,
 ) -> "SimpleInstanceLike":
     """Orchestrates the complete validation and compilation lifecycle of a new runtime instance."""
 
     # 1. Validate class identity and boolean parameters
-    if validate:
-        if cls.__name__ in BASE_CLASS_NAMES or not isinstance(as_atom, bool):
-            validate_class_is_not_base_class(cls)
-            validate_param_is_bool(as_atom)
-            validate_param_is_bool(mutable)
+    if (
+        cls.__name__ in BASE_CLASS_NAMES
+        or not isinstance(as_atom, bool)
+        or not isinstance(mutable, bool)
+    ):
+        validate_class_is_not_base_class(cls)
+        validate_param_is_bool(as_atom)
+        validate_param_is_bool(mutable)
 
     # 2. Resolve structural mode (atomic vs composite)
     is_atom = cls.meta.is_constant or as_atom
@@ -43,83 +45,63 @@ def create_instance(
     # 4. Select structural base class
     base_class = get_base_class(cls, is_atom, mutable)
 
-    # 5. Validate mixin compatibility
-    if validate:
-        validate_mixins(cls, mixins, is_atom, mutable)
-
-    # 6. Compile unified runtime class
+    # 5. Compile unified instance class (resolves mixins, namespace, slots, and extension hooks)
+    # noinspection PyTypeChecker
     _instance_cls = create_instance_class(cls, mixins, base_class, is_atom, mutable)
 
-    # 7. Apply mixin extension hooks
-    for mixin in mixins:
-        if hasattr(mixin, "__extend_instance_class__"):
-            _instance_cls = mixin.__extend_instance_class__(_instance_cls)
-
-    # 8. Allocate raw memory for instance
+    # 6. Allocate raw memory for instance
     instance = object.__new__(_instance_cls)
 
-    # 9. Run initializer (atomic/composite closures handle mutability internally)
+    # 7. Run initializer (atomic/composite closures handle mutability internally)
     instance.__init__()
 
-    # 10. Return fully materialized instance
-    instance: "SimpleInstanceLike"
+    # 8. Return fully materialized instance
     return instance
-
 
 
 _DESIGN_NOTES = """
 # create_instance
 
 ## Purpose
-Serves as the central orchestrator of the instance factory. Coordinates validation,
-structural resolution, dynamic class compilation, mixin extension hooks, memory
-allocation, and initialization into a single deterministic pipeline.
+Serves as the high-level orchestrator for constructing runtime instances in the Simple system.
+It coordinates parameter validation, structural topology resolution, dynamic class compilation,
+memory allocation, and instance initialization in a strict, deterministic sequence.
 
-## Pipeline Overview
-1. **Validation**
-   Ensures class identity and boolean flags are correct. Prevents misuse of base
-   classes and invalid configuration parameters.
+## Lifecycle Pipeline
+1. **Identity & Parameter Guard**
+   Guards against passing abstract base system classes as blueprint sources and validates
+   that structural parameters (`as_atom`, `mutable`) are boolean primitives.
 
-2. **Topology Resolution**
-   Determines whether the instance is atomic or composite based on metadata and
-   the `as_atom` flag.
+2. **Structural Topology Resolution (`is_atom`)**
+   Evaluates whether the instance behaves as a single value container (atom) or a composite structure.
+   Constants automatically force atomic topology regardless of `as_atom`.
 
-3. **Immutability Safety**
-   Immutable instances must wrap hashable default values. This step enforces that
-   contract early.
+3. **Immutability Contract Validation**
+   Ensures that immutable targets wrap hashable default values before class allocation begins.
 
-4. **Base Class Selection**
-   Retrieves the correct structural class (atom/composite × mutable/immutable)
-   from metadata.
+4. **Base Class Selection (`get_base_class`)**
+   Delegates to `get_base_class` to fetch the cached structural core class 
+   (atom/composite × mutable/immutable).
 
-5. **Mixin Compatibility**
-   Validates mixin identity and structural constraints (`_constant_only`,
-   `_composite_only`, `_mutable_only`, `_immutable_only`, `_only_types`).
+5. **Class Compilation (`create_instance_class`)**
+   Triggers namespace construction, mixin flattening/injection, slot validation, and 
+   metaprogramming extension hooks to produce a clean runtime class `_instance_cls`.
 
-6. **Dynamic Class Compilation**
-   Builds the final runtime class using `type()`, merging mixins and the base
-   class into a unified MRO.
+6. **Raw Memory Allocation (`object.__new__`)**
+   Allocates memory directly on the compiled runtime class without triggering parent `__init__`
+   constructors prematurely.
 
-7. **Mixin Extension Hooks**
-   Mixins may optionally modify the compiled class via `__extend_instance_class__`.
+7. **Initialization (`instance.__init__`)**
+   Executes the compiled initializer closure which sets up reactive storage, internal state,
+   and chained `init_mixins` hooks.
 
-8. **Memory Allocation**
-   Uses `object.__new__` to allocate raw memory without invoking Python’s default
-   constructor.
+8. **Materialization**
+   Returns a fully initialized instance conforming to `SimpleInstanceLike`.
 
-9. **Initialization**
-   Executes the pre‑compiled initializer closure (atomic or composite), which
-   handles mutability and structural setup.
-
-10. **Return**
-   Produces a fully operational instance implementing the `SimpleInstanceLike`
-   protocol.
-
-## Notes
-- The pipeline is intentionally linear and granular, making debugging and tracing
-  extremely predictable.
-- Validation can be disabled for high‑performance hydration or deserialization
-  scenarios.
-- The separation of class compilation and instance allocation provides full
-  control over memory layout and initialization semantics.
+## Architectural Notes
+- **Decoupled Validation**: Mixin resolution and validation are deferred to `create_instance_class` 
+  and its helper pipeline (`_resolve_flat_mixins`), keeping `create_instance` lightweight and focused.
+- **Two-Phase Construction**: Separating class compilation (`create_instance_class`) from instance 
+  allocation (`object.__new__`) ensures that dynamic class generation happens once per execution path,
+  leaving memory layout clean and deterministic.
 """

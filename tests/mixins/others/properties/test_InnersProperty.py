@@ -1,50 +1,44 @@
-from typing import TYPE_CHECKING
-# Outers
-from ..base_class import SimpleMixin
-# Inners
-from ._utils._utils_for_inners_property import collect_all_nested_properties
-# Annotations
-if TYPE_CHECKING:
-    from ..._core.protocols.instance import SimpleInstanceLike
+"""
+Tests for `InnersProperty` mixin.
+"""
+import pytest
+from simplibs.object.mixins.others.properties import InnersProperty
+from simplibs.object.mixins.others.properties._inners_property_utils import (
+    collect_all_nested_properties,
+)
+from simplibs.object.testing import assert_simple_mixin
 
 
-class InnersProperty(SimpleMixin):
-    """
-    Mixin přidávající property na vnitřní prvky.
+class TestInnersPropertyStructure:
 
-    Dynamicky rozšiřuje kompozitní instance o properties
-    pro přímý komfortní přístup k jejím vnitřním prvkům (inners)
-    na základě definice blueprintu.
-    """
+    def test_composite_only_flag(self):
+        assert InnersProperty._composite_only is True
 
-    # ----------------------------------------
-    # Základní rozhraní
-    # ----------------------------------------
+    def test_slots_empty(self):
+        assert InnersProperty.__slots__ == ()
 
-    # Definice určení
-    _composite_only = True
+    def test_assert_simple_mixin_shallow(self, subtests, Outer):
+        assert_simple_mixin(subtests, InnersProperty, test_class=Outer)
 
-    # Definice slotů
-    __slots__ = ()
 
-    # ----------------------------------------
-    # Hook pro úpravu instanční třídy
-    # ----------------------------------------
+class TestInnersPropertyExtendInstanceClass:
 
-    @staticmethod
-    def __extend_instance_class__(
-        instance_cls: "SimpleInstanceLike"
-    ) -> "SimpleInstanceLike":
-        """
-        Interní metoda pro připojení prvků k třídě, před inicializačním procesem.
-        """
+    def test_nested_properties_attached_to_instance_class(self, Outer):
+        instance = Outer(mixins=(InnersProperty,))
+        expected_props = collect_all_nested_properties(Outer.meta)
 
-        # 1. Vytvoření potřebných properties
-        nested_props = collect_all_nested_properties(instance_cls.meta)
+        for name in expected_props:
+            assert hasattr(type(instance), name)
+            assert isinstance(getattr(type(instance), name), property)
 
-        # 2. Připojení atributů k třídě
-        for name, prop in nested_props.items():
-            setattr(instance_cls, name, prop)
+    def test_composite_without_nested_inners_adds_no_properties(self, PairObject):
+        instance = PairObject(mixins=(InnersProperty,))
+        expected_props = collect_all_nested_properties(PairObject.meta)
+        assert expected_props == {}
 
-        # 3. Navrácení pozměněné třídy
-        return instance_cls
+
+class TestInnersPropertyCompatibility:
+
+    def test_rejects_atom_only_test_class(self, subtests, IntLeaf):
+        with pytest.raises(Exception):
+            IntLeaf(mixins=(InnersProperty,), as_atom=True)

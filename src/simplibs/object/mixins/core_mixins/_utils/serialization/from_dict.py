@@ -30,9 +30,9 @@ def from_dict(
     if not isinstance(user_dict, dict):
         raise_unvalid_state_dict_input(self, user_dict)
 
-    # 2. Validate owner class
+    # 2. Validate owner class (supports both string class_name and class reference)
     owner_class = user_dict.get(OWNER_CLASS, UNSET)
-    if self.meta.owner_class != owner_class:
+    if owner_class not in (self.meta.class_name, self.meta.owner_class):
         raise_unvalid_owner_class_mismatch_for_state_dict(self, owner_class)
 
     # 3. Prepare traversal structures
@@ -45,7 +45,7 @@ def from_dict(
 
         # 4.1 Define per-node variables
         current_dict = user_dict
-        last_key = path[-1]
+        last_key = path[-1] if path else instance.meta.name_snake
 
         # 4.2 Handle composite nodes (non-root)
         if len(path) > 1:
@@ -126,12 +126,13 @@ The function performs strict validation:
    The provided value must be a dictionary.
 
 2. **Owner class identity**  
-   The dictionary must contain the correct `OWNER_CLASS` token.  
-   This prevents accidental deserialization into incompatible object types.
+   The dictionary must contain the matching `OWNER_CLASS` token.  
+   It accepts both string identifiers (`meta.class_name`) and class references (`meta.owner_class`),
+   allowing transparent JSON restoration and in-memory Python dictionary restoration.
 
 3. **Structural correctness**  
    The dictionary must contain all required keys according to the structural
-   paths defined in `_nodes_tuple`.
+   paths defined in `_nodes_tuple` (resolving standalone atoms via `name_snake`).
 
 4. **Value validation**  
    Each value is validated using the instance’s own `validate()` method.
@@ -145,9 +146,10 @@ paths stored in `_nodes_tuple`.
 
 To optimize traversal:
 
+- standalone atom nodes with empty paths safely fallback to `instance.meta.name_snake`
 - composite dictionaries are cached (`last_composite_dict`)
 - repeated lookups into the same composite branch are avoided
-- missing keys or invalid structures raise clear `KeyError` diagnostics
+- missing keys or invalid structures raise clear diagnostics
 
 This ensures linear performance even for deeply nested composite objects.
 

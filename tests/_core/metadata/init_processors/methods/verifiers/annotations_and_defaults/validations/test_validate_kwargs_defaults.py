@@ -1,74 +1,56 @@
-from typing import TYPE_CHECKING, Any
-# Outers
-from ........exceptions import SimpleMetadataError
-# Annotations
-if TYPE_CHECKING:
-    from .......protocols.methods import ClassMethodProtocol
+from unittest.mock import Mock
+from simplibs.object.exceptions.SimpleDefinitionError import SimpleDefinitionError
+from simplibs.exception.testing.assert_exception_function import assert_exception_function
+from simplibs.object._core.metadata.init_processors.methods.verifiers.annotations_and_defaults.validations.validate_kwargs_defaults import (
+    validate_kwargs_defaults,
+)
 
 
-def validate_kwargs_defaults(
-    expected_kwargs_defaults: dict[str, Any],
-    bound_method: "ClassMethodProtocol",
-    exception_info: tuple[str, str, str],
-    expected_structure: tuple[str, ...],
-) -> None:
-    """Validates keyword-only argument default values."""
+def test_validate_kwargs_defaults_pass() -> None:
+    """Tests that matching keyword-only defaults pass validation."""
 
-    # 1. Extract user-defined keyword defaults
-    method_kwargs_defaults = bound_method.__func__.__kwdefaults__ or {}
+    mock_func = Mock()
+    mock_func.__kwdefaults__ = {"option": True}
+    mock_bound_method = Mock()
+    mock_bound_method.__func__ = mock_func
 
-    # 2. Happy path: no defaults declared
-    if not method_kwargs_defaults:
-        return
-
-    class_name, method_name, context = exception_info
-
-    # 3. Validate each keyword default
-    for name, value in method_kwargs_defaults.items():
-        expected_value = expected_kwargs_defaults.get(name)
-
-        if value != expected_value:
-            raise SimpleMetadataError(
-                error_name="METHOD SIGNATURE ERROR",
-                label="_kwargs_default",
-                value=value,
-                expected=repr(expected_value),
-                problem=f"Parameter '{name}' has an incorrect default value.",
-                context=context,
-                how_to_fix=(
-                    f"Set the default value of '{name}' to '{expected_value}'.",
-                    "Or remove the default entirely; the framework will inject it automatically.",
-                ) + expected_structure,
-                exception=ValueError,
-            )
+    validate_kwargs_defaults(
+        expected_kwargs_defaults={"option": True},
+        bound_method=mock_bound_method,
+        exception_info=("TestClass", "test_method", "Context"),
+        expected_structure=("Blueprint",),
+    )
 
 
+def test_validate_kwargs_defaults_raises_error(subtests) -> None:
+    """Tests that mismatching keyword-only defaults raise SimpleDefinitionError."""
 
-_DESIGN_NOTES = """
-# validate_kwargs_defaults
+    mock_func = Mock()
+    mock_func.__kwdefaults__ = {"option": False}
+    mock_bound_method = Mock()
+    mock_bound_method.__func__ = mock_func
 
-## Purpose
-Ensures that keyword-only argument default values match the deterministic defaults
-defined in `_inners`.  
-Users may omit defaults, but they must never override them.
-
-## Why tuple inputs
-The validator receives:
-- `exception_info` — (class_name, method_name, context)
-- `expected_structure` — code blueprint
-
-This keeps the function consistent with all other method-validation helpers.
-
-## Behavior
-1. Extract keyword defaults from `__kwdefaults__`.
-2. If none exist → exit immediately.
-3. Compare each default with the expected value.
-4. If any mismatch occurs, raise a structured `SimpleMetadataError` with a
-   copy‑paste ready blueprint.
-
-## Notes
-This validator is part of the annotation/defaults verification chain:
-- `validate_annotations`
-- `validate_args_defaults`
-- `validate_kwargs_defaults`
-"""
+    assert_exception_function(
+        subtests,
+        validate_kwargs_defaults,
+        invalid_params=(
+            {"option": True},
+            mock_bound_method,
+            ("TestClass", "test_method", "TestContext"),
+            ("Expected structure line 1",),
+        ),
+        exception_type=SimpleDefinitionError,
+        error_name="METHOD SIGNATURE ERROR",
+        label="_kwargs_default",
+        expected="True",
+        value=False,
+        problem="Parameter 'option' has an incorrect default value.",
+        context="TestContext",
+        how_to_fix=(
+            "Set the default value of 'option' to 'True'.",
+            "Or remove the default entirely; the framework will inject it automatically.",
+            "Expected structure line 1",
+        ),
+        exception=ValueError,
+        verbose=False,
+    )

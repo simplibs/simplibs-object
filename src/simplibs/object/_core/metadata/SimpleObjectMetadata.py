@@ -41,11 +41,13 @@ class SimpleObjectMetadata(SimpleConstantMetadata):
         self.value_type, self.value_type_name = process_type(self.owner_class)
 
         # 4. Process inners
-        self.inners, self.node_names_set = process_inners(
+        inners, node_names_set = process_inners(
             node_names_set=self.node_names_set,
             name_snake=self.name_snake,
             owner_class=self.owner_class,
         )
+        self.inners = inners
+        self.node_names_set.update(node_names_set)
 
         # 5. Build lookup maps
         self.inners_map = {inner.meta.name_snake: inner for inner in self.inners}
@@ -79,7 +81,7 @@ class SimpleObjectMetadata(SimpleConstantMetadata):
             expected_args_defaults=(self.default,),
             expected_kwargs_defaults={},
             expected_param_types={"value": self.value_type},
-            expected_return_type=reduce(or_, inners_annotations.values()),
+            expected_return_type=tuple,
             owner_class=self.owner_class,
         )
 
@@ -113,14 +115,14 @@ class SimpleObjectMetadata(SimpleConstantMetadata):
 
     @property
     def composite_class_mutable(self: "SimpleObjectMetadataProtocol") -> "CompositeInstanceProtocol":
-        if self._composite_class_mutable is EMPTY:
+        if self._composite_class_mutable is UNSET:
             # noinspection PyAttributeOutsideInit
             self._composite_class_mutable = make_composite_class(self.owner_class.__metadata__)
         return self._composite_class_mutable
 
     @property
     def composite_class_immutable(self: "SimpleObjectMetadataProtocol") -> "CompositeInstanceProtocol":
-        if self._composite_class_immutable is EMPTY:
+        if self._composite_class_immutable is UNSET:
             # noinspection PyAttributeOutsideInit
             self._composite_class_immutable = make_composite_class(
                 self.owner_class.__metadata__,

@@ -1,18 +1,28 @@
-RESTRICTION_FLAGS = (
-    "_constant_only",
-    "_composite_only",
-    "_mutable_only",
-    "_immutable_only",
-)
-
-_DESIGN_NOTES = """
-# RESTRICTION_FLAGS
-
-## Purpose
-Defines the complete set of declarative compatibility flags used by mixins to
-express structural constraints on where they may be applied.
-
-## Notes
-Used by the mixin validation pipeline to ensure all declared flags are boolean.
-Acts as a schema definition for mixin compatibility metadata.
 """
+Tests for `RESTRICTION_FLAGS` constant tuple.
+"""
+from simplibs.object.mixins._common_logic.constants.sets import RESTRICTION_FLAGS
+
+
+class TestRestrictionFlagsContent:
+    """Verifies the exact contents of the declarative compatibility flags tuple."""
+
+    EXPECTED = (
+        "_constant_only",
+        "_composite_only",
+        "_mutable_only",
+        "_immutable_only",
+    )
+
+    def test_is_tuple(self):
+        assert isinstance(RESTRICTION_FLAGS, tuple)
+
+    def test_exact_content(self):
+        assert RESTRICTION_FLAGS == self.EXPECTED
+
+    def test_all_items_are_str(self):
+        assert all(isinstance(item, str) for item in RESTRICTION_FLAGS)
+
+    def test_does_not_include_only_types(self):
+        # _only_types is validated separately and does not belong to boolean RESTRICTION_FLAGS
+        assert "_only_types" not in RESTRICTION_FLAGS

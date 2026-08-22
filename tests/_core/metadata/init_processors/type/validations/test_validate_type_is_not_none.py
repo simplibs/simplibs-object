@@ -1,87 +1,44 @@
-from typing import Any, TYPE_CHECKING
-# Outers
-from ......exceptions import SimpleMetadataError
-# Inners
-from ._exception_info_for_type import _exception_info_for_type
-# Annotations
-if TYPE_CHECKING:
-    from .....protocols.classes import SimpleClassLike
+from simplibs.object.exceptions.SimpleDefinitionError import SimpleDefinitionError
+from simplibs.exception.testing.assert_exception_function import assert_exception_function
+from simplibs.object._core.metadata.init_processors.type.validations.validate_type_is_not_none import (
+    validate_type_is_not_none,
+)
 
 
-def validate_type_is_not_none(
-    value_type: Any,
-    owner_class: "SimpleClassLike"
-) -> None:
-    """Validates that '_type' is not set to literal None."""
+def test_validate_type_is_not_none_pass(sample_object_classes) -> None:
+    """Tests that a non-None _type attribute passes validation."""
 
-    # 1. Literal None is invalid
-    if value_type is None:
-        (
-            class_name,
-            class_parent,
-            error_name,
-            context,
-            acceptable_definitions,
-        ) = _exception_info_for_type(owner_class)
-
-        # 2. Raise structured error
-        raise SimpleMetadataError(
-            error_name=error_name,
-            label="_type",
-            value=value_type,
-            problem=(
-                "The '_type' attribute is set to literal None.",
-            ),
-            expected="A concrete type or a UnionType.",
-            how_to_fix=(
-                "Replace literal None with a real type.",
-                "If you intended to allow absence of value, use NoneType instead.",
-                "Literal None cannot serve as a structural type definition.",
-            ) + acceptable_definitions,
-            context=context,
-            exception=TypeError,
-        )
+    MyTestConstant, MyTestObject = sample_object_classes
+    validate_type_is_not_none(int, MyTestObject)
 
 
+def test_validate_type_is_not_none_raises_error(subtests, sample_object_classes) -> None:
+    """Tests that setting _type to literal None raises SimpleDefinitionError."""
 
-_DESIGN_NOTES = """
-# validate_type_is_not_none
+    MyTestConstant, MyTestObject = sample_object_classes
 
-## Purpose
-Prevents developers from assigning literal `None` to the `_type` attribute.
-Literal `None` cannot represent a structural type and would break validation,
-normalization, and instance creation.
-
-## Why this validation exists
-The `_type` attribute must always point to:
-
-- a concrete Python type (e.g., `int`, `str`, `MyClass`),
-- a UnionType (e.g., `int | str`),
-- or a tuple of types (later converted to a UnionType).
-
-Literal `None` is not a type and cannot be used with `isinstance`.
-
-## Pipeline position
-This check runs immediately after:
-
-- `validate_type_is_defined`
-- and before deeper structural checks.
-
-It ensures that `_type` is not missing and not `None`.
-
-## Error structure
-The helper `_exception_info_for_type` provides contextual data:
-
-- class name,
-- parent type (constant vs object),
-- error name,
-- context string,
-- example definitions.
-
-These are injected directly into the exception.
-
-## Notes
-If the developer wants to allow `None` as a valid value, they must use
-`NoneType` from the `types` module, not literal `None`.
-
-"""
+    assert_exception_function(
+        subtests,
+        validate_type_is_not_none,
+        invalid_params=(None, MyTestObject),
+        exception_type=SimpleDefinitionError,
+        error_name="INVALID TYPE DEFINITION",
+        label="_type",
+        value=None,
+        expected="A concrete type or a UnionType.",
+        problem="The '_type' attribute is set to literal None.",
+        context="Metadata validation for: MyTestObject._type",
+        how_to_fix=(
+            "Replace literal None with a real type.",
+            "If you intended to allow absence of value, use NoneType instead.",
+            "Literal None cannot serve as a structural type definition.",
+            "Acceptable definitions:",
+            "class MyTestObject(SimpleObject):",
+            "    _type = int",
+            "    _type = int | str",
+            "    _type = (int, str)",
+            "    ...",
+        ),
+        exception=TypeError,
+        verbose=False,
+    )

@@ -1,14 +1,14 @@
 from typing import Any, NoReturn
 from simplibs.sentinels import UNSET
 # Outers
-from ....exceptions import SimpleLogicError
+from ....exceptions import SimpleRuntimeError
 
 
 def validate_composite_has_logic(class_name: str, logic: Any) -> None | NoReturn:
     """Validates that a composite object class definition provides a valid logic calculation callable."""
 
     if logic in (UNSET, None):
-        raise SimpleLogicError(
+        raise SimpleRuntimeError(
             error_name="COMPOSITE MISSING LOGIC ERROR",
             label="composite_missing_or_none_logic",
             expected="A valid non-None and non-UNSET callable logic function (logic not in (UNSET, None))",
@@ -40,5 +40,5 @@ Guarantees that every composite `SimpleObject` defines a functional `logic` pipe
 
 ## Behavior
 1. Asserts `logic` is not in `(UNSET, None)` when `inners` is present.
-2. Raises structured `SimpleLogicError` emphasizing mandatory calculation rules for composite nodes.
+2. Raises structured `SimpleRuntimeError` emphasizing mandatory calculation rules for composite nodes.
 """

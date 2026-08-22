@@ -1,7 +1,7 @@
 from typing import Any, TYPE_CHECKING
 # Annotations
 if TYPE_CHECKING:
-    from ....._core.protocols.mixins.core_mixins import (
+    from ......_core.protocols.mixins.core_mixins import (
         InfrastructureProtocol,
         InfrastructuredComponent,
     )

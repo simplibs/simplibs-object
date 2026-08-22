@@ -1,128 +1,31 @@
-from typing import Any, TYPE_CHECKING
-# Inners
-from .process_value import process_value
-from .validations import raise_stepper_invalid_up_limit
-# Annotations
-if TYPE_CHECKING:
-    from ....._core.protocols.mixins.numerical.stepper import StepperProtocol
-
-
-def process_up_limit_value(
-    self: "StepperProtocol",
-    value: Any
-) -> Any:
-    """
-    Prepares and validates the upper‑limit value for the stepper.
-
-    Normalizes the provided value to the correct type and verifies
-    that the upper limit is not lower than the currently configured down limit.
-    """
-
-    # 1. Normalize the value
-    _value = process_value(self, value)
-
-    # 2. Validate boundary consistency
-    if self.down_limit > _value:
-        raise_stepper_invalid_up_limit(self, value)
-
-    return _value
-
-
-_DESIGN_NOTES = """
-# process_up_limit_value
-
-## Purpose
-Normalizes and validates the upper‑limit value for the stepper.  
-This function ensures that:
-
-- the provided limit value is converted to the correct numeric type,
-- the upper limit is not lower than the currently configured down limit,
-- invalid configurations are rejected early using structured errors.
-
-It provides the canonical logic for configuring the upper numeric boundary.
-
----
-
-## Architectural role
-`process_up_limit_value` is used by the setter:
-
-```
-Stepper.up_limit = ...
-```
-
-It acts as the validation and normalization layer for upper‑limit configuration.
-
-The function integrates with:
-
-- `process_value` for type normalization,
-- `raise_stepper_invalid_up_limit` for structured error reporting,
-- UNSET semantics for optional limit configuration.
-
----
-
-## How it works
-
-### 1. Value normalization
-The function first calls:
-
-```
-_value = process_value(self, value)
-```
-
-This ensures:
-
-- type consistency with the instance’s numeric type,
-- optional validation,
-- safe conversion of user‑provided values.
-
-### 2. Boundary consistency check
-The function verifies:
-
-```
-self.down_limit > _value
-```
-
-If true, the configuration is invalid because:
-
-```
-up_limit must be >= down_limit
-```
-
-Violations are reported using a structured diagnostic error.
-
-### 3. Returning the normalized value
-If validation succeeds, the normalized value is returned and stored as the new
-upper limit.
-
----
-
-## Why this function exists
-Stepper requires consistent numeric boundaries to operate safely.  
-This function encapsulates:
-
-- normalization,
-- boundary validation,
-- structured error raising.
-
-It ensures that invalid configurations never reach deeper layers of the stepper
-pipeline.
-
----
-
-## Deterministic behavior
-The function guarantees:
-
-- stable normalization,
-- predictable validation,
-- consistent error raising,
-- deterministic return values.
-
-This determinism is essential for safe numeric stepping.
-
----
-
-## Notes
-- This function is internal and not part of the public API.
-- All structural logic is delegated to normalization and validation utilities.
-- The function is intentionally minimal and side‑effect‑free.
 """
+Tests for `process_up_limit_value(self, value)` (Stepper processor).
+"""
+import pytest
+from simplibs.object.mixins.others.numerical._stepper_class import Stepper
+from simplibs.object.mixins.others.numerical._stepper_class.processors import (
+    process_up_limit_value,
+)
+
+
+class TestProcessUpLimitValue:
+
+    def test_set_up_limit_without_down_limit_first(self, IntLeaf):
+        instance = IntLeaf(as_atom=True, mutable=True)
+        stepper = Stepper(instance)
+        result = process_up_limit_value(stepper, 100)
+        assert result == 100
+
+    def test_up_limit_above_down_limit_succeeds(self, IntLeaf):
+        instance = IntLeaf(as_atom=True, mutable=True)
+        stepper = Stepper(instance)
+        stepper.down_limit = 0
+        result = process_up_limit_value(stepper, 50)
+        assert result == 50
+
+    def test_up_limit_below_down_limit_raises(self, IntLeaf):
+        instance = IntLeaf(as_atom=True, mutable=True)
+        stepper = Stepper(instance)
+        stepper.down_limit = 10
+        with pytest.raises(Exception):
+            process_up_limit_value(stepper, 5)

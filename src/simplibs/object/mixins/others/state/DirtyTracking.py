@@ -36,10 +36,7 @@ class DirtyTracking(Snapshot):
         process.
         """
 
-        # 1. Initialize parents
-        super().init_mixins()
-
-        # 2. Build a snapshot of the default state
+        # 1. Build a snapshot of the default state
         self._clean_snapshot = self._build_snapshot()
 
     # ----------------------------------------

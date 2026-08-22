@@ -1,135 +1,64 @@
-from typing import Any
-from simplibs.sentinels import UNSET
-from simplibs.exception.testing import maybe_subtest
-
-# Case třídy
-from .ObjectCase import ObjectCase
-from .MixinCase import MixinCase
-
-# Orchestrátory
-from ..assert_simple_object import assert_simple_object
-from ..assert_simple_mixin import assert_simple_mixin
-
-# Typy
-from ..._core.protocols import SimpleClassLike, SimpleMixinLike
-
-from ....SimpleConstant import SimpleConstant
-from ....mixins.base_class import SimpleMixin
+"""
+Tests for `testing/bulk_test.py`.
+"""
+import pytest
+from simplibs.object.testing.bulk_test import bulk_test
+from simplibs.object.testing.containers.ObjectCase import ObjectCase
+from simplibs.object.testing.containers.MixinCase import MixinCase
+from simplibs.object.testing.containers.TestMixin import TestMixin
 
 
-def bulk_test(
-    subtests: Any,
-    items: list[Any],
-    *,
-    verbose: bool = True,
-    deep_check: bool = True,
-) -> None:
-    """
-    Unified bulk test runner for SimpleObject and SimpleMixin tests.
+class TestBulkTestObjectCase:
 
-    Supports:
-        - ObjectCase
-        - MixinCase
-        - raw object class
-        - raw (object_class, mixins)
-        - raw (mixin_class, test_class)
+    def test_dispatches_object_case(self, IntConst, subtests):
+        bulk_test(subtests, [ObjectCase(test_class=IntConst)])
 
-    Args:
-        subtests: pytest subtests fixture
-        items: list of test definitions
-        verbose: enable verbose subtests
-        deep_check: deep validation for object tests
-    """
 
-    for item in items:
+class TestBulkTestMixinCase:
 
-        # ------------------------------------------------------------
-        # 1) ObjectCase
-        # ------------------------------------------------------------
-        if isinstance(item, ObjectCase):
-            intro = f"object_{item.test_class.__name__}::"
-            item.run_test(
-                subtests,
-                verbose=verbose,
-                intro=intro,
-                deep_check=deep_check,
-            )
-            continue
+    def test_dispatches_mixin_case(self, IntConst, subtests):
+        bulk_test(subtests, [MixinCase(mixin_class=TestMixin, test_class=IntConst)])
 
-        # ------------------------------------------------------------
-        # 2) MixinCase
-        # ------------------------------------------------------------
-        if isinstance(item, MixinCase):
-            intro = f"mixin_{item.mixin_class.__name__}::"
-            item.run_test(
-                subtests,
-                verbose=verbose,
-                intro=intro,
-            )
-            continue
 
-        # ------------------------------------------------------------
-        # 3) Raw object class (no mixins)
-        # ------------------------------------------------------------
-        if isinstance(item, type) and issubclass(item, SimpleConstant):
-            cls = item
-            intro = f"object_{cls.__name__}::"
-            assert_simple_object(
-                subtests,
-                cls,
-                mixins=UNSET,
-                verbose=verbose,
-                intro=intro,
-                deep_check=deep_check,
-            )
-            continue
+class TestBulkTestRawClass:
 
-        # ------------------------------------------------------------
-        # 4) Raw object class with mixins
-        # ------------------------------------------------------------
-        if isinstance(item, tuple) and len(item) == 2:
+    def test_dispatches_raw_simple_constant_class(self, IntConst, subtests):
+        bulk_test(subtests, [IntConst])
 
-            cls, mixins = item
-            if (
-                isinstance(cls, type)
-                and issubclass(cls, SimpleConstant)
-                and isinstance(mixins, tuple)
-                and all(issubclass(mixin, SimpleMixin) for mixin in mixins)
-            ):
-                intro = f"object_{cls.__name__}::"
-                assert_simple_object(
-                    subtests,
-                    cls,
-                    mixins=mixins,
-                    verbose=verbose,
-                    intro=intro,
-                    deep_check=deep_check,
-                )
-                continue
 
-        # ------------------------------------------------------------
-        # 5) Raw mixin test (mixin_class, test_class)
-        # ------------------------------------------------------------
+class TestBulkTestClassMixinsTuple:
 
-            mixin_class, test_class = item
-            if (
-                isinstance(mixin_class, type)
-                and issubclass(mixin_class, SimpleMixin)
-                and isinstance(test_class, type)
-                and issubclass(test_class, SimpleConstant)
-            ):
-                intro = f"mixin_{mixin_class.__name__}::"
-                assert_simple_mixin(
-                    subtests,
-                    mixin_class,
-                    test_class=test_class,
-                    verbose=verbose,
-                    intro=intro,
-                )
-                continue
+    def test_dispatches_class_with_mixins_tuple(self, IntConst, subtests):
+        bulk_test(subtests, [(IntConst, (TestMixin,))])
 
-        # ------------------------------------------------------------
-        # 6) Unknown item
-        # ------------------------------------------------------------
-        with maybe_subtest(subtests, name="unknown_item", verbose=verbose):
-            raise AssertionError(f"Unsupported bulk test item: {item!r}")
+
+class TestBulkTestMixinClassTuple:
+
+    def test_dispatches_mixin_class_tuple(self, IntConst, subtests):
+        bulk_test(subtests, [(TestMixin, IntConst)])
+
+
+class TestBulkTestMixedBatch:
+
+    def test_processes_multiple_heterogeneous_items(self, IntConst, subtests):
+        bulk_test(
+            subtests,
+            [
+                IntConst,
+                (IntConst, (TestMixin,)),
+                (TestMixin, IntConst),
+                ObjectCase(test_class=IntConst),
+                MixinCase(mixin_class=TestMixin, test_class=IntConst),
+            ],
+        )
+
+
+class TestBulkTestUnsupportedItem:
+
+    def test_unrecognized_item_raises_assertion_error(self, subtests):
+        with pytest.raises(AssertionError, match="Unsupported bulk test item"):
+            bulk_test(subtests, ["not-a-valid-item"])
+
+    def test_wrong_length_tuple_raises(self, IntConst, subtests):
+        with pytest.raises(AssertionError, match="Unsupported bulk test item"):
+            bulk_test(subtests, [(IntConst, IntConst, IntConst)])

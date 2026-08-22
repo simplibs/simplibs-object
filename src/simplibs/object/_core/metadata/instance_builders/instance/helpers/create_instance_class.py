@@ -1,10 +1,10 @@
 from typing import TYPE_CHECKING
 # Inners
-from .validations import raise_mixin_slots_conflict_error
+from ._build_instance_class_dict import _build_instance_class_dict
+from ._extend_instance_class import _extend_instance_class
 # Annotations
 if TYPE_CHECKING:
     from .....protocols.classes import SimpleClassLike
-    from .....protocols.instance.core_classes import AtomInstanceProtocol, CompositeInstanceProtocol
     from .....protocols.alias_typings import MixinsTuple
     from .....protocols.instance import SimpleInstanceLike
 
@@ -12,37 +12,28 @@ if TYPE_CHECKING:
 def create_instance_class(
     cls: "SimpleClassLike",
     mixins: "MixinsTuple",
-    base_class: "AtomInstanceProtocol | CompositeInstanceProtocol",
+    base_class: type,
     is_atom: bool,
     mutable: bool,
 ) -> "SimpleInstanceLike":
-    """Compiles a unified runtime instance class from mixins and the structural base."""
+    """Compiles a unified runtime instance class by synthesizing namespace, mixins, and base class."""
 
-    # 1. Build MRO
-    class_parents = (*mixins, base_class)
+    # 1. Define arguments for dynamic type creation
     class_name = f"{cls.meta.class_name}Instance"
+    class_parents = (base_class,)
+    class_dict = _build_instance_class_dict(cls, mixins, is_atom, mutable)
 
-    # 2. Build namespace
-    class_dict = {
-        "__slots__": (),
-        "__is_constant__": is_atom,
-        "__is_mutable__": mutable,
-        "__mixins__": mixins,
-    }
+    # 2. Compile dynamic instance class
+    _instance_cls = type(class_name, class_parents, class_dict)
 
-    # 3. Compile type (catch slot conflicts)
-    try:
-        # noinspection PyTypeChecker
-        _instance_cls = type(class_name, class_parents, class_dict)
-    except TypeError as error:
-        raise_mixin_slots_conflict_error(cls, mixins, error)
-
-    # 4. Standardize qualname
-    _instance_cls: "SimpleInstanceLike"
-    # noinspection PyUnboundLocalVariable
+    # 3. Standardize qualname for introspection
     _instance_cls.__qualname__ = class_name
 
-    # 5. Return compiled class
+    # 4. Apply metaprogramming extension hooks in-place
+    _instance_cls: "SimpleInstanceLike"
+    _extend_instance_class(class_dict["__mixins__"], _instance_cls)
+
+    # 5. Return compiled instance class
     return _instance_cls
 
 
@@ -50,28 +41,36 @@ _DESIGN_NOTES = """
 # create_instance_class
 
 ## Purpose
-Builds the final runtime class for an instance by merging:
-- the structural base class (atom/composite)
-- all user‑provided mixins
-- identity markers describing mutability and topology
+Compiles the dynamic runtime class (`*_Instance`) for a given blueprint and mixin set.
+Rather than placing mixins directly into Python's MRO (`class_parents`), this function 
+implements a **Namespace Injection Pattern**: mixins are flattened, validated, and merged
+into `class_dict`, leaving `base_class` as the sole parent in MRO.
 
-## Behavior
-1. Constructs the MRO as `(*mixins, base_class)`.
-2. Defines an empty `__slots__` to avoid conflicts with base‑class slots.
-3. Injects identity tokens:
-   - `__is_constant__`
-   - `__is_mutable__`
-   - `__mixins__`
-4. Compiles the class using `type()`.
-5. Intercepts slot layout conflicts and routes them through
-   `raise_mixin_slots_conflict_error`.
-6. Normalizes `__qualname__` for debugging and introspection.
+## Compilation Steps
+1. **Namespace Assembly (`_build_instance_class_dict`)**
+   Flattens the MRO tree of all provided mixins, validates individual mixin compatibility, 
+   checks for slot collision, merges attributes/methods, and chains `init_mixins` hooks.
+   Also attaches `__mixins__` (tuple of flattened mixin classes) to `class_dict`.
 
-## Notes
-- Mixins appear before the base class in the MRO, allowing them to override
-  behavior while still supporting `super()`.
-- Empty `__slots__` ensures compatibility with structural base classes that
-  already define storage slots.
-- This function returns a **class**, not an instance; instantiation happens later
-  in `create_instance`.
+2. **Class Creation (`type()`)**
+   Constructs the new type with single inheritance `(base_class,)`. This eliminates C-level 
+   slot arrangement conflicts in Python's MRO while preserving clean behavior.
+
+3. **Qualname Standardization**
+   Sets `__qualname__` to match `class_name` for clean stack traces, help(), and debugging.
+
+4. **In-Place Metaprogramming Extension (`_extend_instance_class`)**
+   Executes static `__extend_instance_class__` hooks present on flattened mixins. This allows 
+   advanced mixins (e.g., `InnersProperty`, `Equalizer`, `ImmutableWithInners`) to dynamically 
+   attach generated properties or setters directly onto `_instance_cls`.
+
+## Why Single Parent in MRO `(base_class,)`?
+- **No Slot Layout Conflicts**: Mixins define their own slots. In standard Python multiple inheritance,
+  combining multiple classes with non-empty `__slots__` raises a `TypeError`. Injecting mixin slots 
+  and attributes directly into `class_dict` bypasses MRO slot limitations completely.
+- **Explicit Ancestry Tracking**: Mixin membership is tracked explicitly via `class_dict["__mixins__"]`
+  and validated at runtime via `SimpleMixinMeta.__instancecheck__`, making `isinstance(obj, Mixin)`
+  work seamlessly without MRO complexity.
+- **Predictable Method Resolution**: Attribute collisions are caught and resolved predictably during
+  `class_dict` assembly rather than relying on complex MRO ordering.
 """

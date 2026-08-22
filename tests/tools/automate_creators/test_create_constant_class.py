@@ -1,47 +1,68 @@
-from typing import Any, Callable
-from simplibs.sentinels import UNSET, UnsetType
-# Outers
-from ..SimpleConstant import SimpleConstant
-# Inners
-from ._process_helpers.process_validate import process_validate
-from ._process_helpers.is_lambda import is_lambda
+"""
+Tests for `tools/automate_creators/create_constant_class.py`.
+"""
+import pytest
+from simplibs.object import SimpleConstant
+from simplibs.object.tools.automate_creators.create_constant_class import (
+    create_constant_class,
+)
+from simplibs.sentinels import UNSET
 
 
-def create_constant_class(
-    class_name: str,
-    default: Any,
-    value_type: type | UnsetType = UNSET,
-    validate: Callable | UnsetType = UNSET,
-):
-    """
-    Dynamically creates a SimpleConstant subclass.
+class TestCreateConstantClassHappyPath:
 
-    Parameters:
-        class_name  – name of the generated class
-        default     – default value of the constant
-        value_type  – optional explicit type; if UNSET, inferred from default
-        validate    – optional validation function or lambda
+    def test_creates_working_constant_class(self):
+        Age = create_constant_class("Age", default=18)
 
-    Returns:
-        Newly created SimpleConstant subclass.
-    """
+        assert issubclass(Age, SimpleConstant)
+        assert Age.meta.default == 18
+        assert Age.meta.value_type is int
 
-    # 1) Infer type if not provided
-    if value_type is UNSET:
-        value_type = type(default)
+    def test_explicit_value_type_overrides_inference(self):
+        Flexible = create_constant_class("Flexible", default=1, value_type=int | str)
+        assert Flexible.meta.value_type == (int | str)
 
-    # 2) Prepare namespace
-    namespace = {
-        "_default": default,
-        "_type": value_type,
-    }
+    def test_class_name_is_applied(self):
+        Age = create_constant_class("Age", default=0)
+        assert Age.__name__ == "Age"
 
-    # 3) Wrap validate if provided
-    if validate is not UNSET:
-        _validate = process_validate(validate)
-        namespace["_validate"] = classmethod(_validate)
 
-    # 4) Create class dynamically
-    new_class = type(class_name, (SimpleConstant,), namespace)
+class TestCreateConstantClassValidate:
 
-    return new_class
+    def test_regular_validate_function_is_attached(self):
+        def _validate(cls, value, *, return_bool=False):
+            if value >= 0:
+                return True
+            return cls.bool_or_raise_validate_error(
+                value, problem="must be non-negative", return_bool=return_bool
+            )
+
+        PositiveAge = create_constant_class("PositiveAge", default=0, validate=_validate)
+        assert PositiveAge.is_valid(5) is True
+        assert PositiveAge.is_valid(-5) is False
+
+    def test_lambda_validate_is_normalized_and_attached(self):
+        PositiveAge = create_constant_class(
+            "PositiveAge", default=0, validate=lambda value: value >= 0
+        )
+        assert PositiveAge.is_valid(5) is True
+        assert PositiveAge.is_valid(-5) is False
+
+    def test_no_validate_means_default_accept_all(self):
+        Age = create_constant_class("Age", default=0)
+        assert Age.is_valid(-999) is True
+
+
+class TestCreateConstantClassValidation:
+
+    def test_invalid_class_name_raises(self):
+        with pytest.raises(Exception):
+            create_constant_class("", default=0)
+
+    def test_missing_default_raises(self):
+        with pytest.raises(Exception):
+            create_constant_class("Age", default=UNSET)
+
+    def test_none_default_raises(self):
+        with pytest.raises(Exception):
+            create_constant_class("Age", default=None)

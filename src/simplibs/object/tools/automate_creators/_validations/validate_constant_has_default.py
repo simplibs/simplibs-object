@@ -1,14 +1,14 @@
 from typing import Any, NoReturn
 from simplibs.sentinels import UNSET
 # Outers
-from ....exceptions import SimpleLogicError
+from ....exceptions import SimpleRuntimeError
 
 
 def validate_constant_has_default(class_name: str, default: Any) -> None | NoReturn:
     """Validates that a constant leaf class definition provides a valid non-None default value."""
 
     if default in (UNSET, None):
-        raise SimpleLogicError(
+        raise SimpleRuntimeError(
             error_name="INVALID CONSTANT DEFAULT ERROR",
             label="constant_missing_or_none_default",
             expected="A valid non-UNSET and non-None default value (default not in (UNSET, None))",
@@ -40,7 +40,7 @@ a `SimpleConstant` class blueprint.
 
 ## Behavior
 1. Checks if `default` is `UNSET` or `None`.
-2. Raises `SimpleLogicError` explaining that `None` is disallowed due to automatic type inference 
+2. Raises `SimpleRuntimeError` explaining that `None` is disallowed due to automatic type inference 
    and default value propagation rules across composite object trees.
 
 ## Notes

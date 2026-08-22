@@ -1,6 +1,6 @@
 from typing import Any, NoReturn
 # Outers
-from ......exceptions import SimpleLogicError
+from ......exceptions import SimpleRuntimeError
 
 
 def raise_locked_value_error(
@@ -8,7 +8,7 @@ def raise_locked_value_error(
     class_name: str,
 ) -> NoReturn:
 
-    raise SimpleLogicError(
+    raise SimpleRuntimeError(
         error_name="VALUE LOCKED",
         label="value_is_locked",
         expected="Unlocked instance",
@@ -31,7 +31,7 @@ def raise_locked_value_error(
 
 
 _DESIGN_NOTES = """
-# Locked Value Error — SimpleLogicError
+# Locked Value Error — SimpleRuntimeError
 
 ## Purpose
 This error is raised when a user attempts to modify the value of a Simple
@@ -40,7 +40,7 @@ prevents further mutation of the instance’s value. It is implemented through t
 `Permission` mixin or by directly manipulating the `_locked` attribute.
 
 The error is part of the public-facing logic layer and therefore uses
-`SimpleLogicError`.
+`SimpleRuntimeError`.
 
 ---
 
@@ -65,7 +65,7 @@ Locking is typically controlled via the `Permission` mixin:
 
 ```python
 obj.lock()
-obj.value = 10  # → raises SimpleLogicError
+obj.value = 10  # → raises SimpleRuntimeError
 ```
 
 The mixin exposes:
@@ -95,7 +95,7 @@ This applies to:
 ---
 
 ## Notes
-- The error uses `SimpleLogicError` because it is a **runtime data manipulation**
+- The error uses `SimpleRuntimeError` because it is a **runtime data manipulation**
   problem, not a metadata or instantiation issue.
 - The setter includes the fix instructions directly in the error message.
 - The `_locked` flag defaults to `False` for all instances.

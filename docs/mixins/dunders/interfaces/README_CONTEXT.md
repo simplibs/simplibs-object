@@ -1,100 +1,80 @@
-from typing import Literal, TYPE_CHECKING
-from types import TracebackType
-# Outers
-from ...base_class import SimpleMixin
-# Annotations
-if TYPE_CHECKING:
-    from ...._core.protocols.mixins.dunders.interfaces import ContextProtocol
+# 🧱 `ContextManager` — Inert Context Manager Support
 
+`ContextManager` lets a Simple instance be used in a `with obj:` block. It performs no
+side effects — no cleanup, no state change — it simply enables the syntax and never
+suppresses exceptions.
+
+```python
+from types import TracebackType
+from ...base_class import SimpleMixin
 
 class ContextManager(SimpleMixin):
-    """
-    Mixin providing basic support for the context manager protocol
-    (`with obj:`).
+    ...
+```
 
-    This mixin allows an instance to be used in a `with` construct
-    without performing any side effects. It is fully universal — it
-    works for mutable and immutable objects, atoms and composites alike,
-    since it never changes the instance's state.
+---
 
-    Behavior:
-    - `__enter__` returns the instance itself.
-    - `__exit__` does not suppress exceptions (returns False), so any
-      errors propagate normally.
+## 🧭 Table of Contents
 
-    This mixin serves purely as a syntactic API extension and does not
-    interfere with value logic, snapshots, mutability, or immutable mode.
-    """
+* [`__enter__`](#__enter__)
+* [`__exit__`](#__exit__)
 
-    # ----------------------------------------
-    # Basic interface
-    # ----------------------------------------
+---
 
-    # Slot definition
-    __slots__ = ()
+### `__enter__`
 
-    # ----------------------------------------
-    # Methods - ENTER / EXIT
-    # ----------------------------------------
+Returns the instance itself, enabling `with obj as x:` to bind `x` to the same
+instance.
 
-    def __enter__(
-        self: "ContextProtocol"
-    ) -> "ContextProtocol":
-        """
-        Returns the instance on entering the context.
+**Parameters:**
+* *(none)*
 
-        Enables the construct:
-            with obj as x:
-                ...
+**Returns:**
+* the instance itself.
 
-        Without any change to the instance's state.
-        """
-        return self
+**Example usage:**
+```python
+with obj as x:
+    x.do_something()
+```
 
-    def __exit__(
-        self: "ContextProtocol",
-        exc_type: type[BaseException] | None,
-        exc_val: BaseException | None,
-        exc_tb: TracebackType | None
-    ) -> Literal[False]:
-        """
-        Ends the context block.
+**Under the hood:**
+```python
+def __enter__(self):
+    return self
+```
 
-        Returns False, meaning any exceptions are NOT suppressed and
-        propagate normally. The mixin performs no cleanup or state
-        change — it is purely syntactic.
-        """
-        return False
+[▲ Back to top](#-table-of-contents)
 
+---
 
-_DESIGN_NOTES = """
-# ContextManager
+### `__exit__`
 
-## Purpose
-Lets a Simple instance be used in a `with obj:` block. On its own this
-does nothing functional — no cleanup, no side effects — it exists so an
-instance can participate in context-manager-based APIs or read naturally
-in code that scopes a variable to a block.
+Always returns `False`, so any exception raised inside the `with` block propagates
+normally.
 
-> For newcomers: `__enter__`/`__exit__` are the two methods Python looks
-> for when you write `with x:`. Here they're intentionally inert — this
-> is a "no-op" context manager, not a resource-management one like a file
-> handle.
+**Parameters:**
+* `exc_type` (*type[BaseException] | None*)
+* `exc_val` (*BaseException | None*)
+* `exc_tb` (*TracebackType | None*)
 
-## Compatibility
-- No compatibility flags — safe for every instance kind, precisely
-  because it never touches state.
+**Returns:**
+* `Literal[False]`
 
-## Logic
-- `__enter__` just returns `self`, enabling `with obj as x:` to bind `x`
-  to the same instance.
-- `__exit__` always returns `False`, so any exception raised inside the
-  `with` block propagates as normal — this mixin never swallows errors.
+**Example usage:**
+```python
+with obj:
+    raise ValueError("still propagates")
+```
 
-## Notes
-- Purely syntactic — does not create a snapshot, does not lock the
-  instance, does not interact with mutability at all.
-- If a future use case needs an actual scoped effect (e.g. temporarily
-  freezing an instance), that belongs in a separate, more specific mixin
-  rather than being added here.
-"""
+**Under the hood:**
+```python
+def __exit__(self, exc_type, exc_val, exc_tb):
+    return False
+```
+
+[▲ Back to top](#-table-of-contents)
+
+---
+
+[⬅️ Back to Mixins Overview](../../../README_MIXINS_OVERVIEW.md)

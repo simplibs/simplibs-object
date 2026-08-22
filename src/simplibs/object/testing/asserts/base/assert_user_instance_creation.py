@@ -38,6 +38,7 @@ def assert_user_instance_creation(
     subintro = "test_user_instance_creation::"
 
     # 1. Prepare mixins tuple payload
+    mixins_tuple = None
     with maybe_subtest(
         subtests,
         name=f"{intro}{subintro}prepare_mixins",
@@ -49,6 +50,10 @@ def assert_user_instance_creation(
             if not isinstance(mixins, tuple):
                 pytest.fail("Parameter 'mixins' must be a tuple of mixin classes.")
             mixins_tuple = mixins
+
+    # 1.1 Guard clause: If mixins validation failed, abort downstream instantiation
+    if mixins_tuple is None:
+        return None
 
     # 2. Instantiate target class with user mixins (or vanilla default)
     with maybe_subtest(
@@ -78,9 +83,9 @@ It verifies that a blueprint class can be instantiated with custom user mixins o
 vanilla (mixin-free) state without raising runtime instantiation errors.
 
 ## Execution Matrix & Sentinel Handling
-1. **Mixin Normalization Gate:** Evaluates the `mixins` parameter. If left as `UNSET`, it defaults 
+1. **Mixin Normalization & Guard Gate:** Evaluates the `mixins` parameter. If left as `UNSET`, it defaults 
    to an empty tuple `()`. If passed explicitly, it validates that `mixins` is formatted as a `tuple`, 
-   failing fast via `pytest.fail` if an invalid type is supplied.
+   failing fast via `pytest.fail` and aborting execution via a guard clause if an invalid type is supplied.
 2. **Instantiation Intercept:** Invokes `test_class(mixins=mixins_tuple)` within a protected context, 
    capturing unexpected runtime exceptions and emitting clear diagnostic logs.
 

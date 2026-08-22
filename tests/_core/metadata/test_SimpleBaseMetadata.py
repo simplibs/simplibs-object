@@ -1,139 +1,63 @@
-from typing import Set, Any, TYPE_CHECKING
-from simplibs.sentinels import UNSET
-# Inners
-from .init_processors.names import create_names
-from .init_processors.blueprint_path import calculate_blueprint_path
-from .validations import raise_metadata_is_immutable
-# Annotations
-if TYPE_CHECKING:
-    from ..protocols.metadata import SimpleBaseMetadataProtocol
-    from ..protocols.classes import SimpleClassLike
-
-
-class SimpleBaseMetadata:
-    """Base metadata orchestrator for Simple classes."""
-
-    __slots__ = (
-        # 1. Owner class
-        "owner_class",
-
-        # 2. Name identity
-        "class_name",       # "MyData"
-        "name_tuple",       # ("My", "Data")
-        "name_snake",       # "my_data"
-        "name_private",     # "_my_data"
-
-        # 3. Namespace registry
-        "node_names_set",
-
-        # 4. Blueprint path
-        "blueprint_path",
-    )
-
-    def __init__(
-        self: "SimpleBaseMetadataProtocol",
-        owner_class: "SimpleClassLike"
-    ) -> None:
-        """Initializes core metadata fields."""
-
-        # 1. Owner reference
-        self.owner_class = owner_class
-
-        # 2. Name identity
-        self.class_name = owner_class.__name__
-        (
-            self.name_tuple,
-            self.name_snake,
-            self.name_private,
-        ) = create_names(owner_class)
-
-        # 3. Namespace registry
-        self.node_names_set: Set[str] = {self.name_snake}
-
-        # 4. Blueprint path
-        self.blueprint_path = calculate_blueprint_path(owner_class)
-
-        # 5. Subclass hook
-        self._process_user_data()
-
-    def _process_user_data(
-        self: "SimpleBaseMetadataProtocol"
-    ) -> None:
-        """Subclass-specific initialization hook."""
-        pass
-
-    def __setattr__(
-        self: "SimpleBaseMetadataProtocol",
-        attr_name: str,
-        new_value: Any
-    ) -> None:
-        """Allows assignment only if the field is UNSET."""
-
-        current_value = getattr(self, attr_name, UNSET)
-
-        if current_value is not UNSET:
-            raise_metadata_is_immutable(
-                attr_name,
-                current_value,
-                new_value,
-                self.owner_class,
-            )
-
-        super().__setattr__(attr_name, new_value)
-
-
-
-_DESIGN_NOTES = """
-# SimpleBaseMetadata
-
-## Purpose
-Provides the foundational metadata structure for all Simple classes.  
-It extracts naming identity, initializes namespace tracking, and enforces
-immutability of metadata fields.
-
-## Initialization pipeline
-The constructor performs five deterministic steps:
-
-1. **Owner reference**  
-   Stores the class for which metadata is being generated.
-
-2. **Name identity**  
-   Uses `create_names` to derive:
-   - `name_tuple`
-   - `name_snake`
-   - `name_private`
-
-3. **Namespace registry**  
-   Initializes `node_names_set` with the class’s own snake name.  
-   Subclasses extend this set when processing inner fields.
-
-4. **Blueprint path**  
-   Uses `calculate_blueprint_path` to generate a readable inheritance path.
-
-5. **Subclass hook**  
-   Calls `_process_user_data()` for specialized metadata types.
-
-## Write-once rule
-Metadata fields are immutable after initialization.
-
-- Fields start with `UNSET`.
-- `__setattr__` allows assignment only when the current value is `UNSET`.
-- Any overwrite attempt triggers `raise_metadata_is_immutable`.
-
-This guarantees stable, deterministic metadata for the lifetime of the class.
-
-## Subclass architecture
-Subclasses **must not** override `__init__`.  
-All custom initialization belongs inside `_process_user_data()`.
-
-This ensures:
-- consistent naming identity,
-- consistent namespace initialization,
-- consistent blueprint path generation,
-- predictable metadata structure.
-
-## Notes
-- The class is lightweight and performs only structural tasks.
-- All heavy logic is delegated to specialized processors.
-- Metadata objects are created once per class and never mutated.
 """
+Tests for `_core/metadata/SimpleBaseMetadata.py`.
+"""
+import pytest
+from simplibs.object._core.metadata.SimpleBaseMetadata import SimpleBaseMetadata
+from simplibs.object.exceptions import SimpleDefinitionError
+
+
+class TestSimpleBaseMetadataNameDerivation:
+
+    def test_derives_name_fields_from_class_name(self):
+        FakeOwner = type("Widget", (), {})
+        meta = SimpleBaseMetadata(FakeOwner)
+
+        assert meta.class_name == "Widget"
+        assert meta.name_tuple == ("Widget",)
+        assert meta.name_snake == "widget"
+        assert meta.name_private == "_widget"
+
+    def test_node_names_set_seeded_with_own_name(self):
+        FakeOwner = type("Widget", (), {})
+        meta = SimpleBaseMetadata(FakeOwner)
+        assert meta.node_names_set == {"widget"}
+
+    def test_owner_class_reference_is_stored(self):
+        FakeOwner = type("Widget", (), {})
+        meta = SimpleBaseMetadata(FakeOwner)
+        assert meta.owner_class is FakeOwner
+
+
+class TestSimpleBaseMetadataProcessUserDataHook:
+
+    def test_process_user_data_is_a_noop_by_default(self):
+        FakeOwner = type("Widget", (), {})
+        meta = SimpleBaseMetadata(FakeOwner)
+        meta._process_user_data()
+
+
+class TestSimpleBaseMetadataWriteOnce:
+
+    def test_reassigning_existing_attribute_raises(self):
+        FakeOwner = type("Widget", (), {})
+        meta = SimpleBaseMetadata(FakeOwner)
+
+        with pytest.raises(SimpleDefinitionError):
+            meta.class_name = "SomethingElse"
+
+    def test_first_assignment_of_unset_slot_succeeds(self):
+        """
+        __setattr__ allows assignment only when current value is UNSET.
+        """
+        from simplibs.object import SimpleConstant
+
+        class Age(SimpleConstant):
+            _type = int
+            _default = 0
+
+        # First direct assignment to an UNSET slot passes
+        Age.meta._atom_class_mutable = "manually-set-once"
+
+        # Second assignment to a non-UNSET slot must fail
+        with pytest.raises(SimpleDefinitionError):
+            Age.meta._atom_class_mutable = "manually-set-twice"

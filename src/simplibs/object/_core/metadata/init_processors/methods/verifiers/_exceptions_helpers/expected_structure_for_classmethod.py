@@ -11,15 +11,22 @@ def expected_structure_for_classmethod(
 ) -> tuple[str, ...]:
     """Generates a copy‑paste ready expected method structure."""
 
-    class_name = bound_method.__self__.__name__
-    method_name = bound_method.__func__.__name__
+    # 1. Class name recovery (fallback to <UnknownClass>)
+    owner = getattr(bound_method, "__self__", None)
+    class_name = owner.__name__ if owner is not None else "<UnknownClass>"
 
-    class_parent = (
-        "SimpleObject"
-        if "SimpleObject" in [c.__name__ for c in bound_method.__self__.__mro__]
-        else "SimpleConstant"
-    )
+    # 2. Method name recovery (fallback to standard string/attribute inspection)
+    func = getattr(bound_method, "__func__", bound_method)
+    method_name = getattr(func, "__name__", str(bound_method))
 
+    # 3. Safe parent recovery via already resolved owner
+    if owner is None:
+        class_parent = "<UnknownClass>"
+    else:
+        mro_names = [c.__name__ for c in getattr(owner, "__mro__", ())]
+        class_parent = "SimpleObject" if "SimpleObject" in mro_names else "SimpleConstant"
+
+    # 4. Build signature parameters
     args_params = ", ".join(expected_params[:expected_args_params_count])
     kwargs_params = ", ".join(expected_params[expected_args_params_count:])
 
@@ -28,6 +35,7 @@ def expected_structure_for_classmethod(
         + (f", *, {kwargs_params}" if kwargs_params else "")
     )
 
+    # 5. Build blueprint structure
     expected_structure = (
         "Expected structure:",
         f"class {class_name}({class_parent}):",
@@ -45,42 +53,28 @@ _DESIGN_NOTES = """
 # expected_structure_for_classmethod
 
 ## Purpose
-Generates a minimal, copy‑paste ready code blueprint showing how the classmethod
-should be declared.  
-Used when signature validation fails and the developer needs a clear structural
-example of the correct method layout.
+Generates a copy-paste ready code blueprint showing how a required `@classmethod`
+should be declared. Used when signature validation fails.
+
+## Defensive Behavior & Parent Discovery
+- Safely extracts class name via `bound_method.__self__`, falling back to `<UnknownClass>`.
+- Dynamically discovers the parent class (`SimpleObject` vs `SimpleConstant`) by inspecting
+  the `owner.__mro__`.
+- Formats positional and keyword-only arguments separated by `*, ` according to strict protocol specs.
 
 ## What it returns
-Only one value:
-
-- `expected_structure` — a tuple of strings forming a readable code snippet.
-
-The function does not return class name, method name, or context separately.
-It computes these values internally and embeds them directly into the blueprint.
+- `expected_structure` — a tuple of strings forming a readable multi-line code snippet.
 
 ## Why this separation exists
-The method‑validation pipeline uses two helpers:
+The method-validation pipeline uses two distinct helpers:
+- **exception_info_for_classmethod**: Provides identity metadata (class name, method name, context).
+- **expected_structure_for_classmethod**: Generates the structural blueprint code snippet.
 
-- **exception_context_for_classmethod**  
-  Provides minimal identity metadata (class name, method name, context).
-
-- **exception_info_for_classmethod**  
-  Provides the full structural code example.
-
-Each helper has a distinct purpose and remains independent.
+Each helper maintains a single responsibility and operates independently.
 
 ## Why tuple
 The expected structure:
-
-- has a fixed shape,
+- has a fixed layout,
 - is immutable,
-- is consumed immediately,
-- does not require keys or dictionary access.
-
-A tuple is the cleanest and fastest representation.
-
-## Notes
-This helper is used only when the developer needs to see the correct method
-signature visually.  
-It is intentionally simple and focused solely on generating the blueprint.
+- is consumed immediately for error formatting.
 """

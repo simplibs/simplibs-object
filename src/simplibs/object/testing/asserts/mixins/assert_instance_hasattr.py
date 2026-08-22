@@ -30,12 +30,14 @@ def assert_instance_hasattr(
     subintro = f"assert_instance_hasattr[{kind}]::"
 
     # 1. Validate input parameter types
+    is_valid_input: bool = True
     with maybe_subtest(
         subtests,
         name=f"{intro}{subintro}validate_input",
         verbose=verbose,
     ):
         if not isinstance(names, tuple):
+            is_valid_input = False
             pytest.fail(
                 f"Parameter 'names' for kind '{kind}' must be a tuple of strings, "
                 f"got: {names!r}"
@@ -43,10 +45,15 @@ def assert_instance_hasattr(
 
         for name in names:
             if not isinstance(name, str):
+                is_valid_input = False
                 pytest.fail(
                     f"{kind.capitalize()} name '{name!r}' is not a string. "
                     f"All {kind} names must be string identifiers."
                 )
+
+    # 1.1 Guard clause: Halt execution if parameter structure is invalid
+    if not is_valid_input:
+        return
 
     # 2. Validate attribute presence on target instance
     with maybe_subtest(
@@ -72,8 +79,9 @@ of named members exists on a target instance. It serves as the foundation for te
 propagation across slots, properties, methods, and class-level attributes.
 
 ## Verification Pipeline
-1. **Input Schema Gate:** Validates that `names` is explicitly formatted as a `tuple[str, ...]`, 
-   failing fast via `pytest.fail` if non-string identifiers or incorrect containers are supplied.
+1. **Input Schema & Guard Gate:** Validates that `names` is explicitly formatted as a `tuple[str, ...]`. 
+   If non-string identifiers or incorrect containers are supplied, it reports a failure and aborts early 
+   via a guard clause to prevent iterating invalid payloads downstream.
 2. **Attribute Existence Intercept:** Iterates through `names` using `hasattr(instance, name)`. 
    If any expected attribute is absent, it raises a failure with diagnostic information, including 
    the class name and `dir(instance)` reflection dump.

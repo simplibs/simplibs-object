@@ -30,31 +30,40 @@ def assert_reactivity_downward(
         intro: Optional prefix string added to the generated subtest identity name.
     """
     subintro = "test_reactivity_downward::"
-    meta = instance.meta
 
     # 1. Target instance must be a composite (non-constant) object
+    meta = instance.meta
     with maybe_subtest(
         subtests,
         name=f"{intro}{subintro}is_composite",
         verbose=verbose,
     ):
-        if meta.is_constant:
+        if getattr(meta, "is_constant", False):
             pytest.fail(
                 f"Cannot test downward reactivity on atomic constant '{meta.class_name}', "
                 f"because constants do not contain inner components."
             )
 
+    # 1.1 Guard clause: Halt execution if instance is an atomic constant
+    if getattr(meta, "is_constant", False):
+        return
+
     # 2. Target composite must explicitly support decomposition
+    is_decomposeable = getattr(meta, "is_decomposeable", False)
     with maybe_subtest(
         subtests,
         name=f"{intro}{subintro}supports_decompose",
         verbose=verbose,
     ):
-        if not meta.is_decomposeable:
+        if not is_decomposeable:
             pytest.fail(
                 f"Composite '{meta.class_name}' does not define a decomposition method; "
                 f"downward reactivity cannot be verified."
             )
+
+    # 2.1 Guard clause: Halt execution if composite does not support decomposition
+    if not is_decomposeable:
+        return
 
     # 3. Apply composite value change to root via shared assertion
     with maybe_subtest(
@@ -71,6 +80,7 @@ def assert_reactivity_downward(
         )
 
     # 4. Compute expected decomposed inner values
+    expected_values = None
     with maybe_subtest(
         subtests,
         name=f"{intro}{subintro}compute_expected",
@@ -83,13 +93,17 @@ def assert_reactivity_downward(
                 f"decompose_value raised an unexpected exception on '{meta.class_name}': {exc}"
             )
 
+    # 4.1 Guard clause: Halt execution if decomposition calculation failed
+    if expected_values is None:
+        return
+
     # 5. Compare inner property attributes against expected decomposed values
     with maybe_subtest(
         subtests,
         name=f"{intro}{subintro}compare_inners",
         verbose=verbose,
     ):
-        for inner, expected_value in zip(meta.inners, expected_values):
+        for inner, expected_value in zip(getattr(meta, "inners", ()), expected_values):
             name_snake = inner.meta.name_snake
             actual_value = getattr(instance, name_snake)
 
@@ -109,13 +123,16 @@ composite value is assigned, the underlying framework decomposes the root payloa
 component state values and propagates them down to each nested inner object.
 
 ## Execution Pipeline Steps
-1. **Composite Type Validation:** Verifies that the target instance is a composite node (`not meta.is_constant`).
-2. **Decomposition Contract Verification:** Confirms the composite class defines decomposition capabilities (`meta.is_decomposeable`).
+1. **Composite Type & Guard Gate:** Verifies that the target instance is a composite node (`not meta.is_constant`). 
+   Aborts early via a guard clause if the target is an atomic constant.
+2. **Decomposition Contract & Guard Gate:** Confirms the composite class defines decomposition capabilities 
+   (`meta.is_decomposeable`). Halts execution if decomposition is unsupported.
 3. **Root Mutation Intercept:** Mutates the root composite value using `assert_value_change`, which handles pre-validation 
    and in-place assignment.
-4. **Decomposition Calculation:** Calls `instance.decompose_value(new_value)` to derive the expected sequence of child values.
-5. **Inner State Reconciliation:** Iterates over `meta.inners`, fetching the runtime inner attribute via `getattr(instance, name_snake)`, 
-   and asserts that every child state strictly reflects the decomposed expected value.
+4. **Decomposition Calculation & Guard Gate:** Calls `instance.decompose_value(new_value)` to derive the expected 
+   sequence of child values, guarded by a fail-fast exit if calculation raises an exception.
+5. **Inner State Reconciliation:** Iterates over `meta.inners`, fetching the runtime inner attribute via 
+   `getattr(instance, name_snake)`, and asserts that every child state strictly reflects the decomposed expected value.
 
 ## Pipeline Lifecycle Role
 Serves as one of the twin reactivity validation blades in the framework. While `assert_reactivity_upward` 

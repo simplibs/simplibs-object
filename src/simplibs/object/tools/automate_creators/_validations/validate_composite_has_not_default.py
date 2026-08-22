@@ -1,14 +1,14 @@
 from typing import Any, NoReturn
 from simplibs.sentinels import UNSET
 # Outers
-from ....exceptions import SimpleLogicError
+from ....exceptions import SimpleRuntimeError
 
 
 def validate_composite_has_not_default(class_name: str, default: Any) -> None | NoReturn:
     """Validates that a composite object class definition does not provide a static default value."""
 
     if default is not UNSET:
-        raise SimpleLogicError(
+        raise SimpleRuntimeError(
             error_name="COMPOSITE DEFAULT CONFLICT ERROR",
             label="composite_default_conflict",
             expected="default=UNSET when creating a SimpleObject composite class",

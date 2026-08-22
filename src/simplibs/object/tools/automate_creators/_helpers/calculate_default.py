@@ -20,7 +20,7 @@ def calculate_default(
         The computed default result of the logic function.
 
     Raises:
-        SimpleLogicError: If logic execution fails with provided default parameters.
+        SimpleRuntimeError: If logic execution fails with provided default parameters.
     """
 
     # 1. Execute Logic Callable with Default Inner Arguments

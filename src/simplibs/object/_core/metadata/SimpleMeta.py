@@ -55,7 +55,8 @@ class SimpleMeta(type):
     ) -> None:
         """Prevents overwriting already-initialized class-level attributes."""
 
-        if getattr(cls, attr_name, UNSET) is not UNSET:
+        # if getattr(cls, attr_name, UNSET) is not UNSET:
+        if attr_name in cls.__dict__:
             raise_attribut_allready_set(cls, attr_name, new_value)
 
         super().__setattr__(attr_name, new_value)

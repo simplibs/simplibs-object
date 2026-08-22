@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, NoReturn
 # Outers
-from .......exceptions import SimpleLogicError
+from .......exceptions import SimpleRuntimeError
 # Annotations
 if TYPE_CHECKING:
     from ......._core.protocols.mixins.state import HistoryProtocol
@@ -14,7 +14,7 @@ def raise_unvalide_history_import_file(
     Raises an error when the provided history import container is not a dictionary.
     """
 
-    raise SimpleLogicError(
+    raise SimpleRuntimeError(
         error_name="HISTORY IMPORT FORMAT ERROR",
         label="history import container",
         expected="A dictionary containing OWNER_CLASS and HISTORY fields.",

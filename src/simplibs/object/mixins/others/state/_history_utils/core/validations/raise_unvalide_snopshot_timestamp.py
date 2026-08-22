@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, NoReturn, Any
 # Outers
-from .......exceptions import SimpleLogicError
+from .......exceptions import SimpleRuntimeError
 # Annotations
 if TYPE_CHECKING:
     from ......._core.protocols.mixins.state import HistoryProtocol
@@ -17,7 +17,7 @@ def raise_unvalide_snopshot_timestamp(
     # noinspection PyProtectedMember
     history_timestamps = tuple(ts for ts, _ in instance._history)
 
-    raise SimpleLogicError(
+    raise SimpleRuntimeError(
         error_name="HISTORY SNAPSHOT TIMESTAMP ERROR",
         label="snapshot timestamp",
         expected="A timestamp that exists in recorded history.",

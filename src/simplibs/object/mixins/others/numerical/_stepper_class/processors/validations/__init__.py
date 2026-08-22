@@ -34,6 +34,6 @@ states from entering the runtime pipeline.
 ## Notes
 - These utilities are internal and not part of the public API.
 - They are used exclusively by configuration processors (`process_value`, `process_limit_action`, etc.).
-- All errors follow the SimpleLogicError diagnostic format.
+- All errors follow the SimpleRuntimeError diagnostic format.
 - Validators here protect the Stepper from invalid configuration before runtime.
 """

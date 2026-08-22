@@ -1,77 +1,48 @@
-from typing import Any, TYPE_CHECKING
+import pytest
+from unittest.mock import Mock
+
 from simplibs.sentinels import UNSET
-# Outers
-from ......exceptions import SimpleMetadataError
-# Inners
-from ._exception_info_for_default import _exception_info_for_default
-# Annotations
-if TYPE_CHECKING:
-    from .....protocols.classes import SimpleClassLike
+from simplibs.exception.testing import assert_exception_function
+from simplibs.object._core.metadata.init_processors.default.validations.validate_default_is_defined import (
+    validate_default_is_defined,
+)
+from simplibs.object.exceptions import SimpleDefinitionError
 
 
-def validate_default_is_defined(
-    default_value: Any,
-    owner_class: "SimpleClassLike"
-) -> None:
-    """Validates that '_default' is explicitly defined for a constant."""
+def test_validate_default_is_defined_pass() -> None:
+    """Test that valid default values do not trigger any exception."""
 
-    if default_value is UNSET:
-        (
-            class_name,
-            class_parent,
-            error_name,
-            context,
-        ) = _exception_info_for_default(owner_class)
+    dummy_class = Mock(__name__="MyConstant", __mro__=("MyConstant", "SimpleConstant", "object"))
 
-        raise SimpleMetadataError(
-            error_name=error_name,
-            label="_default",
-            value=default_value,
-            problem=(
-                "The '_default' attribute is missing.",
-            ),
-            expected="A concrete default value.",
-            how_to_fix=(
-                "Define '_default' inside the class body.",
-                "Constants must always declare a default value.",
-                "If this class is meant to be a composite, define '_inners' instead.",
-            ),
-            context=context,
-            exception=ValueError,
-        )
+    # None je platná hodnota (není UNSET), nemělo by nic vyvolat
+    validate_default_is_defined(None, dummy_class)
+    validate_default_is_defined(42, dummy_class)
 
 
+def test_validate_default_is_defined_raises_on_unset(subtests) -> None:
+    """Test that UNSET default_value raises SimpleDefinitionError."""
 
-_DESIGN_NOTES = """
-# validate_default_is_defined
+    dummy_class = Mock(__name__="MyConstant", __mro__=("MyConstant", "SimpleConstant", "object"))
 
-## Purpose
-Ensures that every constant (`SimpleConstant`) declares a `_default` value.  
-Constants have no inner structure, so the default value is required to define
-their runtime identity.
+    assert_exception_function(
+        subtests,
+        validate_default_is_defined,
 
-## Why UNSET is used
-`None` is a valid default value.  
-`UNSET` is the only reliable marker for “attribute not provided”.
+        invalid_params=(UNSET, dummy_class),
+        exception_type=SimpleDefinitionError,
 
-This prevents false positives when a developer intentionally sets:
+        error_name="INVALID DEFAULT DEFINITION",
+        label="_default",
+        value=UNSET,
+        problem="The '_default' attribute is missing.",
+        expected="A concrete default value.",
+        how_to_fix=(
+            "Define '_default' inside the class body.",
+            "Constants must always declare a default value.",
+            "If this class is meant to be a composite, define '_inners' instead.",
+        ),
+        context="Metadata validation for: MyConstant._default",
+        exception=ValueError,
 
-```
-_default = None
-```
-
-## Pipeline position
-This validation is the first step in `process_default_for_constant`.  
-If `_default` is missing, no further checks are executed.
-
-## Developer experience
-The error message points the developer toward the correct architectural path:
-
-- If the class is meant to be a constant → define `_default`.
-- If the class is meant to be a composite → define `_inners` and `_logic`.
-
-## Notes
-This validator is used only for constants.  
-Compositions use a separate guard that forbids `_default`.
-```
-"""
+        verbose=False,
+    )

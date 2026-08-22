@@ -1,48 +1,34 @@
-from typing import TYPE_CHECKING
-# Annotations
-if TYPE_CHECKING:
-    from ......protocols.methods import ClassMethodProtocol
-
-
-def exception_info_for_classmethod(
-    bound_method: "ClassMethodProtocol",
-) -> tuple[str, str, str]:
-    """Extracts class name, method name, and diagnostic context."""
-
-    class_name = bound_method.__self__.__name__
-    method_name = bound_method.__func__.__name__
-    context = f"Metadata validation for: {class_name}.{method_name}"
-
-    return (
-        class_name,
-        method_name,
-        context,
-    )
-
-
-_DESIGN_NOTES = """
-# exception_info_for_classmethod
-
-## Purpose
-Provides the minimal diagnostic metadata needed for most classmethod validations:
-- class name
-- method name
-- context string
-
-## Why tuple
-The returned values are:
-- fixed in structure,
-- used immediately,
-- not mutated,
-- not stored,
-- not exposed externally.
-
-Tuple is the fastest and cleanest option.
-
-## Separation of concerns
-This helper is intentionally small.  
-It is used when validation needs only basic identity information.
-
-The larger helper (expected structure) will be a separate function returning only
-the code‑blueprint tuple, not an extended version of this one.
 """
+Tests for `_core/metadata/init_processors/methods/verifiers/_exceptions_helpers/exception_info_for_classmethod.py`.
+"""
+from unittest.mock import Mock
+from simplibs.object._core.metadata.init_processors.methods.verifiers._exceptions_helpers.exception_info_for_classmethod import (
+    exception_info_for_classmethod,
+)
+
+
+def test_exception_info_for_classmethod_happy_path() -> None:
+    """Tests extraction of class name, method name, and context tuple."""
+    mock_self = Mock(__name__="DummyClass")
+    mock_func = Mock(__name__="dummy_method")
+
+    mock_bound_method = Mock()
+    mock_bound_method.__self__ = mock_self
+    mock_bound_method.__func__ = mock_func
+
+    class_name, method_name, context = exception_info_for_classmethod(mock_bound_method)
+
+    assert class_name == "DummyClass"
+    assert method_name == "dummy_method"
+    assert context == "Metadata validation for: DummyClass.dummy_method"
+
+
+def test_exception_info_for_classmethod_defensive_fallback() -> None:
+    """Tests safe fallback when bound_method lacks __self__ or __func__ (e.g., plain string or bad object)."""
+    invalid_bound_method = "not_a_bound_classmethod"
+
+    class_name, method_name, context = exception_info_for_classmethod(invalid_bound_method)
+
+    assert class_name == "<UnknownClass>"
+    assert method_name == "not_a_bound_classmethod"
+    assert context == "Metadata validation for: <UnknownClass>.not_a_bound_classmethod"

@@ -15,7 +15,7 @@ def validate_inner_is_simple_subclass(
     """Validates that an inner element inherits from SimpleConstant."""
 
     # Lazy import to avoid circular dependencies
-    from .......SimpleConstant import SimpleConstant
+    from ......SimpleConstant import SimpleConstant
 
     # 1. Check subclass relationship
     inner: type

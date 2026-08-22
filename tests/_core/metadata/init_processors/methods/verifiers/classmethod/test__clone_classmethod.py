@@ -1,81 +1,68 @@
-from typing import TYPE_CHECKING, Callable
-from types import FunctionType
-# Annotations
-if TYPE_CHECKING:
-    from ......protocols.methods import ClassMethodProtocol
-
-
-def _clone_classmethod(
-    cm: "ClassMethodProtocol",
-) -> classmethod:
-    """Creates a fully isolated clone of a classmethod."""
-
-    # 1. Extract underlying function
-    func = cm.__func__
-
-    # 2. Rebuild a new function object
-    new_func: Callable = FunctionType(
-        func.__code__,
-        func.__globals__,
-        name=func.__name__,
-        argdefs=func.__defaults__,
-        closure=func.__closure__,
-    )
-
-    # 3. Copy annotations
-    new_func.__annotations__ = dict(func.__annotations__)
-
-    # 4. Copy keyword-only defaults
-    new_func.__kwdefaults__ = (
-        dict(func.__kwdefaults__) if func.__kwdefaults__ else None
-    )
-
-    # 5. Copy custom attributes
-    if func.__dict__:
-        new_func.__dict__.update(func.__dict__)
-
-    # 6. Wrap into a fresh classmethod descriptor
-    return classmethod(new_func)
-
-
-
-_DESIGN_NOTES = """
-# _clone_classmethod
-
-## Purpose
-Creates a fully isolated clone of a classmethod.  
-Used when a subclass inherits a method but needs its own independent copy so that
-metadata injection does not modify the parent class.
-
-## Why cloning is required
-Python's `classmethod` wraps a single underlying function object.  
-If a subclass modifies that function (annotations, defaults, attributes), the
-changes propagate upward to the parent class.  
-This breaks isolation and causes shared‑state bugs.
-
-Cloning prevents this by reconstructing a new function object.
-
-## How cloning works
-1. **Extract the underlying function**  
-   `cm.__func__` gives the raw function object.
-
-2. **Rebuild a new function**  
-   A new `FunctionType` is created using:
-   - bytecode (`__code__`)
-   - globals (`__globals__`)
-   - name (`__name__`)
-   - defaults (`__defaults__`)
-   - closure (`__closure__`)
-
-3. **Copy metadata safely**
-   - annotations → copied into a new dict  
-   - keyword defaults → copied or set to None  
-   - custom attributes → copied via `.update()`
-
-4. **Wrap back into classmethod**
-   The new function is wrapped in a fresh `classmethod` descriptor.
-
-## Notes
-This helper is used only inside the method‑verification pipeline.  
-It is intentionally minimal and does not perform validation.
 """
+Tests for `_core/metadata/init_processors/methods/verifiers/classmethod/_clone_classmethod.py`.
+
+Tests directly on a real `classmethod` object to verify that the clone is functionally
+equivalent but completely isolated (mutating defaults/annotations on the clone does not
+affect the original).
+"""
+from simplibs.object._core.metadata.init_processors.methods.verifiers.classmethod._clone_classmethod import (
+    _clone_classmethod,
+)
+
+
+class Original:
+    @classmethod
+    def compute(cls, a, b=2):
+        """Original docstring."""
+        return a + b
+
+
+class TestCloneClassmethodFunctionalEquivalence:
+
+    def test_clone_produces_same_result(self):
+        clone = _clone_classmethod(Original.__dict__["compute"])
+        bound_clone = clone.__get__(None, Original)
+        assert bound_clone(3) == 5
+        assert bound_clone(3, 10) == 13
+
+    def test_clone_is_classmethod_instance(self):
+        clone = _clone_classmethod(Original.__dict__["compute"])
+        assert isinstance(clone, classmethod)
+
+    def test_clone_preserves_function_name(self):
+        clone = _clone_classmethod(Original.__dict__["compute"])
+        assert clone.__func__.__name__ == "compute"
+
+
+class TestCloneClassmethodIsolation:
+
+    def test_mutating_clone_defaults_does_not_affect_original(self):
+        original_cm = Original.__dict__["compute"]
+        clone = _clone_classmethod(original_cm)
+
+        clone.__func__.__defaults__ = (99,)
+
+        assert original_cm.__func__.__defaults__ == (2,)
+        assert clone.__func__.__defaults__ == (99,)
+
+    def test_mutating_clone_annotations_does_not_affect_original(self):
+        original_cm = Original.__dict__["compute"]
+        clone = _clone_classmethod(original_cm)
+
+        clone.__func__.__annotations__["a"] = int
+
+        assert "a" not in original_cm.__func__.__annotations__
+
+    def test_clone_copies_custom_function_dict_attributes(self):
+        def compute(cls, a):
+            return a
+
+        compute.custom_flag = True
+        cm = classmethod(compute)
+
+        clone = _clone_classmethod(cm)
+        assert clone.__func__.custom_flag is True
+
+        # Ensure dictionary is an isolated copy
+        clone.__func__.custom_flag = False
+        assert compute.custom_flag is True

@@ -25,5 +25,5 @@ invalid transitions are detected early and handled consistently.
 - These utilities are internal and not part of the public API.
 - They are used exclusively by `verify_down_limit` and `verify_up_limit`.
 - All structural logic is delegated to the stepper's validation subsystem.
-- Errors raised here follow the SimpleLogicError diagnostic format.
+- Errors raised here follow the SimpleRuntimeError diagnostic format.
 """

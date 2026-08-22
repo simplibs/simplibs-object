@@ -1,55 +1,57 @@
-from typing import TYPE_CHECKING
-import operator
+"""
+Tests for `Unary` mixin.
+"""
+import pytest
 from numbers import Number
-# Outers
-from ...core_mixins import NodesDicts, Snapshot
-# Inners
-from ._utils import execute_unary_op
-# Annotations
-if TYPE_CHECKING:
-    from ...._core.protocols.mixins.dunders.numeric import UnaryProtocol
+from simplibs.object.mixins.core_mixins import NodesDicts, Snapshot
+from simplibs.object.mixins.dunders.numeric import Unary
+from simplibs.object.testing import assert_simple_mixin
 
 
-class Unary(NodesDicts, Snapshot):
-    """
-    Poskytuje unární numerické operace (-x, +x, abs(x)) pro SimpleObject.
+class TestUnaryStructure:
 
-    Podporuje:
-    - atomy (konstanty)
-    - kompozice (přepočítává vnitřní inners i vlastnické owner hodnoty)
+    def test_only_types_is_number(self):
+        assert Unary._only_types is Number
 
-    Obsahuje lazy fallback konverzi typu:
-    - pokud operace selže, pokusí se převést hodnotu na typ defaultní hodnoty
-    - konverze se provádí pouze pokud je bezpečná (např. int → float/Decimal/Fraction)
-    """
+    def test_inherits_from_nodes_dicts_and_snapshot(self):
+        assert issubclass(Unary, NodesDicts)
+        assert issubclass(Unary, Snapshot)
 
-    # ----------------------------------------
-    # Základní rozhraní
-    # ----------------------------------------
+    def test_assert_simple_mixin_shallow(self, subtests, IntLeaf):
+        assert_simple_mixin(
+            subtests,
+            Unary,
+            test_class=IntLeaf,
+            method_names=("__neg__", "__pos__", "__abs__"),
+        )
 
-    # Definice určení
-    _only_types = Number
 
-    # Definice slotů
-    __slots__ = ()
+class TestUnaryOperatorsAtom:
 
-    # ----------------------------------------
-    # Methods - Unární operátory (-x, +x, abs(x))
-    # ----------------------------------------
-    def __neg__(
-        self: "UnaryProtocol"
-    ) -> "UnaryProtocol":
-        """Vrací novou instanci s hodnotou -self.value."""
-        return execute_unary_op(self, operator.neg)
+    def test_neg(self, IntLeaf):
+        instance = IntLeaf(mixins=(Unary,), as_atom=True, mutable=False)
+        result = -instance
+        assert result.value == -instance.value
 
-    def __pos__(
-        self: "UnaryProtocol"
-    ) -> "UnaryProtocol":
-        """Vrací novou instanci s hodnotou +self.value."""
-        return execute_unary_op(self, operator.pos)
+    def test_pos(self, IntLeaf):
+        instance = IntLeaf(mixins=(Unary,), as_atom=True, mutable=False)
+        result = +instance
+        assert result.value == +instance.value
 
-    def __abs__(
-        self: "UnaryProtocol"
-    ) -> "UnaryProtocol":
-        """Vrací novou instanci s hodnotou abs(self.value)."""
-        return execute_unary_op(self, abs)
+    def test_abs(self, IntLeaf):
+        instance = IntLeaf(mixins=(Unary,), as_atom=True, mutable=False)
+        result = abs(instance)
+        assert result.value == abs(instance.value)
+
+    def test_operations_return_new_instance(self, IntLeaf):
+        instance = IntLeaf(mixins=(Unary,), as_atom=True, mutable=False)
+        result = -instance
+        assert result is not instance
+
+
+class TestUnaryOperatorsComposite:
+
+    def test_neg_on_composite(self, Outer):
+        instance = Outer(mixins=(Unary,), mutable=False)
+        result = -instance
+        assert result.value == -instance.value

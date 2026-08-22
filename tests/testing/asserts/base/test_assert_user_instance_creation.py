@@ -1,59 +1,47 @@
+"""
+Tests for `testing/asserts/base/assert_user_instance_creation.py`.
+"""
 import pytest
-from typing import Any, TYPE_CHECKING
-from simplibs.exception.testing import maybe_subtest
-from simplibs.sentinels import UNSET, UnsetType
-# Annotations
-if TYPE_CHECKING:
-    from ...._core.protocols import SimpleClassLike
-    from ...._core.protocols import SimpleMixinLike
+from simplibs.object.testing.asserts.base.assert_user_instance_creation import (
+    assert_user_instance_creation,
+)
 
 
-def assert_user_instance_creation(
-    subtests: Any,
-    test_class: "SimpleClassLike",
-    *,
-    mixins: tuple["SimpleMixinLike"] | UnsetType = UNSET,
-    verbose: bool = True,
-    intro: str = "",
-) -> Any:
-    """
-    Creates a user-facing instance of the target class.
+class TestAssertUserInstanceCreationVanilla:
 
-    - If mixins is UNSET → instance is created without mixins.
-    - If mixins is a tuple → instance is created with these mixins.
-    - Only verifies that instance creation succeeds.
-    - Does NOT test mixin propagation (that is handled by assert_instance_creation).
-    """
+    def test_default_unset_mixins_creates_plain_instance(self, IntConst, subtests):
+        instance = assert_user_instance_creation(subtests, IntConst)
+        assert instance is not None
+        assert instance.value == IntConst.meta.default
 
-    subintro = "test_user_instance_creation::"
-
-    # 1) Prepare mixins tuple
-    with maybe_subtest(
-        subtests,
-        name=f"{intro}{subintro}prepare_mixins",
-        verbose=verbose,
-    ):
-        if mixins is UNSET:
-            mixins_tuple = ()
-        else:
-            if not isinstance(mixins, tuple):
-                pytest.fail("Parameter 'mixins' must be a tuple of mixin classes.")
-            mixins_tuple = mixins
-
-    # 2) Create instance with user mixins (or none)
-    with maybe_subtest(
-        subtests,
-        name=f"{intro}{subintro}create_instance",
-        verbose=verbose,
-    ):
-        try:
-            instance = test_class(mixins=mixins_tuple)
-        except Exception as exc:
-            pytest.fail(
-                f"Unexpected error during user instance creation "
-                f"with mixins={mixins_tuple}: {exc}"
-            )
-
+    def test_explicit_empty_tuple_mixins(self, IntConst, subtests):
+        instance = assert_user_instance_creation(subtests, IntConst, mixins=())
         assert instance is not None
 
-    return instance
+
+class TestAssertUserInstanceCreationWithMixins:
+
+    def test_creates_instance_with_provided_mixins(self, IntConst, subtests):
+        from simplibs.object.testing.containers.TestMixin import TestMixin
+
+        instance = assert_user_instance_creation(subtests, IntConst, mixins=(TestMixin,))
+        assert instance.test_property == "test_value"
+
+
+class TestAssertUserInstanceCreationInvalidMixinsType:
+
+    def test_non_tuple_mixins_fails(self, IntConst, subtests):
+        with pytest.raises(pytest.fail.Exception, match="Parameter 'mixins' must be a tuple"):
+            assert_user_instance_creation(
+                subtests,
+                IntConst,
+                mixins=[],
+                verbose=False,
+            )
+
+
+class TestAssertUserInstanceCreationDoesNotCheckMixinPropagation:
+
+    def test_returns_instance_without_deep_structural_checks(self, IntConst, subtests):
+        instance = assert_user_instance_creation(subtests, IntConst)
+        assert not hasattr(instance, "test_property")

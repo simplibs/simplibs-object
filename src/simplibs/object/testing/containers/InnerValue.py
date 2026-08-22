@@ -28,7 +28,7 @@ class InnerValue:
         """Normalizes and validates the property path upon dataclass initialization.
 
         Raises:
-            SimpleLogicError: If the path evaluates to an empty sequence or contains non-string items.
+            SimpleRuntimeError: If the path evaluates to an empty sequence or contains non-string items.
         """
         # 1. Normalize path input into a list of string segments
         if isinstance(self.path, str):
@@ -87,8 +87,8 @@ state mutation assertions, and parameter tests on nested `SimpleObject` composit
 1. **Normalization:** Converted from dot-notation strings (`"address.city"`) or sequences (`("address", "city")`) 
    into an immutable tuple of string segments (`("address", "city")`).
 2. **Validation Errors:**
-   - Empty path -> Triggers `raise_inner_value_empty_path()` (`SimpleLogicError` wrapping `ValueError`).
-   - Non-string path segments -> Triggers `raise_inner_value_invalid_path_type()` (`SimpleLogicError` wrapping `TypeError`).
+   - Empty path -> Triggers `raise_inner_value_empty_path()` (`SimpleRuntimeError` wrapping `ValueError`).
+   - Non-string path segments -> Triggers `raise_inner_value_invalid_path_type()` (`SimpleRuntimeError` wrapping `TypeError`).
 
 ## Navigation Lifecycle (`as_instance_tuple`)
 Navigates composite hierarchies via `getattr(current, f"{part}_instance")`. 

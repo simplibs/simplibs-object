@@ -15,8 +15,8 @@ def validate_inner_is_not_simple_class(
     """Validates that inner is not SimpleConstant or SimpleObject."""
 
     # Lazy imports to avoid circular dependencies
-    from .......SimpleConstant import SimpleConstant
-    from .......SimpleObject import SimpleObject
+    from ......SimpleConstant import SimpleConstant
+    from ......SimpleObject import SimpleObject
 
     # 1. Check identity
     if inner is not SimpleConstant and inner is not SimpleObject:

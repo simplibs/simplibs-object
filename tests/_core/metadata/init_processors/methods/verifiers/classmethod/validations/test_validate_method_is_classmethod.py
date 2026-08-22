@@ -1,60 +1,49 @@
-from typing import Any
-# Outers
-from ........exceptions import SimpleMetadataError
+from simplibs.object.exceptions.SimpleDefinitionError import SimpleDefinitionError
+from simplibs.exception.testing.assert_exception_function import assert_exception_function
+from simplibs.object._core.metadata.init_processors.methods.verifiers.classmethod.validations.validate_method_is_classmethod import (
+    validate_method_is_classmethod,
+)
 
 
-def validate_method_is_classmethod(
-    raw_method: Any,
-    exception_info: tuple[str, str, str],
-    expected_structure: tuple[str, ...],
-) -> None:
-    """Validates that the method is decorated with @classmethod."""
+def test_validate_method_is_classmethod_pass() -> None:
+    """Tests that a @classmethod descriptor passes validation."""
 
-    if not isinstance(raw_method, classmethod):
-        class_name, method_name, context = exception_info
+    @classmethod
+    def dummy_method(cls):
+        pass
 
-        raise SimpleMetadataError(
-            error_name="METHOD LOGIC ERROR",
-            label="_method",
-            value=raw_method,
-            problem=f"'{class_name}.{method_name}' is not a classmethod.",
-            expected="A method decorated with '@classmethod'.",
-            how_to_fix=(
-                f"Add '@classmethod' to '{method_name}'.",
-                "Without this decorator, the system cannot bind the method correctly.",
-            ) + expected_structure,
-            context=context,
-            exception=TypeError,
-        )
+    validate_method_is_classmethod(
+        raw_method=dummy_method,
+        exception_info=("MyClass", "dummy_method", "Context"),
+        expected_structure=("Blueprint",),
+    )
 
 
-_DESIGN_NOTES = """
-# validate_method_is_classmethod
+def test_validate_method_is_classmethod_raises_error(subtests) -> None:
+    """Tests that non-classmethod attributes raise SimpleDefinitionError."""
 
-## Purpose
-Ensures that the reflected method is explicitly decorated with `@classmethod`.
-The metadata pipeline relies on class‑bound semantics, so instance methods or
-plain attributes cannot be used.
+    def plain_function(cls):
+        pass
 
-## Why tuple inputs
-The validator receives:
-- `exception_info` — (class_name, method_name, context)
-- `expected_structure` — code blueprint
+    exception_info = ("MyClass", "plain_function", "TestContext")
+    expected_structure = ("Expected structure line 1",)
 
-This keeps the function consistent with all other method‑validation helpers.
-
-## Behavior
-If the raw attribute is not a `classmethod` instance, the validator raises a
-structured `SimpleMetadataError` containing:
-- the class and method name,
-- a clear explanation of the issue,
-- a copy‑paste ready blueprint showing the correct method layout.
-
-## Notes
-This validator is used for all three method types:
-- `_validate`
-- `_logic`
-- `_decompose`
-
-It is the third guard in the classmethod verification chain.
-"""
+    assert_exception_function(
+        subtests,
+        validate_method_is_classmethod,
+        invalid_params=(plain_function, exception_info, expected_structure),
+        exception_type=SimpleDefinitionError,
+        error_name="METHOD LOGIC ERROR",
+        label="_method",
+        value=plain_function,
+        expected="A method decorated with '@classmethod'.",
+        problem="'MyClass.plain_function' is not a classmethod.",
+        context="TestContext",
+        how_to_fix=(
+            "Add '@classmethod' to 'plain_function'.",
+            "Without this decorator, the system cannot bind the method correctly.",
+            "Expected structure line 1",
+        ),
+        exception=TypeError,
+        verbose=False,
+    )

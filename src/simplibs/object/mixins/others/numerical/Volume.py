@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 from numbers import Number
 # Outers
-from ..base_class import SimpleMixin
+from ...base_class import SimpleMixin
 # Innser
 from ._stepper_class import Stepper
 # Annotations
@@ -43,10 +43,7 @@ class Volume(SimpleMixin):
         process.
         """
 
-        # 1. Initialize parents
-        super().init_mixins()
-
-        # 2. Stepper for the base value
+        # 1. Stepper for the base value
         self._value_stepper: "StepperProtocol" = Stepper(self)
 
     # ----------------------------------------

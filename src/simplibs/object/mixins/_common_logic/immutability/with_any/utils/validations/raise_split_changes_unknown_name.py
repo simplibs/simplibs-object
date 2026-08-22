@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, NoReturn
 # Outers
-from .......exceptions import SimpleLogicError
+from .......exceptions import SimpleRuntimeError
 # Annotations
 if TYPE_CHECKING:
     from ......._core.protocols.mixins.core_mixins import InfrastructureProtocol
@@ -16,7 +16,7 @@ def raise_split_changes_unknown_name(
     """
 
     # noinspection PyProtectedMember
-    raise SimpleLogicError(
+    raise SimpleRuntimeError(
         error_name="IMMUTABILITY UNKNOWN UPDATE NAME (split_changes)",
         label="update name",
         expected=(

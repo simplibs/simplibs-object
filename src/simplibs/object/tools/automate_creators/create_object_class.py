@@ -63,14 +63,14 @@ def create_object_class(
 
     # 4. Infer output value_type if omitted
     if value_type is UNSET:
-        _default_value = calculate_default(logic, tuple(_params.values()))
+        _default_value = calculate_default(_logic, tuple(_params.values()))
         value_type = type(_default_value)
 
     # 5. Prepare class namespace blueprint
     namespace = {
         "_inners": inners,
         "_type": value_type,
-        "_logic": _logic,
+        "_logic": classmethod(_logic),
     }
 
     # 6. Attach normalized validation handler if provided

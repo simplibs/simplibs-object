@@ -1,90 +1,54 @@
-from typing import TYPE_CHECKING, Any
-# Outers
-from ...base_class import SimpleMixin
-# Annotations
-if TYPE_CHECKING:
-    from ...._core.protocols.mixins.dunders.comparison import OrderingProtocol
+"""
+Tests for `Ordering` mixin.
+"""
+import pytest
+from simplibs.object.mixins.dunders.comparison import Ordering
+from simplibs.object.testing import assert_simple_mixin
 
 
-# noinspection PyUnresolvedReferences
-class Ordering(SimpleMixin):
-    """
-    Porovnávání velikosti pro Simple instance.
-    Porovnává podle hodnoty (self.value).
-    Funguje pro porovnání instance s instancí i s přímou hodnotou.
-    """
+class TestOrderingStructure:
 
-    # ----------------------------------------
-    # Základní rozhraní
-    # ----------------------------------------
+    def test_slots_empty(self):
+        assert Ordering.__slots__ == ()
 
-    # Definice slotů
-    __slots__ = ()
+    def test_assert_simple_mixin_shallow(self, subtests, IntLeaf):
+        assert_simple_mixin(
+            subtests,
+            Ordering,
+            test_class=IntLeaf,
+            method_names=("__lt__", "__le__", "__gt__", "__ge__"),
+        )
 
-    # ----------------------------------------
-    # Methods - LT / LE / GT / GE
-    # ----------------------------------------
 
-    def __lt__(
-        self: "OrderingProtocol",
-        other: Any
-    ) -> bool:
-        """
-        Vrací True, pokud je hodnota této instance menší než hodnota druhého
-        operandu. Pokud je operand Simple instance, použije se jeho .value,
-        jinak se porovnává přímo s hodnotou operandu. Při nekompatibilních
-        typech vrací NotImplemented.
-        """
-        other_value = getattr(other, "value", other)
-        try:
-            return self.value < other_value
-        except TypeError:
-            return NotImplemented
+class TestOrderingComparisons:
 
-    def __le__(
-        self: "OrderingProtocol",
-        other: Any
-    ) -> bool:
-        """
-        Vrací True, pokud je hodnota této instance menší nebo rovna hodnotě
-        druhého operandu. Pokud je operand Simple instance, použije se jeho
-        .value, jinak se porovnává přímo s hodnotou operandu. Při
-        nekompatibilních typech vrací NotImplemented.
-        """
-        other_value = getattr(other, "value", other)
-        try:
-            return self.value <= other_value
-        except TypeError:
-            return NotImplemented
+    def test_lt_against_raw_value(self, IntLeaf):
+        instance = IntLeaf(mixins=(Ordering,), as_atom=True)
+        assert instance < 100
+        assert not (instance < 1)
 
-    def __gt__(
-        self: "OrderingProtocol",
-        other: Any
-    ) -> bool:
-        """
-        Vrací True, pokud je hodnota této instance větší než hodnota druhého
-        operandu. Pokud je operand Simple instance, použije se jeho .value,
-        jinak se porovnává přímo s hodnotou operandu. Při nekompatibilních
-        typech vrací NotImplemented.
-        """
-        other_value = getattr(other, "value", other)
-        try:
-            return self.value > other_value
-        except TypeError:
-            return NotImplemented
+    def test_le_against_raw_value(self, IntLeaf):
+        instance = IntLeaf(mixins=(Ordering,), as_atom=True)
+        assert instance <= instance.value
+        assert instance <= instance.value + 1
 
-    def __ge__(
-        self: "OrderingProtocol",
-        other: Any
-    ) -> bool:
-        """
-        Vrací True, pokud je hodnota této instance větší nebo rovna hodnotě
-        druhého operandu. Pokud je operand Simple instance, použije se jeho
-        .value, jinak se porovnává přímo s hodnotou operandu. Při
-        nekompatibilních typech vrací NotImplemented.
-        """
-        other_value = getattr(other, "value", other)
-        try:
-            return self.value >= other_value
-        except TypeError:
-            return NotImplemented
+    def test_gt_against_raw_value(self, IntLeaf):
+        instance = IntLeaf(mixins=(Ordering,), as_atom=True)
+        assert instance > 1
+        assert not (instance > 100)
+
+    def test_ge_against_raw_value(self, IntLeaf):
+        instance = IntLeaf(mixins=(Ordering,), as_atom=True)
+        assert instance >= instance.value
+        assert instance >= instance.value - 1
+
+    def test_comparison_between_two_instances(self, IntLeaf):
+        a = IntLeaf(mixins=(Ordering,), as_atom=True)
+        b = IntLeaf(mixins=(Ordering,), as_atom=True)
+        assert (a < b) is False
+        assert (a <= b) is True
+
+    def test_incompatible_type_returns_not_implemented_leads_to_typeerror(self, IntLeaf):
+        instance = IntLeaf(mixins=(Ordering,), as_atom=True)
+        with pytest.raises(TypeError):
+            _ = instance < "not_a_number"

@@ -1,4 +1,5 @@
 from typing import TYPE_CHECKING
+
 # Annotations
 if TYPE_CHECKING:
     from ......_core.protocols.alias_typings import NodesPathDict, PathDict, ChangesTuple
@@ -18,7 +19,12 @@ def split_constants_paths(
 
     # 1. Build dictionary of constant paths
     constants_paths = {name: nodes_path_dict[name] for name, _ in constants}
-    used_paths = used_paths_dict.values()
+
+    # 1.1 Strip terminal segment (_value) from composite paths to get branch prefixes
+    root_prefixes = [
+        path[:-1] if path and path[-1] == "_value" else path
+        for path in used_paths_dict.values()
+    ]
 
     # 2. Prepare containers
     contained = {}
@@ -27,10 +33,10 @@ def split_constants_paths(
     # 3. Classify paths
     for key, path in constants_paths.items():
 
-        # 3.1 Path starts with any root → contained
+        # 3.1 Path starts with any root branch prefix → contained
         if any(
-            path[:len(used_path)] == used_path
-            for used_path in used_paths
+            path[:len(prefix)] == prefix
+            for prefix in root_prefixes
         ):
             contained[key] = path
 
@@ -68,7 +74,7 @@ The function performs four deterministic phases:
 
 ### 1. Build constant path dictionary
 Each constant `(name, value)` pair is mapped to its structural path using
-`nodes_path_dict`.
+`nodes_path_dict`. Root composite paths are normalized into branch prefixes.
 
 ### 2. Prepare containers
 Creates two dictionaries:
@@ -78,7 +84,7 @@ Creates two dictionaries:
 ### 3. Classify paths
 For each constant path:
 
-- If the path **starts with** any root path →  
+- If the path **starts with** any root prefix →  
   it is **contained**.
 
 - Otherwise →  
@@ -138,5 +144,4 @@ immutability subsystem.
 - This function is intentionally minimal and side-effect-free.  
 - It is not part of the public API; it is used internally by mixins.  
 - All structural logic is delegated to path metadata (`nodes_path_dict`).  
-
 """

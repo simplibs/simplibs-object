@@ -7,7 +7,7 @@ if TYPE_CHECKING:
 
 
 def create_names(
-    owner_class: "SimpleClassLike"
+    owner_class: "SimpleClassLike",
 ) -> tuple[tuple[str, ...], str, str]:
     """Generates deterministic name variants derived from the class name."""
 
@@ -31,44 +31,89 @@ def create_names(
     )
 
 
-
 _DESIGN_NOTES = """
 # create_names
 
 ## Purpose
-Generates all name variants used throughout the metadata system.  
+Generates all name variants used throughout the metadata system.
+
 Every variant is derived deterministically from the class name, ensuring
 predictable and consistent naming across the entire SimpleObject ecosystem.
+
+The function keeps the original semantic decomposition separate from
+name normalization:
+
+- `name_tuple` preserves the semantic units and their original capitalization.
+- `name_snake` provides the normalized `snake_case` representation.
+- `name_private` provides the private `snake_case` representation.
 
 ## Pipeline
 The function performs three simple steps:
 
-1. **Split the class name**  
+1. **Split the class name**
    Delegates to `_class_name_splitter`, which validates the name and returns
-   a tuple of semantic words.
+   a tuple of semantic words while preserving their original capitalization.
 
-2. **Create snake_case**  
-   Joins the words using underscores and converts them to lowercase.
+2. **Create snake_case**
+   Joins the semantic words using underscores and converts the complete
+   result to lowercase.
 
-3. **Create private name**  
+3. **Create private name**
    Prefixes the snake_case name with `_` for internal metadata and slot usage.
 
 ## Output
-| Name          | Format        | Purpose                                      |
-|---------------|---------------|----------------------------------------------|
-| `name_tuple`  | `("my", "class")` | Raw semantic units for further processing |
-| `name_snake`  | `"my_class"`  | Parameter names, JSON keys, internal fields |
-| `name_private`| `"_my_class"` | Private slots and internal attributes        |
+| Name           | Format                  | Purpose                                      |
+|----------------|-------------------------|----------------------------------------------|
+| `name_tuple`   | `("My", "Class")`       | Semantic units preserving original casing    |
+| `name_snake`   | `"my_class"`            | Parameter names, JSON keys, internal fields  |
+| `name_private` | `"_my_class"`           | Private slots and internal attributes        |
+
+For example, given the class name:
+
+```text
+MyHTTPClient
+````
+
+the generated values are:
+
+```python
+name_tuple = ("My", "HTTP", "Client")
+name_snake = "my_http_client"
+name_private = "_my_http_client"
+```
 
 ## Determinism
-All name variants are derived from a single source: the class name.  
+
+All name variants are derived from a single source: the class name.
+
 This guarantees:
 
-- **Consistency** — internal and external names always match  
-- **Safety** — no manual string manipulation  
-- **Predictability** — developers can infer all generated names from the class name alone
+* **Consistency** — internal and external names always match
+* **Safety** — no manual string manipulation is required
+* **Predictability** — developers can infer all generated names from the class name alone
+
+## Separation of responsibilities
+
+`create_names` does not determine semantic word boundaries itself.
+
+The responsibilities are deliberately separated:
+
+* `_class_name_splitter` → validates and decomposes the class name
+* `create_names` → derives the required name representations
+
+The splitter preserves the original capitalization, while `create_names`
+performs normalization only when creating `name_snake`.
+
+This follows the design principle:
+
+> Split first, normalize later.
 
 ## Notes
-- `_class_name_splitter` ensures the name is valid, ASCII-only, and PascalCase.
-- Because validation happens upstream, joining and formatting are always safe.
+
+* `_class_name_splitter` ensures the name is valid, ASCII-only, and contains
+  no underscores.
+* The splitter preserves the capitalization of each semantic unit.
+* `name_snake` is always derived from `name_tuple`.
+* `name_private` is always derived from `name_snake`.
+* No name variant is constructed independently from the original class name.
 """

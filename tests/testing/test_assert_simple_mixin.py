@@ -1,100 +1,35 @@
-from typing import Any, TYPE_CHECKING
-from simplibs.sentinels import UNSET, UnsetType
-# Inners
-from .asserts.mixins import (
-    assert_mixin_inheritance,
-    assert_mixin_instance_creation,
-    assert_instance_hasattr,
-    assert_mixins_slots_values
-)
-# Annotations
-if TYPE_CHECKING:
-    from .._core.protocols import SimpleClassType, SimpleMixinType
+"""
+Tests for `testing/assert_simple_mixin.py`.
+"""
+from simplibs.object.testing.assert_simple_mixin import assert_simple_mixin
+from simplibs.object.testing.containers.TestMixin import TestMixin
 
 
-def assert_simple_mixin(
-    subtests,
-    mixin_class: "SimpleMixinType",
-    *,
-    test_class: "SimpleClassType",
-    slots_names: tuple[str, ...] | UnsetType = UNSET,
-    slots_values: tuple[tuple[str, Any], ...] | tuple[str, Any] | UnsetType = UNSET,
-    attribute_names: tuple[str, ...] | UnsetType = UNSET,
-    method_names: tuple[str, ...] | UnsetType = UNSET,
-    verbose: bool = True,
-    intro: str = "",
-):
+class TestAssertSimpleMixinShallowOnly:
 
-    # ------------------------------------------------------------
-    # SHALLOW TESTS — základní test
-    # ------------------------------------------------------------
+    def test_returns_instance_with_mixin_applied(self, IntConst, subtests):
+        instance = assert_simple_mixin(subtests, TestMixin, test_class=IntConst)
+        assert instance is not None
+        assert hasattr(instance, "test_method")
+        assert instance.test_method() == "[TestMixin] property=test_value"
 
-    # 1. Test dědičnosti mixinu ze SimpleMixin
-    assert_mixin_inheritance(
-        subtests,
-        mixin_class,
-        verbose=verbose,
-        intro=intro
-    )
 
-    # 2. Test inicializace mixinu na uživatelem dodané třídě
-    instance = assert_mixin_instance_creation(
-        subtests,
-        test_class,
-        mixin_class,
-        verbose=verbose,
-        intro=intro
-    )
+class TestAssertSimpleMixinAllParameterChecks:
 
-    # ------------------------------------------------------------
-    # PARAMETER TESTS — volitelné testy podle uživatele
-    # ------------------------------------------------------------
-
-    # 3. Test přítomnosti slotů
-    if slots_names is not UNSET:
-        slots_names: tuple[str, ...]
-        assert_instance_hasattr(
+    def test_runs_full_parameter_suite(self, IntConst, subtests):
+        instance = assert_simple_mixin(
             subtests,
-            instance,
-            names=slots_names,
-            kind="slot",
-            verbose=verbose,
-            intro=intro
+            TestMixin,
+            test_class=IntConst,
+            slots_names=("_test_slot",),
+            slots_values=("_test_slot", "test_value"),
+            attribute_names=("test_property",),
+            method_names=("test_method", "test_class_method"),
         )
+        assert instance.test_method() == "[TestMixin] property=test_value"
 
-    # 4. Test hodnot slotů
-    if slots_values is not UNSET:
-        assert_mixins_slots_values(
-            subtests,
-            instance,
-            slots_values=slots_values,
-            verbose=verbose,
-            intro=intro
+    def test_intro_and_verbose_do_not_affect_outcome(self, IntConst, subtests):
+        instance = assert_simple_mixin(
+            subtests, TestMixin, test_class=IntConst, verbose=False, intro="Suite::"
         )
-
-    # 5. Test přítomnosti atributů
-    if attribute_names is not UNSET:
-        attribute_names: tuple[str, ...]
-        assert_instance_hasattr(
-            subtests,
-            instance,
-            names=attribute_names,
-            kind="attribute",
-            verbose=verbose,
-            intro=intro
-        )
-
-    # 6. Test přítomnosti metod
-    if method_names is not UNSET:
-        method_names: tuple[str, ...]
-        assert_instance_hasattr(
-            subtests,
-            instance,
-            names=method_names,
-            kind="method",
-            verbose=verbose,
-            intro=intro
-        )
-
-    # 7. Vrátíme instanci pro případné další testy uživatele
-    return instance
+        assert instance is not None

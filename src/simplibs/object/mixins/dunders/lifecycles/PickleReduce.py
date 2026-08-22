@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING
 # Inners
 from .PickleState import PickleState
+from ._utils import rebuild_simple_instance
 # Annotations
 if TYPE_CHECKING:
     from ...._core.protocols.mixins.dunders.lifecycles import PickleReduceProtocol
@@ -12,9 +13,8 @@ class PickleReduce(PickleState):
     Provides an implementation of the pickle protocol (__reduce__).
 
     Logic:
-    - Constructor = self.__class__
-    - Arguments = ()
-    - State = self.__getstate__()
+    - Callable = rebuild_simple_instance helper function
+    - Arguments = (owner_class, mixins, is_constant, is_mutable, state)
 
     PickleState ensures __getstate__/__setstate__ work through
     to_dict/from_dict.
@@ -42,20 +42,18 @@ class PickleReduce(PickleState):
     ) -> "PicklePlan":
         """
         Pickle protocol:
-        - callable: the instance's class
-        - args: none (the class builds the instance itself)
-        - state: the dict returned by __getstate__
-
-        Note:
-        - a mutable instance is built via create_instance through
-          __class__()
-        - an immutable instance is built as a snapshot-based instance via
-          __setstate__
+        - callable: top-level helper rebuild_simple_instance
+        - args: configuration tuple required to reconstruct mutable/immutable instance
         """
         return (
-            self.__class__,
-            (),
-            self.__getstate__()
+            rebuild_simple_instance,
+            (
+                self.meta.owner_class,
+                self.__mixins__,
+                self.__is_constant__,
+                self.__is_mutable__,
+                self.__getstate__(),
+            ),
         )
 
 
@@ -64,8 +62,8 @@ _DESIGN_NOTES = """
 
 ## Purpose
 Implements `__reduce__`, the top-level hook `pickle` calls first to learn
-how to reconstruct an object: what callable to invoke, what arguments to
-pass it, and what state to apply afterward.
+how to reconstruct an object: what callable to invoke and what arguments
+to pass it.
 
 ## Compatibility
 - No compatibility flags. Inherits from `PickleState` specifically to
@@ -73,23 +71,18 @@ pass it, and what state to apply afterward.
   `__reduce__` layer on top rather than duplicating state logic.
 
 ## Logic
-`__reduce__` returns a fixed 3-tuple:
-1. `self.__class__` — the callable pickle will call to rebuild the object.
-2. `()` — no constructor arguments; the class is expected to be able to
-   build a bare instance of itself.
-3. `self.__getstate__()` — the actual saved state, produced by
-   `PickleState` via `to_dict()`.
+`__reduce__` returns a 2-tuple:
+1. `rebuild_simple_instance` — static, module-level factory function capable of
+   rebuilding dynamically compiled instance classes.
+2. `(owner_class, mixins, is_constant, is_mutable, state)` — tuple of parameters
+   and the saved state produced by `PickleState` via `to_dict()`.
 
-After unpickling, Python calls `__setstate__` with that state
-automatically — which is where the mutable-vs-immutable branching
-(mutate in place vs. return a new instance) actually happens, inside
-`PickleState`, not here.
+This design guarantees seamless unpickling for both mutable and immutable instances
+without relying on in-place `__setstate__` side effects from Python's standard
+deserializer.
 
 ## Notes
 - To customize pickling behavior, override `__getstate__` in a mixin
   placed above this one in the MRO — `__reduce__` itself rarely needs to
   change.
-- Keeping `args` empty means the reconstructed instance always starts
-  from a clean/default construction path before state is applied — this
-  is a deliberate, not incidental, choice.
 """

@@ -1,25 +1,29 @@
-# create_simple_object_bulk_from_yaml.py
+# Inners
 from .create_simple_object_bulk_from_dicts import create_simple_object_bulk_from_dicts
+from ._validations import (
+    raise_bulk_input_not_str,
+    raise_bulk_yaml_import_failed,
+    raise_bulk_decode_failed,
+    raise_bulk_data_not_list,
+)
 
 
 def create_simple_object_bulk_from_yaml(yaml_string: str):
-    """Parse YAML řetězce a vytvoří bulk."""
+    """Parses a YAML string and creates a bulk collection of Simple objects."""
     if not isinstance(yaml_string, str):
-        raise TypeError("Vstupní YAML musí být string.")
+        raise_bulk_input_not_str(yaml_string, "yaml")
 
     try:
         import yaml
     except ImportError:
-        raise ImportError(
-            "Pro načítání YAML je potřeba nainstalovat balíček PyYAML: `pip install pyyaml`"
-        )
+        raise_bulk_yaml_import_failed()
 
     try:
         data = yaml.safe_load(yaml_string)
-    except Exception as e:
-        raise ValueError(f"Neplatný YAML formát: {e}") from e
+    except Exception as exc:
+        raise_bulk_decode_failed(yaml_string, "yaml", exc)
 
     if not isinstance(data, list):
-        raise ValueError("YAML musí obsahovat list objektů (slovníků).")
+        raise_bulk_data_not_list(data, "yaml")
 
     return create_simple_object_bulk_from_dicts(data)

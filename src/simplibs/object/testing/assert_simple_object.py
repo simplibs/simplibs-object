@@ -20,10 +20,10 @@ from .asserts.mutability import (
     assert_mutable_behavior,
     assert_immutable_behavior
 )
-from .containers.InnerValue import InnerValue
 # Annotations
 if TYPE_CHECKING:
     from .._core.protocols import SimpleClassLike, SimpleMixinLike
+    from .containers.InnerValue import InnerValue
 
 
 def assert_simple_object(
@@ -31,11 +31,11 @@ def assert_simple_object(
     test_class: "SimpleClassLike",
     *,
     mixins: tuple["SimpleMixinLike", ...] | UnsetType = UNSET,
-    test_value_change: Any | InnerValue | UnsetType = UNSET,
-    test_reactivity_up: InnerValue | UnsetType = UNSET,
-    test_reactivity_down: Any | UnsetType = UNSET,
-    test_mutability: Any | InnerValue | UnsetType = UNSET,
-    test_immutability: Any | InnerValue | UnsetType = UNSET,
+    test_value_change: "Any | InnerValue | UnsetType" = UNSET,
+    test_reactivity_up: "InnerValue | UnsetType" = UNSET,
+    test_reactivity_down: "Any | UnsetType" = UNSET,
+    test_mutability: "Any | InnerValue | UnsetType" = UNSET,
+    test_immutability: "Any | InnerValue | UnsetType" = UNSET,
     verbose: bool = True,
     intro: str = "",
     deep_check: bool = True,

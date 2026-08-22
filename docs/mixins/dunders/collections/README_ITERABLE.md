@@ -1,81 +1,106 @@
-from typing import TYPE_CHECKING
-from collections.abc import Iterator
-# Inners
-from .CollectionBase import CollectionBase
-# Annotations
-if TYPE_CHECKING:
-    from ...._core.protocols.mixins.dunders.collections import IterableProtocol
+# 🧱 `Iterable` — Iteration Support for Composites
 
+`Iterable` makes a composite instance iterable the way Python programmers expect:
+`for key in person`, `reversed(person)`, and a `dir(person)` that also shows the inner
+names.
+
+```python
+from collections.abc import Iterator
+from .CollectionBase import CollectionBase
 
 class Iterable(CollectionBase):
-    """
-    Iteration API for composite instances.
-    Enables iteration, reverse iteration, and an extended dir() listing.
-    """
+    ...
+```
 
-    # ----------------------------------------
-    # Basic interface
-    # ----------------------------------------
+`_composite_only = True` — builds directly on `CollectionBase`'s frozen key tuple.
 
-    # Compatibility declaration
-    _composite_only = True
+---
 
-    # Slot definition
-    __slots__ = ()
+## 🧭 Table of Contents
 
-    # ----------------------------------------
-    # Methods - ITER / REVERSED / DIR
-    # ----------------------------------------
+* [`__iter__`](#__iter__)
+* [`__reversed__`](#__reversed__)
+* [`__dir__`](#__dir__)
 
-    def __iter__(
-        self: "IterableProtocol"
-    ) -> Iterator[str]:
-        """Iterates over the keys (name_snake) of all inners in defined order."""
-        return iter(self._inners_name_tuple)
+---
 
-    def __reversed__(
-        self: "IterableProtocol"
-    ) -> Iterator[str]:
-        """Returns a reverse iterator over the inner keys."""
-        return reversed(self._inners_name_tuple)
+### `__iter__`
 
-    def __dir__(
-        self: "IterableProtocol"
-    ) -> list[str]:
-        """Extends the attribute listing with the inner keys."""
-        base = list(object.__dir__(self))
-        base += list(self._inners_name_tuple)
-        return sorted(set(base))
+Iterates over the keys of all inners, in defined order.
 
+**Parameters:**
+* *(none)*
 
-_DESIGN_NOTES = """
-# Iterable
+**Returns:**
+* `Iterator[str]`
 
-## Purpose
-Makes a composite instance iterable the way Python programmers expect:
-`for key in person`, `reversed(person)`, and a `dir(person)` that also
-shows the inner names — useful in a REPL or debugger.
+**Example usage:**
+```python
+for key in person:
+    print(key)
+```
 
-> Note the iteration is over *keys* (name_snake), not values — mirroring
-> how `for x in some_dict` iterates over dict keys, not items.
+**Under the hood:**
+```python
+def __iter__(self):
+    return iter(self._inners_name_tuple)
+```
 
-## Compatibility
-- `_composite_only = True` — builds directly on `CollectionBase`'s
-  `_inners_name_tuple`, which only exists for composites.
+[▲ Back to top](#-table-of-contents)
 
-## Logic
-All three dunders are thin wrappers around the tuple already frozen by
-`CollectionBase.init_mixins`:
+---
 
-- `__iter__` / `__reversed__` just forward to `iter()` / `reversed()` on
-  that tuple — no extra computation.
-- `__dir__` merges the default `object.__dir__(self)` listing with the
-  inner keys, so autocomplete and `dir()` reveal the composite's
-  structure, not just its methods.
+### `__reversed__`
 
-## Notes
-- Combine with `Mapping` (see `Collection`) to get `obj[key]` access on
-  top of the keys this mixin lets you iterate.
-- Inherits `_composite_only` from `CollectionBase` — declared again here
-  for clarity, not because the value changes.
-"""
+Returns a reverse iterator over the inner keys.
+
+**Parameters:**
+* *(none)*
+
+**Returns:**
+* `Iterator[str]`
+
+**Example usage:**
+```python
+list(reversed(person))  # ["last_name", "first_name"]
+```
+
+**Under the hood:**
+```python
+def __reversed__(self):
+    return reversed(self._inners_name_tuple)
+```
+
+[▲ Back to top](#-table-of-contents)
+
+---
+
+### `__dir__`
+
+Extends the standard attribute listing with the inner keys, so autocomplete and
+`dir()` reveal the composite's structure.
+
+**Parameters:**
+* *(none)*
+
+**Returns:**
+* `list[str]`
+
+**Example usage:**
+```python
+dir(person)  # includes "first_name", "last_name", plus normal attributes
+```
+
+**Under the hood:**
+```python
+def __dir__(self):
+    base = list(object.__dir__(self))
+    base += list(self._inners_name_tuple)
+    return sorted(set(base))
+```
+
+[▲ Back to top](#-table-of-contents)
+
+---
+
+[⬅️ Back to Mixins Overview](../../../README_MIXINS_OVERVIEW.md)

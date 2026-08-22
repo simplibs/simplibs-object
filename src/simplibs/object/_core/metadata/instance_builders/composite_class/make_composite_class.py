@@ -34,6 +34,7 @@ def make_composite_class(
 
     # 3. Core namespace
     class_dict = {
+        "__metadata__": meta,
         "__doc__": f"Composite structural instance object tracking {meta.class_name}",
         "__slots__": tuple(inner.meta.name_private for inner in meta.inners),
         "__init__": create_composite_init(meta, base_class_name, mutable=mutable),
@@ -71,8 +72,9 @@ initialization, and reactive hooks.
 
 ## Behavior
 1. Derives a unique class name for mutable/immutable variants.
-2. Chooses the correct atom base class and sets it as the sole parent.
+2. Chooses the correct atom base class and sets it as the sole parent (inheriting `_is_instance_class` from `InstanceBase`).
 3. Builds the class namespace:
+   - `__metadata__ = meta` to preserve declarative blueprint metadata on the class
    - `__slots__` from `inner.meta.name_private`
    - `__init__` from `create_composite_init`
    - `value` from `create_value_property`
@@ -84,6 +86,8 @@ initialization, and reactive hooks.
 
 ## Notes
 - Using `type(...)` keeps compilation safe and explicit, without `exec`.
+- Inherited `_is_instance_class` and assigned `__metadata__` prevent `SimpleMeta` from treating 
+  dynamically created composite types as new declarative classes.
 - Explicit `__slots__` and atom base inheritance produce a compact, predictable
   memory layout without per-instance `__dict__`.
 - Reactive hooks exist only on mutable composites; immutable ones are structurally

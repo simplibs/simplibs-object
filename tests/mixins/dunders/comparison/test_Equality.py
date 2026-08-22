@@ -1,82 +1,62 @@
-from typing import TYPE_CHECKING, Any
-# Outers
-from ...base_class import SimpleMixin
-# Annotations
-if TYPE_CHECKING:
-    from ...._core.protocols.mixins.dunders.comparison import EqualityProtocol
+"""
+Tests for `Equality` mixin.
+"""
+import pytest
+from simplibs.object.mixins.dunders.comparison import Equality
+from simplibs.object.testing import assert_simple_mixin
 
 
-class Equality(SimpleMixin):
-    """
-    Rovnost a hashování pro Simple instance.
+class TestEqualityStructure:
 
-    Rovnost (__eq__) je založená na hodnotě:
-    - Pokud je druhý operand Simple instance stejného blueprintu,
-      porovnají se jejich hodnoty.
-    - Pokud je druhý operand surová hodnota, porovnává se přímo s ní.
+    def test_slots_empty(self):
+        assert Equality.__slots__ == ()
 
-    Hashování (__hash__) je řízené mutabilitou instance:
-    - U mutovatelných instancí (__is_mutable__ = True) se používá
-      hash podle identity (id(self)), aby byla zaručena stabilita
-      i při změně hodnoty.
-    - U neměnných instancí (__is_mutable__ = False) se používá
-      hash podle hodnoty (hash(self.value)), protože hodnota je
-      garantovaně neměnná a hashovatelná.
+    def test_assert_simple_mixin_shallow(self, subtests, Outer):
+        assert_simple_mixin(
+            subtests,
+            Equality,
+            test_class=Outer,
+            method_names=("__eq__", "__hash__"),
+        )
 
-    Tento mixin je univerzální — lze jej použít pro mutable i immutable
-    instance, protože hashovací strategie se volí dynamicky podle
-    příznaku __is_mutable__.
-    """
 
-    # ----------------------------------------
-    # Základní rozhraní
-    # ----------------------------------------
+class TestEqualityEqOperator:
 
-    # Definice slotů
-    __slots__ = ()
+    def test_equal_to_raw_value(self, IntLeaf):
+        instance = IntLeaf(mixins=(Equality,), as_atom=True)
+        assert instance == instance.value
 
-    # ----------------------------------------
-    # Methods - EQ / HASH
-    # ----------------------------------------
+    def test_not_equal_to_different_raw_value(self, IntLeaf):
+        instance = IntLeaf(mixins=(Equality,), as_atom=True)
+        assert instance != (instance.value + 1)
 
-    def __eq__(
-        self: "EqualityProtocol",
-        other: Any
-    ) -> bool:
-        """
-        Rovnost podle hodnoty.
-        - Pokud je druhý operand Simple instance stejného blueprintu,
-          porovnají se jejich hodnoty.
-        - Pokud je druhý operand surová hodnota, porovná se přímo.
-        """
-        # 1. Porovnání dvou Simple instancí
-        if hasattr(other, "meta") and hasattr(other, "value"):
-            if self.meta.blueprint_path == other.meta.blueprint_path:
-                return self.value == other.value
-            return False
+    def test_equal_to_same_blueprint_same_value(self, IntLeaf):
+        a = IntLeaf(mixins=(Equality,), as_atom=True)
+        b = IntLeaf(mixins=(Equality,), as_atom=True)
+        assert a == b
 
-        # 2. Porovnání s přímou hodnotou
-        return self.value == other
+    def test_different_blueprint_not_equal_even_with_same_value(self, Outer, IntLeaf):
+        instance = Outer(mixins=(Equality,))
+        other = IntLeaf(mixins=(Equality,), as_atom=True)
+        assert instance != other
 
-    def __hash__(
-        self: "EqualityProtocol"
-    ) -> int:
-       """
-       Vrací hash podle mutability instance.
 
-       - U mutovatelných instancí (__is_mutable__ = True) vrací hash založený
-         na identitě objektu (id(self)), aby byla zaručena stabilita i při
-         změně hodnoty.
+class TestEqualityHash:
 
-       - U neměnných instancí (__is_mutable__ = False) vrací hash hodnoty
-         (hash(self.value)), protože hodnota je garantovaně neměnná a
-         hashovatelná.
+    def test_mutable_instance_uses_identity_hash(self, IntLeaf):
+        instance = IntLeaf(mixins=(Equality,), as_atom=True, mutable=True)
+        assert hash(instance) == id(instance)
 
-       Tato metoda tak sjednocuje hashování pro mutable i immutable režim
-       v rámci jednoho mixinu.
-       """
-       return (
-           id(self)
-           if self.__is_mutable__ else
-           hash(self.value)
-       )
+    def test_immutable_instance_uses_value_hash(self, IntLeaf):
+        instance = IntLeaf(mixins=(Equality,), as_atom=True, mutable=False)
+        assert hash(instance) == hash(instance.value)
+
+    def test_two_equal_immutable_instances_have_same_hash(self, IntLeaf):
+        a = IntLeaf(mixins=(Equality,), as_atom=True, mutable=False)
+        b = IntLeaf(mixins=(Equality,), as_atom=True, mutable=False)
+        assert hash(a) == hash(b)
+
+    def test_two_mutable_instances_have_different_hash(self, IntLeaf):
+        a = IntLeaf(mixins=(Equality,), as_atom=True, mutable=True)
+        b = IntLeaf(mixins=(Equality,), as_atom=True, mutable=True)
+        assert hash(a) != hash(b)

@@ -1,93 +1,91 @@
-from typing import TYPE_CHECKING
-# Outers
-from ...base_class import SimpleMixin
-# Annotations
-if TYPE_CHECKING:
-    from ...._core.protocols.mixins.dunders.representation import ValueDisplayProtocol
+"""
+Tests for `ValueFormatting` mixin.
+"""
+import pytest
+from simplibs.object.mixins.dunders.representation import ValueFormatting
+from simplibs.object.testing import assert_simple_mixin
 
 
-class ValueFormatting(SimpleMixin):
-    """
-    Reprezentační a konverzní dundery navázané na hodnotu objektu.
-    Nezasahuje do __repr__ / __str__ – ty jsou definované v InstanceBase.
-    Funguje pro atomické i kompozitní typy, protože oba mají hodnotu.
-    """
+class TestValueFormattingStructure:
 
-    # ----------------------------------------
-    # Základní rozhraní
-    # ----------------------------------------
+    def test_no_compatibility_flags(self):
+        assert ValueFormatting._constant_only is False
+        assert ValueFormatting._composite_only is False
 
-    # Definice slotů
-    __slots__ = ()
-
-    # ----------------------------------------
-    # Methods = FORMAT
-    # ----------------------------------------
-
-    def format(
-        self: "ValueDisplayProtocol",
-        pattern: str | None = None
-    ) -> str:
-        """
-        Zformátuje hodnotu instance podle zadaného patternu.
-        Pokud není pattern zadán, použije masku z metadat (meta.mask),
-        pokud existuje. Vhodné pro formátování čísel, textů a jednoduchých
-        hodnot kompozic.
-        """
-        value = self.value
-        mask = pattern or getattr(self.meta, "mask", None)
-
-        if mask and isinstance(value, (str, int, float)):
-            return mask.format(value)
-
-        return str(value)
-
-    def __format__(
-        self,
-        format_spec: str = ""
-    ) -> str:
-        """
-        Podpora pro f-string formátování.
-        Umožňuje zápis typu: f"{obj:pattern}".
-        """
-        return self.format(format_spec or None)
-
-    # ----------------------------------------
-    # Methods = BYTES / BOOL
-    # ----------------------------------------
-
-    def __bytes__(
-        self: "ValueDisplayProtocol"
-    ) -> bytes:
-        """
-        Převod hodnoty instance na bytes.
-        Podporuje:
-            - bytes → vrací přímo
-            - bytearray, memoryview → bytes(...)
-            - str → UTF-8 encode
-        Ostatní typy vyvolají TypeError.
-        """
-        value = self.value
-
-        if isinstance(value, bytes):
-            return value
-
-        if isinstance(value, (bytearray, memoryview)):
-            return bytes(value)
-
-        if isinstance(value, str):
-            return value.encode("utf-8")
-
-        raise TypeError(
-            f"Nelze převést {self.meta.class_name} "
-            f"(type={type(value).__name__}) na bytes."
+    def test_assert_simple_mixin_shallow(self, subtests, IntLeaf):
+        assert_simple_mixin(
+            subtests,
+            ValueFormatting,
+            test_class=IntLeaf,
+            method_names=("format", "__format__", "__bytes__", "__bool__"),
         )
 
-    def __bool__(
-        self: "ValueDisplayProtocol"
-    ) -> bool:
-        """
-        Pravdivost objektu odpovídá pravdivosti jeho hodnoty.
-        """
-        return bool(self.value)
 
+class TestValueFormattingFormat:
+
+    def test_format_without_pattern_returns_str(self, IntLeaf):
+        instance = IntLeaf(mixins=(ValueFormatting,), as_atom=True)
+        assert instance.format() == str(instance.value)
+
+    def test_format_with_pattern(self, IntLeaf):
+        instance = IntLeaf(mixins=(ValueFormatting,), as_atom=True)
+        result = instance.format("{:03d}")
+        assert result == "{:03d}".format(instance.value)
+
+    def test_dunder_format_via_fstring(self, IntLeaf):
+        instance = IntLeaf(mixins=(ValueFormatting,), as_atom=True)
+        result = f"{instance:03d}"
+        assert result == "{:03d}".format(instance.value)
+
+    def test_dunder_format_without_spec(self, IntLeaf):
+        instance = IntLeaf(mixins=(ValueFormatting,), as_atom=True)
+        assert format(instance) == str(instance.value)
+
+    def test_works_on_composite(self, Outer):
+        instance = Outer(mixins=(ValueFormatting,))
+        assert instance.format() == str(instance.value)
+
+
+class TestValueFormattingBytes:
+
+    def test_bytes_from_str_value(self):
+        from simplibs.object import SimpleConstant
+
+        class StrLeaf(SimpleConstant):
+            _type = str
+            _default = "hello"
+
+        instance = StrLeaf(mixins=(ValueFormatting,), as_atom=True)
+        assert bytes(instance) == "hello".encode("utf-8")
+
+    def test_bytes_from_bytes_value_returned_directly(self):
+        from simplibs.object import SimpleConstant
+
+        class BytesLeaf(SimpleConstant):
+            _type = bytes
+            _default = b"raw"
+
+        instance = BytesLeaf(mixins=(ValueFormatting,), as_atom=True)
+        assert bytes(instance) == b"raw"
+
+    def test_bytes_raises_for_unsupported_type(self, IntLeaf):
+        instance = IntLeaf(mixins=(ValueFormatting,), as_atom=True)
+        with pytest.raises(TypeError):
+            bytes(instance)
+
+
+class TestValueFormattingBool:
+
+    def test_bool_matches_value_truthiness_nonzero(self, IntLeaf):
+        instance = IntLeaf(mixins=(ValueFormatting,), as_atom=True)
+        assert bool(instance) is True
+
+    def test_bool_matches_value_truthiness_zero(self):
+        from simplibs.object import SimpleConstant
+
+        class ZeroLeaf(SimpleConstant):
+            _type = int
+            _default = 0
+
+        instance = ZeroLeaf(mixins=(ValueFormatting,), as_atom=True)
+        assert bool(instance) is False

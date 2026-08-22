@@ -1,124 +1,173 @@
-import operator
-from typing import TYPE_CHECKING, Any
-from numbers import Number
-# Outers
-from ...base_class import SimpleMixin
-#Inners
-from ._utils import execute_inplace_op
-# Annotations
-if TYPE_CHECKING:
-    from ...._core.protocols.mixins.dunders.numeric import InplaceProtocol
+# 🧱 `Inplace` — In-Place Arithmetic Operators
 
+`Inplace` gives a mutable SimpleObject the in-place arithmetic operators (`+=`, `-=`,
+`*=`, `/=`, `//=`, `%=`, `**=`). Unlike `Arithmetic`, these genuinely mutate the
+instance's own value via the normal validation/reactivity pipeline, and return `self`.
+
+```python
+import operator
+from numbers import Number
+from ...base_class import SimpleMixin
+from ._utils import execute_inplace_op
 
 class Inplace(SimpleMixin):
-    """
-    Provides in-place arithmetic operations (+=, -=, *=, /=, //=, %=, **=)
-    for SimpleObject atoms and mutable instances.
+    ...
+```
 
-    Operations:
-    - change the instance's value via self.value = ...
-    - trigger validation and reactivity
-    - return self
-    """
+`_mutable_only = True`, `_only_types = Number`.
 
-    # ----------------------------------------
-    # Basic interface
-    # ----------------------------------------
+---
 
-    # Compatibility declaration
-    _mutable_only = True
-    _only_types = Number
+## 🧭 Table of Contents
 
-    # Slot definition
-    __slots__ = ()
+* [`__iadd__`](#__iadd__)
+* [`__isub__`](#__isub__)
+* [`__imul__`](#__imul__)
+* [`__itruediv__`](#__itruediv__)
+* [`__ifloordiv__`](#__ifloordiv__)
+* [`__imod__`](#__imod__)
+* [`__ipow__`](#__ipow__)
 
-    # ----------------------------------------
-    # Methods - Operators (+=, -=, *=, /=, //=, %=, **=)
-    # ----------------------------------------
-    def __iadd__(
-        self: "InplaceProtocol",
-        other: Any
-    ) -> "InplaceProtocol":
-        """In-place: self.value += other."""
-        return execute_inplace_op(self, operator.add, other)
+---
 
-    def __isub__(
-        self: "InplaceProtocol",
-        other: Any
-    ) -> "InplaceProtocol":
-        """In-place: self.value -= other."""
-        return execute_inplace_op(self, operator.sub, other)
+### `__iadd__`
 
-    def __imul__(
-        self: "InplaceProtocol",
-        other: Any
-    ) -> "InplaceProtocol":
-        """In-place: self.value *= other."""
-        return execute_inplace_op(self, operator.mul, other)
+Mutates `self.value += other` in place.
 
-    def __itruediv__(
-        self: "InplaceProtocol",
-        other: Any
-    ) -> "InplaceProtocol":
-        """In-place: self.value /= other."""
-        return execute_inplace_op(self, operator.truediv, other)
+**Parameters:**
+* `other` (*Any*)
 
-    def __ifloordiv__(
-        self: "InplaceProtocol",
-        other: Any
-    ) -> "InplaceProtocol":
-        """In-place: self.value //= other."""
-        return execute_inplace_op(self, operator.floordiv, other)
+**Returns:**
+* `self`
 
-    def __imod__(
-        self: "InplaceProtocol",
-        other: Any
-    ) -> "InplaceProtocol":
-        """In-place: self.value %= other."""
-        return execute_inplace_op(self, operator.mod, other)
+**Example usage:**
+```python
+price += 10
+```
 
-    def __ipow__(
-        self: "InplaceProtocol",
-        other: Any
-    ) -> "InplaceProtocol":
-        """In-place: self.value **= other."""
-        return execute_inplace_op(self, operator.pow, other)
+**Under the hood:**
+```python
+def __iadd__(self, other):
+    return execute_inplace_op(self, operator.add, other)
+```
 
+[▲ Back to top](#-table-of-contents)
 
-_DESIGN_NOTES = """
-# Inplace
+---
 
-## Purpose
-Gives a mutable SimpleObject the in-place arithmetic operators (`+=`,
-`-=`, `*=`, `/=`, `//=`, `%=`, `**=`), so a variable holding a mutable
-instance can be updated in place, the same way plain numbers are.
+### `__isub__`
 
-## Compatibility
-- `_mutable_only = True` — this is the key difference from `Arithmetic`.
-  Where `+` always returns a new instance, `+=` here genuinely mutates
-  `self.value`, which is only a coherent operation on a mutable instance.
-  On an immutable instance, `+=` would need to rebind the variable to a
-  new object anyway, which is exactly what `Arithmetic.__add__` already
-  provides — so `Inplace` doesn't need to (and must not) apply there.
-- `_only_types = Number` — same reasoning as `Arithmetic`: the operators
-  only make sense on numeric values.
+Mutates `self.value -= other` in place. Same shape as `__iadd__`, using
+`operator.sub`.
 
-## Logic
-Each operator delegates to the shared `execute_inplace_op` helper with
-the matching `operator.*` function. Unlike `Arithmetic`'s helper, this
-one is expected to:
-1. Compute the new value.
-2. Assign it via `self.value = ...`, which routes through the normal
-   validation and reactivity pipeline (so a bad in-place update is
-   rejected the same way a bad direct assignment would be).
-3. Return `self`, satisfying Python's expectation that `__iadd__` etc.
-   return the (possibly same) object to rebind the name to.
+**Example usage:**
+```python
+price -= 5
+```
 
-## Notes
-- No reflected variants exist for in-place operators in Python (there's
-  no `__riadd__`) — this mixin only needs the forward set.
-- Choosing between `Arithmetic` and `Inplace` mixins on a class is really
-  choosing between "always get a new instance" and "mutate the existing
-  one" — a class can have both, since `+` and `+=` are independent
-  protocols, but `Inplace` alone would leave plain `+` undefined.
-"""
+**Under the hood:**
+```python
+def __isub__(self, other):
+    return execute_inplace_op(self, operator.sub, other)
+```
+
+[▲ Back to top](#-table-of-contents)
+
+---
+
+### `__imul__`
+
+Mutates `self.value *= other` in place. Same shape, using `operator.mul`.
+
+**Example usage:**
+```python
+price *= 2
+```
+
+**Under the hood:**
+```python
+def __imul__(self, other):
+    return execute_inplace_op(self, operator.mul, other)
+```
+
+[▲ Back to top](#-table-of-contents)
+
+---
+
+### `__itruediv__`
+
+Mutates `self.value /= other` in place. Same shape, using `operator.truediv`.
+
+**Example usage:**
+```python
+price /= 2
+```
+
+**Under the hood:**
+```python
+def __itruediv__(self, other):
+    return execute_inplace_op(self, operator.truediv, other)
+```
+
+[▲ Back to top](#-table-of-contents)
+
+---
+
+### `__ifloordiv__`
+
+Mutates `self.value //= other` in place. Same shape, using `operator.floordiv`.
+
+**Example usage:**
+```python
+price //= 2
+```
+
+**Under the hood:**
+```python
+def __ifloordiv__(self, other):
+    return execute_inplace_op(self, operator.floordiv, other)
+```
+
+[▲ Back to top](#-table-of-contents)
+
+---
+
+### `__imod__`
+
+Mutates `self.value %= other` in place. Same shape, using `operator.mod`.
+
+**Example usage:**
+```python
+price %= 3
+```
+
+**Under the hood:**
+```python
+def __imod__(self, other):
+    return execute_inplace_op(self, operator.mod, other)
+```
+
+[▲ Back to top](#-table-of-contents)
+
+---
+
+### `__ipow__`
+
+Mutates `self.value **= other` in place. Same shape, using `operator.pow`.
+
+**Example usage:**
+```python
+price **= 2
+```
+
+**Under the hood:**
+```python
+def __ipow__(self, other):
+    return execute_inplace_op(self, operator.pow, other)
+```
+
+[▲ Back to top](#-table-of-contents)
+
+---
+
+[⬅️ Back to Mixins Overview](../../../README_MIXINS_OVERVIEW.md)

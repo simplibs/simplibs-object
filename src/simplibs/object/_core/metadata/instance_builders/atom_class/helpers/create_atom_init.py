@@ -28,7 +28,6 @@ def create_atom_init(
     return __init__
 
 
-
 _DESIGN_NOTES = """
 # create_atom_init
 
@@ -42,8 +41,8 @@ are captured efficiently without repeated lookups.
    - `_value` from metadata default,
    - `_owner` as UNSET,
    - `_locked` as False.
-2. Calls `init_mixins()` to allow dynamic extensions.
-3. Rebinds `__name__` and `__qualname__` so stack traces and introspection
+2. Calls `init_mixins()` to execute the combined mixin initialization pipeline.
+3. Rebinds `__name__`, `__qualname__`, and `__annotations__` so stack traces and introspection
    show the method as a native member of the generated class.
 
 ## Notes

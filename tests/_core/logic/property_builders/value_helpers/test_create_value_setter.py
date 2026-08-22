@@ -1,95 +1,128 @@
-from typing import Any, TYPE_CHECKING, Callable
-from operator import attrgetter
-# Outers
-from ...object_methods.validations import raise_class_not_decomposeable
-# Inners
-from .validations import raise_locked_value_error
-# Annotations
-if TYPE_CHECKING:
-    from ....protocols.metadata import SimpleMetadataLike
-    from ....protocols.instance import SimpleInstanceLike
-    from ....protocols.alias_typings import PathTuple
-
-
-def create_value_setter(
-    meta: "SimpleMetadataLike",
-    is_constant: bool = False,
-    path: "PathTuple | None" = None,
-) -> Callable:
-    """Creates a setter for root or inner value properties (atomic or composite)."""
-
-    # 1. Prepare inner resolver
-    get_inner = attrgetter(*path) if path is not None else None
-
-    # 2. Create setter
-    def setter(self: "SimpleInstanceLike", value: Any) -> None:
-
-        # 2.1 Locked instance cannot be modified
-        if self._locked:
-            raise_locked_value_error(value, self.__class__.__name__)
-
-        # 2.2 Composite setter requires decomposeable metadata
-        if not is_constant and not meta.is_decomposeable:
-            raise_class_not_decomposeable(meta)
-
-        # 2.3 Resolve target instance (root or inner)
-        instance = get_inner(self) if get_inner is not None else self
-
-        # 2.4 Write value and propagate recalculation upwards
-        # noinspection PyProtectedMember
-        instance._root_value_setter(value, recalculate_up=True)
-
-        # 2.5 Recalculate inners for composite values
-        if not is_constant:
-            # noinspection PyProtectedMember
-            instance._recalculate_inners()
-
-        # 2.6 Log only root-level value changes
-        if path is None:
-            from simplibs.object.settings.logging import log_value_event
-            log_value_event(self.__class__, value, event="set")
-
-    # 3. Add annotations
-    setter.__annotations__ = {"value": meta.value_type, "return": None}
-
-    # 4. Return setter
-    return setter
-
-
-_DESIGN_NOTES = """
-# create_value_setter
-
-## Purpose
-Generates a unified setter function for both root-level and inner-level value
-properties. The setter encapsulates all mutation semantics for atomic and
-composite instances, including normalization, decomposition, recalculation, and
-logging.
-
-## Behavior
-- `is_constant=True`:
-  - Treats the value as atomic.
-  - Writes the normalized value via `_root_value_setter`.
-  - Triggers upward recalculation (`recalculate_up=True`).
-- `is_constant=False`:
-  - Treats the value as composite.
-  - Requires `meta.is_decomposeable=True` (otherwise raises
-    `raise_class_not_decomposeable`).
-  - Writes the root value via `_root_value_setter`.
-  - Calls `_recalculate_inners()` to distribute the value into inner nodes.
-
-- `path is None`:
-  - Operates on the root instance (`self`).
-  - Logs the value change via `log_value_event`.
-
-- `path is not None`:
-  - Resolves an inner instance using `attrgetter(*path)`.
-  - Operates on that inner instance without logging.
-
-## Notes
-- Locking (`self._locked`) prevents any mutation once the instance is frozen.
-- Composite behavior is strictly guarded by metadata (`is_decomposeable`).
-- Logging is intentionally limited to root-level changes to avoid noise from
-  inner recalculations.
-- The setter is side-effectful by design: it updates value, triggers recalculation,
-  and optionally logs the event.
 """
+Tests for `_core/logic/property_builders/value_helpers/create_value_setter.py`.
+
+Verifies:
+    1. Locked instance rejection.
+    2. Non-decomposable composite rejection.
+    3. Root vs. inner target resolution.
+    4. Propagation of `_root_value_setter(recalculate_up=True)`.
+    5. Conditional invocation of `_recalculate_inners()` for composite types.
+    6. Expected parameter annotations.
+"""
+from types import SimpleNamespace
+from typing import Any, Tuple
+import pytest
+from simplibs.object._core.logic.property_builders.value_helpers.create_value_setter import (
+    create_value_setter,
+)
+from simplibs.object.exceptions import SimpleRuntimeError
+
+
+def _make_fake_instance(
+    locked: bool = False, class_name: str = "FakeInstance"
+) -> Tuple[SimpleNamespace, dict[str, Any]]:
+    """Helper creating a minimal test-double simulating SimpleInstanceLike."""
+    calls: dict[str, Any] = {"root_value_setter": None, "recalculate_inners": False}
+
+    def _root_value_setter(value: Any, recalculate_up: bool = True) -> None:
+        calls["root_value_setter"] = (value, recalculate_up)
+
+    def _recalculate_inners() -> None:
+        calls["recalculate_inners"] = True
+
+    instance = SimpleNamespace(
+        _locked=locked,
+        _root_value_setter=_root_value_setter,
+        _recalculate_inners=_recalculate_inners,
+        __class__=type(class_name, (), {}),
+    )
+    return instance, calls
+
+
+class TestCreateValueSetterLockedInstance:
+
+    def test_raises_when_instance_is_locked(self) -> None:
+        """Verifies setting value on a locked instance raises SimpleRuntimeError."""
+        meta = SimpleNamespace(value_type=int, is_decomposeable=True)
+        setter = create_value_setter(meta, is_constant=True, path=None)
+        instance, _ = _make_fake_instance(locked=True)
+
+        with pytest.raises(SimpleRuntimeError):
+            setter(instance, 5)
+
+
+class TestCreateValueSetterNotDecomposeable:
+
+    def test_composite_setter_raises_when_not_decomposeable(
+        self, NonDecomposablePairObject
+    ) -> None:
+        """Verifies non-decomposable composite setter raises SimpleRuntimeError."""
+        meta = NonDecomposablePairObject.meta
+
+        setter = create_value_setter(meta, is_constant=False, path=None)
+        instance, _ = _make_fake_instance(locked=False)
+
+        with pytest.raises(SimpleRuntimeError):
+            setter(instance, 5)
+
+    def test_constant_setter_ignores_decomposeable_flag(self) -> None:
+        """Verifies constant setter proceeds regardless of is_decomposeable flag."""
+        meta = SimpleNamespace(value_type=int, is_decomposeable=False)
+        setter = create_value_setter(meta, is_constant=True, path=None)
+        instance, calls = _make_fake_instance(locked=False)
+
+        setter(instance, 5)
+        assert calls["root_value_setter"] == (5, True)
+
+
+class TestCreateValueSetterRootVsInner:
+
+    def test_root_setter_targets_self(self) -> None:
+        """Verifies path=None invokes root setter on the passed instance directly."""
+        meta = SimpleNamespace(value_type=int, is_decomposeable=True)
+        setter = create_value_setter(meta, is_constant=True, path=None)
+        instance, calls = _make_fake_instance(locked=False)
+
+        setter(instance, 10)
+        assert calls["root_value_setter"] == (10, True)
+
+    def test_inner_setter_targets_resolved_instance(self) -> None:
+        """Verifies path resolves the nested instance and invokes its root setter."""
+        meta = SimpleNamespace(value_type=int, is_decomposeable=True)
+        setter = create_value_setter(meta, is_constant=True, path=("_inner",))
+
+        inner_instance, inner_calls = _make_fake_instance(locked=False)
+        owner = SimpleNamespace(_locked=False, _inner=inner_instance)
+
+        setter(owner, 3)
+        assert inner_calls["root_value_setter"] == (3, True)
+
+
+class TestCreateValueSetterRecalculateInners:
+
+    def test_composite_setter_calls_recalculate_inners(self) -> None:
+        """Verifies composite setter invokes _recalculate_inners()."""
+        meta = SimpleNamespace(value_type=int, is_decomposeable=True)
+        setter = create_value_setter(meta, is_constant=False, path=None)
+        instance, calls = _make_fake_instance(locked=False)
+
+        setter(instance, 5)
+        assert calls["recalculate_inners"] is True
+
+    def test_constant_setter_does_not_call_recalculate_inners(self) -> None:
+        """Verifies constant setter does not trigger inner recalculation."""
+        meta = SimpleNamespace(value_type=int, is_decomposeable=True)
+        setter = create_value_setter(meta, is_constant=True, path=None)
+        instance, calls = _make_fake_instance(locked=False)
+
+        setter(instance, 5)
+        assert calls["recalculate_inners"] is False
+
+
+class TestCreateValueSetterAnnotations:
+
+    def test_setter_has_expected_annotations(self) -> None:
+        """Verifies setter signature annotations for input value and return type."""
+        meta = SimpleNamespace(value_type=int, is_decomposeable=True)
+        setter = create_value_setter(meta, is_constant=True, path=None)
+        assert setter.__annotations__ == {"value": int, "return": None}

@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, NoReturn, Any
 # Outers
-from ......exceptions import SimpleLogicError
+from ......exceptions import SimpleRuntimeError
 # Annotations
 if TYPE_CHECKING:
     from ......_core.protocols.mixins.core_mixins import InfrastructureProtocol
@@ -17,7 +17,7 @@ def raise_with_any_contained_constant_mismatch(
     the recalculated snapshot value.
     """
 
-    raise SimpleLogicError(
+    raise SimpleRuntimeError(
         error_name="IMMUTABILITY CONTAINED CONSTANT ERROR",
         label="contained constant mismatch",
         expected=f"Constant '{name}' must match its recalculated value.",

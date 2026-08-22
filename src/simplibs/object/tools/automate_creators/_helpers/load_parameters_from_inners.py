@@ -28,7 +28,7 @@ def load_parameters_from_inners(
         A dictionary mapping snake_case child attribute names to their default values.
 
     Raises:
-        SimpleLogicError: If inners is not a tuple or contains invalid class types.
+        SimpleRuntimeError: If inners is not a tuple or contains invalid class types.
     """
 
     # 1. Container Type Boundary Validation
@@ -47,7 +47,7 @@ def load_parameters_from_inners(
 
         # 2.2 Adding a default value
         # noinspection PyUnresolvedReferences
-        params[inner_class.meta.name_snake] = inner_class.meta.default
+        params[inner.meta.name_snake] = inner.meta.default
 
     # 3. Return Mapped Parameters Dictionary
     return params

@@ -1,93 +1,87 @@
-from typing import Any, TYPE_CHECKING
-# Outers
-from ..core_mixins import Infrastructure
-from .._commons.immutability import (
-    with_constants,
-    with_constant,
-    with_composite,
-    with_any,
-    create_new_instance
-)
-# Inners
-from ._validations import raise_with_changes_input_not_dict
-# Annotations
-if TYPE_CHECKING:
-    from ..._core.protocols.mixins.immutable import ImmutableMethodsProtocol
-    from ..._core.protocols.alias_typings import ChangesTuple, ChangesDict
+"""
+Tests for `ImmutableMethods` mixin.
+"""
+import pytest
+from simplibs.object.mixins.core_mixins import Infrastructure
+from simplibs.object.mixins.others.immutable import ImmutableMethods
 
 
-class ImmutableMethods(Infrastructure):
-    """
-    Mixin poskytující immutable API pro práci s instancemi:
+class TestImmutableMethodsStructure:
 
-    - with_constants(...)
-    - with_constant(...)
-    - with_composite(...)
+    def test_immutable_only_flag(self):
+        assert ImmutableMethods._immutable_only is True
 
-    Konstrukce immutable tříd (getter-only value, odstranění setterů,
-    odstranění mutačních metod, immutable inners) je nyní řešena
-    přímo v make_atom_class / make_composite_class.
-    """
+    def test_inherits_from_infrastructure(self):
+        assert issubclass(ImmutableMethods, Infrastructure)
 
-    # ----------------------------------------
-    # Základní rozhraní
-    # ----------------------------------------
+    def test_slots_empty(self):
+        assert ImmutableMethods.__slots__ == ()
 
-    # Definice určení
-    _immutable_only = True
+    def test_methods_present_on_immutable_instance(self, Outer):
+        instance = Outer(mixins=(ImmutableMethods,), mutable=False)
+        for name in (
+            "with_constants",
+            "with_constant",
+            "with_composite",
+            "with_changes",
+            "with_value",
+            "duplicate",
+        ):
+            assert hasattr(instance, name)
+            assert callable(getattr(instance, name))
 
-    # Definice slotů
-    __slots__ = ()
 
-    # ----------------------------------------
-    # Methods - Immutable API (core)
-    # ----------------------------------------
+class TestImmutableMethodsCoreAPI:
 
-    def with_constants(
-        self: "ImmutableMethodsProtocol",
-        changes_tuple: "ChangesTuple | None" = None
-    ) -> "ImmutableMethodsProtocol":
-        """Vytvoří novou immutable instanci na základě více změn."""
-        return with_constants(self, changes_tuple)
+    def test_with_constant_returns_new_instance(self, Outer):
+        instance = Outer(mixins=(ImmutableMethods,), mutable=False)
+        result = instance.with_constant("third", 50)
+        assert result is not instance
+        assert result._nodes_dict["third"][0].value == 50
 
-    def with_constant(
-        self: "ImmutableMethodsProtocol",
-        name: str,
-        new_value: Any
-    ) -> "ImmutableMethodsProtocol":
-        """Vytvoří novou immutable instanci změnou jedné konstanty."""
-        return with_constant(self, name, new_value)
+    def test_with_composite_returns_new_instance(self, Outer):
+        instance = Outer(mixins=(ImmutableMethods,), mutable=False)
+        result = instance.with_composite("pair", 20)
+        assert result._nodes_dict["pair"][0].value == 20
 
-    def with_composite(
-        self: "ImmutableMethodsProtocol",
-        name: str,
-        new_value: Any
-    ) -> "ImmutableMethodsProtocol":
-        """Vytvoří novou immutable instanci změnou jedné kompozice."""
-        return with_composite(self, name, new_value)
+    def test_with_constants_returns_new_instance(self, Outer):
+        instance = Outer(mixins=(ImmutableMethods,), mutable=False)
+        result = instance.with_constants((("first", 5), ("third", 9)))
+        assert result._nodes_dict["first"][0].value == 5
+        assert result._nodes_dict["third"][0].value == 9
 
-    # ----------------------------------------
-    # Methods - Immutable API (extended)
-    # ----------------------------------------
+    def test_with_constants_default_none(self, Outer):
+        instance = Outer(mixins=(ImmutableMethods,), mutable=False)
+        result = instance.with_constants()
+        assert result.value == instance.value
 
-    def with_changes(
-        self: "ImmutableMethodsProtocol",
-        changes_dict: "ChangesDict"
-    ) -> "ImmutableMethodsProtocol":
-        """Metoda umožnující zadat více změn pro konstanty jako slovník"""
-        if not isinstance(changes_dict, dict):
-            raise_with_changes_input_not_dict(self, changes_dict)
-        return with_any(self, tuple(changes_dict.items()))
 
-    def with_value(
-        self: "ImmutableMethodsProtocol",
-        new_value: Any
-    ) -> "ImmutableMethodsProtocol":
-        """Metoda pro změnu hlavní hodnoty - alias pro pohodlné použití"""
-        return self.with_composite(self.meta.name_snake, new_value)
+class TestImmutableMethodsExtendedAPI:
 
-    def duplicate(
-        self: "ImmutableMethodsProtocol"
-    ) -> "ImmutableMethodsProtocol":
-        """Metoda vracejí novu instanci se stejnými hodnotami"""
-        return create_new_instance(self, self._build_snapshot())
+    def test_with_changes_accepts_dict(self, Outer):
+        instance = Outer(mixins=(ImmutableMethods,), mutable=False)
+        result = instance.with_changes({"third": 77})
+        assert result._nodes_dict["third"][0].value == 77
+
+    def test_with_changes_rejects_non_dict(self, Outer):
+        instance = Outer(mixins=(ImmutableMethods,), mutable=False)
+        with pytest.raises(Exception):
+            instance.with_changes(("third", 77))
+
+    def test_with_value_is_alias_for_with_composite_on_own_name(self, Outer):
+        instance = Outer(mixins=(ImmutableMethods,), mutable=False)
+        result = instance.with_value(42)
+        assert result.value == 42
+
+    def test_duplicate_returns_equivalent_new_instance(self, Outer):
+        instance = Outer(mixins=(ImmutableMethods,), mutable=False)
+        result = instance.duplicate()
+        assert result is not instance
+        assert result._build_snapshot() == instance._build_snapshot()
+
+
+class TestImmutableMethodsCompatibility:
+
+    def test_rejects_mutable_instance(self, Outer):
+        with pytest.raises(Exception):
+            Outer(mixins=(ImmutableMethods,), mutable=True)

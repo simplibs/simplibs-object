@@ -1,24 +1,43 @@
-from typing import Any, NoReturn, TYPE_CHECKING
-# Outers
-from .....exceptions import SimpleLogicError
-# Annotations
-if TYPE_CHECKING:
-    from ....protocols.classes import SimpleConstantProtocol
+import pytest
+from typing import Any
+from unittest.mock import Mock
+
+from simplibs.exception.testing import (
+    assert_exception_function,
+)
+from simplibs.object._core.logic.constant_methods.validations.raise_type_error import (
+    raise_type_error,
+)
+from simplibs.object.exceptions import SimpleRuntimeError
 
 
-def raise_type_error(
-    cls: "SimpleConstantProtocol",
-    value: Any,
-) -> NoReturn:
-    """Raises a detailed user-facing type mismatch error."""
+@pytest.mark.parametrize(
+    "class_name, expected_types, invalid_value",
+    [
+        ("AgeConstant", "int", "not_an_int"),
+        ("NameConstant", "str", 12345),
+        ("ListConstant", "list[str]", None),
+    ],
+)
+def test_raise_type_error(
+    subtests, class_name: str, expected_types: str, invalid_value: Any
+) -> None:
+    """Test that type mismatch raises SimpleRuntimeError with type details."""
 
-    expected_types = cls.meta.value_type_name
-    class_name = cls.__name__
+    dummy_cls = Mock()
+    dummy_cls.__name__ = class_name
+    dummy_cls.meta.value_type_name = expected_types
 
-    raise SimpleLogicError(
+    assert_exception_function(
+        subtests,
+        raise_type_error,
+
+        invalid_params=(dummy_cls, invalid_value),
+        exception_type=SimpleRuntimeError,
+
         error_name="TYPE ERROR",
         label="value",
-        value=value,
+        value=invalid_value,
         expected=f"Instance of type '{expected_types}'",
         problem=(
             f"The provided value does not match the required type for constant "
@@ -34,26 +53,6 @@ def raise_type_error(
             "occurs before this validation.",
         ),
         exception=TypeError,
+
+        verbose=False,
     )
-
-
-_DESIGN_NOTES = """
-# raise_type_error
-
-## Purpose
-Signals that a value passed to a constant definition does not match the expected
-type declared in the constant’s metadata. This error is user-facing and explains
-why the value cannot be accepted.
-
-## Behavior
-- Retrieves the expected type name from metadata.
-- Reports the mismatch between the provided value and the required type.
-- Raises a structured `SimpleLogicError` with clear diagnostics and guidance.
-
-## Notes
-- This validation is part of the constant-level API (`validate_type`, `validate`,
-  `normalize`).
-- The error does not instruct the developer to modify metadata; instead, it
-  informs the *user* that the provided value is incompatible.
-- Type validation is deterministic and does not perform implicit conversions.
-"""

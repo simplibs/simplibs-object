@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, NoReturn
 # Outers
-from .......exceptions import SimpleLogicError
+from .......exceptions import SimpleRuntimeError
 # Annotations
 if TYPE_CHECKING:
     from ......._core.protocols.mixins.state import HistoryProtocol
@@ -14,7 +14,7 @@ def raise_history_limit_not_positive_integer(
     Raises an error when the provided history limit is not a positive integer.
     """
 
-    raise SimpleLogicError(
+    raise SimpleRuntimeError(
         error_name="HISTORY LIMIT ERROR",
         label="history limit",
         expected="A positive integer (value >= 1).",

@@ -1,50 +1,57 @@
-from typing import Any, TYPE_CHECKING
+"""
+Tests for `testing/asserts/methods/assert_decompose_value_method.py`.
+"""
 import pytest
-from simplibs.exception.testing import maybe_subtest
-# Annotations
-if TYPE_CHECKING:
-    from ...._core.protocols import SimpleClassLike
+from simplibs.object.testing.asserts.methods.assert_decompose_value_method import (
+    assert_decompose_value_method,
+)
 
 
-def assert_decompose_value_method(
-    subtests: Any,
-    test_class: "SimpleClassLike",
-    *,
-    verbose: bool = True,
-    intro: str = "",
-) -> None:
-    """
-    Deep validation gate for composite classes that support decomposition:
-        - calls decompose_value(default)
-        - verifies that the decomposed tuple matches inner defaults
-    """
+class TestAssertDecomposeValueMethodHappyPath:
 
-    subintro = "test_decompose_value::"
+    def test_passes_for_valid_decomposeable_class(self, PairObject, subtests):
+        assert_decompose_value_method(subtests, PairObject)
 
-    # 1. Prepare expected decomposed values
-    with maybe_subtest(
-        subtests,
-        name=f"{intro}{subintro}prepare_expected",
-        verbose=verbose,
-    ):
-        expected = tuple(inner.meta.default for inner in test_class.meta.inners)
-        assert expected  # composite must have inners
+    def test_intro_and_verbose_do_not_affect_outcome(self, PairObject, subtests):
+        assert_decompose_value_method(
+            subtests, PairObject, verbose=False, intro="Suite::"
+        )
 
-    # 2. Compute decomposed value (runtime test of _decompose)
-    with maybe_subtest(
-        subtests,
-        name=f"{intro}{subintro}decompose_value",
-        verbose=verbose,
-    ):
-        try:
-            decomposed = test_class.decompose_value(test_class.meta.default)
-        except Exception as exc:
-            pytest.fail(f"decompose_value raised an unexpected exception: {exc}")
 
-    # 3. Compare decomposed value with expected inner defaults
-    with maybe_subtest(
-        subtests,
-        name=f"{intro}{subintro}compare_with_expected",
-        verbose=verbose,
-    ):
-        assert decomposed == expected
+class TestAssertDecomposeValueMethodNoInners:
+
+    def test_fails_when_class_has_no_inners(self, subtests):
+        from types import SimpleNamespace
+
+        fake_class = SimpleNamespace(
+            __name__="FakeEmpty",
+            meta=SimpleNamespace(inners=(), default=0),
+            decompose_value=lambda value: (),
+        )
+
+        with pytest.raises(pytest.fail.Exception, match="must define at least one inner component"):
+            assert_decompose_value_method(
+                subtests,
+                fake_class,
+                verbose=False,
+            )
+
+
+class TestAssertDecomposeValueMethodMismatch:
+
+    def test_fails_when_decompose_result_does_not_match_expected_defaults(self, subtests):
+        from types import SimpleNamespace
+
+        fake_inner = SimpleNamespace(meta=SimpleNamespace(name_snake="first", default=1))
+        fake_class = SimpleNamespace(
+            __name__="FakeMismatch",
+            meta=SimpleNamespace(inners=(fake_inner,), default=99),
+            decompose_value=lambda value: (999,),
+        )
+
+        with pytest.raises(pytest.fail.Exception, match="does not match expected inner defaults"):
+            assert_decompose_value_method(
+                subtests,
+                fake_class,
+                verbose=False,
+            )

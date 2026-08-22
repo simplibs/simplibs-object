@@ -1,38 +1,21 @@
-from typing import get_args, Union, get_origin, Any
-from types import UnionType
+from typing import Union, Any
+from simplibs.object._core.metadata.init_processors.methods.verifiers.annotations_and_defaults.validations._convert_annotation_to_type_set import (
+    _convert_annotation_to_type_set,
+)
 
 
-def _convert_annotation_to_type_set(
-    annotation: type | None | UnionType,
-) -> set[type]:
-    """Converts annotation or union into a flat set of types."""
-
-    # 1. Single type
-    if isinstance(annotation, type):
-        return {annotation}
-
-    # 2. Union or PEP 604 pipe union
-    if isinstance(annotation, UnionType) or get_origin(annotation) is Union:
-        return set(get_args(annotation))
-
-    # 3. Fallback
-    return {Any}
+def test_convert_annotation_single_type() -> None:
+    """Tests conversion of a single type."""
+    assert _convert_annotation_to_type_set(int) == {int}
 
 
+def test_convert_annotation_union_types() -> None:
+    """Tests conversion of Union and PEP 604 union types."""
+    assert _convert_annotation_to_type_set(Union[int, str]) == {int, str}
+    assert _convert_annotation_to_type_set(int | str) == {int, str}
 
-_DESIGN_NOTES = """
-# _convert_annotation_to_type_set
 
-## Purpose
-Normalizes Python type annotations into a flat `set[type]` so that
-`validate_annotations` can perform simple subset checks.
-
-## Behavior
-1. Single types → `{type}`
-2. `Union` or PEP 604 unions → `{t1, t2, ...}`
-3. Anything else → `{Any}` as a safe fallback
-
-## Why separate
-This function is a pure utility.  
-Keeping it isolated makes `validate_annotations` smaller, cleaner, and easier to test.
-"""
+def test_convert_annotation_fallback() -> None:
+    """Tests fallback to {Any} for complex or non-type annotations."""
+    assert _convert_annotation_to_type_set(None) == {Any}
+    assert _convert_annotation_to_type_set("string_annotation") == {Any}

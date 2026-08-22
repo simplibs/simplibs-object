@@ -1,70 +1,36 @@
-from typing import NoReturn, TYPE_CHECKING
-# Outers
-from ......exceptions import SimpleMetadataError
-# Inners
-from ._exception_info_for_type import _exception_info_for_type
-# Annotations
-if TYPE_CHECKING:
-    from .....protocols.classes import SimpleClassLike
+from simplibs.object import SimpleConstant, SimpleObject
+from simplibs.object.exceptions.SimpleDefinitionError import SimpleDefinitionError
+from simplibs.exception.testing.assert_exception_function import assert_exception_function
+from simplibs.object._core.metadata.init_processors.type.validations.raise_union_type_contain_none import (
+    raise_union_type_contain_none,
+)
 
 
+def test_raise_union_type_contain_none(subtests, sample_object_classes) -> None:
+    """Tests that raise_union_type_contain_none raises SimpleDefinitionError."""
 
-def raise_union_type_contain_none(
-    owner_class: "SimpleClassLike"
-) -> NoReturn:
-    """Raises an error when a UnionType contains NoneType."""
+    MyTestConstant, MyTestObject = sample_object_classes
 
-    (
-        class_name,
-        class_parent,
-        error_name,
-        context,
-        acceptable_definitions,
-    ) = _exception_info_for_type(owner_class)
-
-    raise SimpleMetadataError(
-        error_name=error_name,
+    assert_exception_function(
+        subtests,
+        raise_union_type_contain_none,
+        invalid_params=(MyTestObject,),
+        exception_type=SimpleDefinitionError,
+        error_name="INVALID TYPE DEFINITION",
         label="_type",
-        problem=(
-            f"The UnionType definition for class '{class_name}' contains NoneType.",
-        ),
         expected="A UnionType without NoneType or literal None.",
+        problem="The UnionType definition for class 'MyTestObject' contains NoneType.",
+        context="Metadata validation for: MyTestObject._type",
         how_to_fix=(
             "Remove NoneType or literal None from the union expression.",
             "Use only real, concrete types in the union.",
-        ) + acceptable_definitions,
-        context=context,
+            "Acceptable definitions:",
+            "class MyTestObject(SimpleObject):",
+            "    _type = int",
+            "    _type = int | str",
+            "    _type = (int, str)",
+            "    ...",
+        ),
         exception=TypeError,
+        verbose=False,
     )
-
-
-_DESIGN_NOTES = """
-# raise_union_type_contain_none
-
-## Purpose
-Raises a structured error when a modern Python UnionType used in `_type`
-contains `NoneType` (e.g. `_type = int | None`).  
-Optional or absent states are not allowed inside the core type registry.
-
-## Pipeline context
-This function is called from the `UnionType` branch of `process_type` when:
-
-- `NoneType in raw_type.__args__` evaluates to `True`.
-
-It does not perform any checks itself; it only formats and raises the error.
-
-## Architectural reasoning
-The metadata type system must describe concrete, fully initialized value domains.
-Embedding `NoneType` inside union definitions would:
-
-- blur the boundary between “no value” and “valid value”,
-- complicate validation and normalization,
-- break deterministic assumptions in internal mapping routines.
-
-Optionality is handled at a different level, not inside `_type`.
-
-## Notes
-If absence of value is part of the business logic, it should be modeled explicitly
-in higher-level structures, not by mixing `NoneType` into the core type constraint.
-
-"""

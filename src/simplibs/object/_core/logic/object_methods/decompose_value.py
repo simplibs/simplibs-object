@@ -20,7 +20,7 @@ def decompose_value(
     cls.validate(value)
 
     # 3. Perform decomposition using the class's decompose function
-    outcome = cls.meta.decompose(cls, value)
+    outcome = cls.meta.decompose(value)
 
     # 4. Return the decomposed result
     return outcome

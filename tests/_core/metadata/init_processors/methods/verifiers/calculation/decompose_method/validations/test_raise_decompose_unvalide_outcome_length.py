@@ -1,64 +1,51 @@
-from typing import TYPE_CHECKING
-# Outers
-from .........exceptions import SimpleMetadataError
-from ...._exceptions_helpers import exception_info_for_classmethod
-# Annotations
-if TYPE_CHECKING:
-    from ........protocols.methods import ClassMethodProtocol
+from unittest.mock import Mock
+from simplibs.object.exceptions.SimpleDefinitionError import SimpleDefinitionError
+from simplibs.exception.testing.assert_exception_function import assert_exception_function
+from simplibs.object._core.metadata.init_processors.methods.verifiers.calculation.decompose_method.validations.raise_decompose_unvalide_outcome_length import (
+    raise_decompose_unvalide_outcome_length,
+)
 
 
-def raise_decompose_unvalide_outcome_length(
-    calculate_default: tuple,
-    inners: tuple,
-    bound_method: "ClassMethodProtocol",
-) -> None:
-    """Raises an exception when _decompose returns an incorrect number of items."""
+def test_raise_decompose_unvalide_outcome_length(subtests) -> None:
+    """Tests that incorrect return tuple length from _decompose raises SimpleDefinitionError."""
 
-    # 1. Extract diagnostic context
-    _, method_name, context = exception_info_for_classmethod(bound_method)
+    # Mock bound_method
+    mock_self = Mock(__name__="MyObject")
+    mock_func = Mock(__name__="_decompose")
+    mock_bound_method = Mock()
+    mock_bound_method.__self__ = mock_self
+    mock_bound_method.__func__ = mock_func
 
-    expected_count = len(inners)
-    got_count = len(calculate_default)
+    # Mock inners
+    inner1 = Mock()
+    inner1.meta.name_snake = "first_param"
+    inner1.meta.default = 10
 
-    inner_names = tuple(inner.meta.name_snake for inner in inners)
-    inner_defaults = tuple(repr(inner.meta.default) for inner in inners)
+    inner2 = Mock()
+    inner2.meta.name_snake = "second_param"
+    inner2.meta.default = "hello"
 
-    # 2. Raise domain exception
-    raise SimpleMetadataError(
+    inners = (inner1, inner2)
+    calculate_default = (10,)  # Length 1 instead of expected 2
+
+    assert_exception_function(
+        subtests,
+        raise_decompose_unvalide_outcome_length,
+        invalid_params=(calculate_default, inners, mock_bound_method),
+        exception_type=SimpleDefinitionError,
         error_name="METHOD LOGIC ERROR",
         label="_decompose_length",
         value=calculate_default,
-        expected=repr(inner_names),
-        problem=f"Expected {expected_count} items, received {got_count}.",
-        context=context,
+        expected="('first_param', 'second_param')",
+        problem="Expected 2 items, received 1.",
+        context="Metadata validation for: MyObject._decompose",
         how_to_fix=(
             "The '_decompose' method must return values matching the defined inner elements.",
-            f"Ensure the return tuple contains exactly {expected_count} items.",
-            f"Expected order: {', '.join(inner_names)}.",
+            "Ensure the return tuple contains exactly 2 items.",
+            "Expected order: first_param, second_param.",
             "Example based on default values:",
-            f"    return ({', '.join(inner_defaults)})",
+            "    return (10, 'hello')",
         ),
         exception=ValueError,
+        verbose=False,
     )
-
-
-_DESIGN_NOTES = """
-# raise_decompose_unvalide_outcome_length
-
-## Purpose
-Ensures that `_decompose` returns a tuple whose length matches the number of
-inner components defined in the metadata (`_inners`).
-
-## Behavior
-1. Extracts diagnostic context using `exception_context_for_classmethod`.
-2. Computes:
-   - expected item count
-   - actual item count
-   - expected inner names
-   - example default values
-3. Raises a structured `SimpleMetadataError` with clear remediation instructions.
-
-## Notes
-This validator is used exclusively inside `verify_decompose_outcome` and is the
-first structural check before type/value validation.
-"""

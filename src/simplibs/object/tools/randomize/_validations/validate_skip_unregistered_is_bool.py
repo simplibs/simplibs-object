@@ -1,6 +1,6 @@
 from typing import Any
 # Outers
-from ....exceptions import SimpleLogicError
+from ....exceptions import SimpleRuntimeError
 
 
 def validate_skip_unregistered_is_bool(
@@ -12,12 +12,12 @@ def validate_skip_unregistered_is_bool(
         skip_unregistered: Candidate argument to validate.
 
     Raises:
-        SimpleLogicError: If skip_unregistered is not a bool.
+        SimpleRuntimeError: If skip_unregistered is not a bool.
     """
     if isinstance(skip_unregistered, bool):
         return
 
-    raise SimpleLogicError(
+    raise SimpleRuntimeError(
         error_name="INVALID SKIP_UNREGISTERED TYPE ERROR",
         label="skip_unregistered",
         expected="A boolean value (True or False).",

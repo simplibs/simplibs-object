@@ -1,76 +1,58 @@
-from typing import TYPE_CHECKING, Any
-# Outers
-from ........exceptions import SimpleMetadataError
-# Annotations
-if TYPE_CHECKING:
-    from .......protocols.methods import ClassMethodProtocol
+from unittest.mock import Mock
+from simplibs.object.exceptions.SimpleDefinitionError import SimpleDefinitionError
+from simplibs.exception.testing.assert_exception_function import assert_exception_function
+from simplibs.object._core.metadata.init_processors.methods.verifiers.annotations_and_defaults.validations.validate_args_defaults import (
+    validate_args_defaults,
+)
 
 
-def validate_args_defaults(
-    expected_args_defaults: tuple[Any, ...],
-    expected_params: tuple[str, ...],
-    bound_method: "ClassMethodProtocol",
-    exception_info: tuple[str, str, str],
-    expected_structure: tuple[str, ...],
-) -> None:
-    """Validates positional argument default values."""
+def test_validate_args_defaults_pass() -> None:
+    """Tests that matching positional defaults pass validation."""
 
-    # 1. Extract user-defined positional defaults
-    method_args_defaults = bound_method.__func__.__defaults__ or ()
+    mock_func = Mock()
+    mock_func.__defaults__ = (10, "default_str")
+    mock_bound_method = Mock()
+    mock_bound_method.__func__ = mock_func
 
-    # 2. Happy path: no defaults declared
-    if not method_args_defaults:
-        return
-
-    class_name, method_name, context = exception_info
-
-    # 3. Validate each default value
-    for index, (value, expected_value) in enumerate(
-        zip(method_args_defaults, expected_args_defaults)
-    ):
-        if value != expected_value:
-            param_name = expected_params[index]
-
-            raise SimpleMetadataError(
-                error_name="METHOD SIGNATURE ERROR",
-                label="_args_default",
-                value=value,
-                expected=repr(expected_value),
-                problem=f"Parameter '{param_name}' has an incorrect default value.",
-                context=context,
-                how_to_fix=(
-                    f"Set the default value of '{param_name}' to '{expected_value}'.",
-                    "Or remove the default entirely; the framework will inject it automatically.",
-                ) + expected_structure,
-                exception=ValueError,
-            )
+    validate_args_defaults(
+        expected_args_defaults=(10, "default_str"),
+        expected_params=("arg1", "arg2"),
+        bound_method=mock_bound_method,
+        exception_info=("TestClass", "test_method", "Context"),
+        expected_structure=("Blueprint",),
+    )
 
 
-_DESIGN_NOTES = """
-# validate_args_defaults
+def test_validate_args_defaults_raises_error(subtests) -> None:
+    """Tests that mismatching positional defaults raise SimpleDefinitionError."""
 
-## Purpose
-Ensures that positional argument default values match the deterministic defaults
-defined in `_inners`.  
-Users may omit defaults, but they must never override them.
+    mock_func = Mock()
+    mock_func.__defaults__ = (99,)
+    mock_bound_method = Mock()
+    mock_bound_method.__func__ = mock_func
 
-## Why tuple inputs
-The validator receives:
-- `exception_info` — (class_name, method_name, context)
-- `expected_structure` — code blueprint
-
-This keeps the function consistent with all other method-validation helpers.
-
-## Behavior
-1. Extract positional defaults from `__defaults__`.
-2. If none exist → exit immediately.
-3. Compare each default with the expected value.
-4. If any mismatch occurs, raise a structured `SimpleMetadataError` with a
-   copy‑paste ready blueprint.
-
-## Notes
-This validator is part of the annotation/defaults verification chain:
-- `validate_annotations`
-- `validate_args_defaults`
-- `validate_kwargs_defaults`
-"""
+    assert_exception_function(
+        subtests,
+        validate_args_defaults,
+        invalid_params=(
+            (10,),
+            ("arg1",),
+            mock_bound_method,
+            ("TestClass", "test_method", "TestContext"),
+            ("Expected structure line 1",),
+        ),
+        exception_type=SimpleDefinitionError,
+        error_name="METHOD SIGNATURE ERROR",
+        label="_args_default",
+        expected="10",
+        value=99,
+        problem="Parameter 'arg1' has an incorrect default value.",
+        context="TestContext",
+        how_to_fix=(
+            "Set the default value of 'arg1' to '10'.",
+            "Or remove the default entirely; the framework will inject it automatically.",
+            "Expected structure line 1",
+        ),
+        exception=ValueError,
+        verbose=False,
+    )

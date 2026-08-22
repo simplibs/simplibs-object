@@ -12,7 +12,7 @@ ready-to-use combined mixin.
 
 | Component     | Type  | Description                                                  |
 | :------------ | :---- | :----------------------------------------------------------- |
-| `Lifecycle`   | Mixin | Combines `Copyable` + `PicleReduce` for copy/pickle support. |
+| `Lifecycle`   | Mixin | Combines `Copyable` + `PickleReduce` for copy/pickle support. |
 
 ## Notes
 - Use `Lifecycle` when an instance needs both `copy`/`deepcopy` and

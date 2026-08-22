@@ -1,56 +1,29 @@
-from typing import Any, Self
-# Outers
-from ...base_class import SimpleMixin
+"""
+Tests for `ClassGetItem` mixin.
+"""
+import pytest
+from simplibs.object.mixins.dunders.generics import ClassGetItem
+from simplibs.object.testing import assert_simple_mixin
 
 
-class ClassGetItem(SimpleMixin):
-    """
-    Mixin poskytující podporu pro syntaxi generik typu:
+class TestClassGetItemStructure:
 
-        MyClass[int]
-        MyClass[str]
-        MyClass[tuple[int, str]]
+    def test_slots_empty(self):
+        assert ClassGetItem.__slots__ == ()
 
-    Tato metoda je čistě syntaktická pomůcka pro type hints, IDE a statickou
-    analýzu. Nemá žádný vliv na runtime chování instance ani na konstrukci
-    instanční třídy.
+    def test_assert_simple_mixin_shallow(self, subtests, IntLeaf):
+        assert_simple_mixin(subtests, ClassGetItem, test_class=IntLeaf)
 
-    Logika:
-    - Pokud nadřazená třída (__class_getitem__) existuje, použije se.
-    - Pokud neexistuje (což je běžné u běžných tříd), vrací se samotná třída.
-    """
 
-    # ----------------------------------------
-    # Základní rozhraní
-    # ----------------------------------------
+class TestClassGetItemBehavior:
 
-    # Definice slotů
-    __slots__ = ()
+    def test_subscript_returns_class_itself_when_no_parent_impl(self, IntLeaf):
+        instance = IntLeaf(mixins=(ClassGetItem,), as_atom=True)
+        result = type(instance)[int]
+        assert result is type(instance)
 
-    # ----------------------------------------
-    # Classmethods - CLASS GETITEM
-    # ----------------------------------------
-
-    @classmethod
-    def __class_getitem__(
-        cls: type[Self],
-        item: Any
-    ) -> type[Self] | Any:
-        """
-        Umožňuje zápis MyClass[T] bez nutnosti dědit z typing.Generic.
-
-        Pokud nadřazená třída implementuje __class_getitem__, použije se její
-        implementace. Pokud ne, vrací se samotná třída, což je standardní
-        fallback používaný v Pythonu pro jednoduché generické zápisy.
-        """
-
-        # 1. Načtení metody z nadřazené třídy
-        super_cls = super(ClassGetItem, cls)
-        method = getattr(super_cls, "__class_getitem__", None)
-
-        # 2. Navrácení metody a nebo třídy jako fallbacku
-        return (
-            method(item)
-            if method is not None
-            else cls
-        )
+    def test_subscript_with_various_items(self, IntLeaf):
+        instance = IntLeaf(mixins=(ClassGetItem,), as_atom=True)
+        cls = type(instance)
+        assert cls[str] is cls
+        assert cls[(int, str)] is cls

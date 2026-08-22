@@ -1,72 +1,61 @@
-from typing import Any, TYPE_CHECKING
-# Outers
-from .........exceptions import SimpleMetadataError
-from ...._exceptions_helpers import exception_info_for_classmethod
-# Annotations
-if TYPE_CHECKING:
-    from ........protocols.methods import ClassMethodProtocol
-    from ........protocols.classes import SimpleClassLike
+from unittest.mock import Mock
+from simplibs.object.exceptions.SimpleDefinitionError import SimpleDefinitionError
+from simplibs.exception.testing.assert_exception_function import assert_exception_function
+from simplibs.object._core.metadata.init_processors.methods.verifiers.calculation.decompose_method.validations.validate_decompose_unvalide_item_value import (
+    validate_decompose_unvalide_item_value,
+)
 
 
-def validate_decompose_unvalide_item_value(
-    value: Any,
-    inner: "SimpleClassLike",
-    inners: tuple["SimpleClassLike", ...],
-    bound_method: "ClassMethodProtocol",
-) -> None:
-    """Validates that a decomposed item matches its expected default value."""
+def test_validate_decompose_unvalide_item_value_pass() -> None:
+    """Tests that matching value passes validation."""
 
-    # 1. Structural evaluation checkpoint
-    if value == inner.meta.default:
-        return
+    mock_bound_method = Mock()
+    inner = Mock()
+    inner.meta.default = "default_value"
+    inners = (inner,)
 
-    # 2. Extract diagnostic context
-    class_name, method_name, context = exception_info_for_classmethod(bound_method)
-
-    meta = inner.meta
-    expected_value = meta.default
-
-    inner_defaults = tuple(repr(i.meta.default) for i in inners)
-    inner_names = tuple(i.meta.name_snake for i in inners)
-
-    # 3. Raise domain exception
-    raise SimpleMetadataError(
-        error_name="METHOD LOGIC ERROR",
-        label="_decompose_item_value",
-        value=value,
-        expected=repr(expected_value),
-        problem=f"Item '{meta.name_snake}' does not match its expected default value.",
-        context=context,
-        how_to_fix=(
-            f"Ensure that '{meta.name_snake}' is computed as '{expected_value!r}'.",
-            f"Received value: '{value!r}'.",
-            "Verify that the returned tuple preserves the exact order defined in '_inners'.",
-            f"Expected order: {', '.join(inner_names)}.",
-            "Example based on default values:",
-            f"    return ({', '.join(inner_defaults)})",
-        ),
-        exception=ValueError,
+    validate_decompose_unvalide_item_value(
+        value="default_value",
+        inner=inner,
+        inners=inners,
+        bound_method=mock_bound_method,
     )
 
 
-_DESIGN_NOTES = """
-# validate_decompose_unvalide_item_value
+def test_validate_decompose_unvalide_item_value_raises_error(subtests) -> None:
+    """Tests that mismatched item value raises SimpleDefinitionError."""
 
-## Purpose
-Ensures that each item returned by `_decompose` matches the default value defined
-in the corresponding inner metadata (`inner.meta.default`).
+    mock_self = Mock(__name__="MyObject")
+    mock_func = Mock(__name__="_decompose")
+    mock_bound_method = Mock()
+    mock_bound_method.__self__ = mock_self
+    mock_bound_method.__func__ = mock_func
 
-## Behavior
-1. Performs a fast equality check.
-2. If the value is invalid:
-   - extracts diagnostic context
-   - determines expected default value
-   - builds example default tuple
-   - raises a structured `SimpleMetadataError`
+    inner1 = Mock()
+    inner1.meta.name_snake = "target_param"
+    inner1.meta.default = "expected_str"
 
-## Notes
-This validator is used inside `verify_decompose_outcome` immediately after the
-type validation.  
-It is the final structural check for `_decompose` before returning the verified
-tuple.
-"""
+    inners = (inner1,)
+
+    assert_exception_function(
+        subtests,
+        validate_decompose_unvalide_item_value,
+        invalid_params=("wrong_str", inner1, inners, mock_bound_method),
+        exception_type=SimpleDefinitionError,
+        error_name="METHOD LOGIC ERROR",
+        label="_decompose_item_value",
+        value="wrong_str",
+        expected="'expected_str'",
+        problem="Item 'target_param' does not match its expected default value.",
+        context="Metadata validation for: MyObject._decompose",
+        how_to_fix=(
+            "Ensure that 'target_param' is computed as ''expected_str''.",
+            "Received value: ''wrong_str''.",
+            "Verify that the returned tuple preserves the exact order defined in '_inners'.",
+            "Expected order: target_param.",
+            "Example based on default values:",
+            "    return ('expected_str')",
+        ),
+        exception=ValueError,
+        verbose=False,
+    )

@@ -23,7 +23,7 @@ def process_decompose(
         return decompose
 
     # 2. Wrap anonymous lambda to accept (cls, value) signature
-    def _decompose(cls: Any, value: Any) -> Any:
+    def _decompose(cls, value):
         return decompose(value)
 
     return _decompose

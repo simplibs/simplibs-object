@@ -1,8 +1,6 @@
 from dataclasses import dataclass
 from typing import Any, TYPE_CHECKING
 from simplibs.sentinels import UNSET, UnsetType
-# Outers
-from ..assert_simple_mixin import assert_simple_mixin
 # Annotations
 if TYPE_CHECKING:
     from ..._core.protocols import SimpleClassType, SimpleMixinType
@@ -58,6 +56,7 @@ class MixinCase:
         Returns:
             The created instance with the target mixin applied.
         """
+        from ..assert_simple_mixin import assert_simple_mixin
         return assert_simple_mixin(
             subtests,
             self.mixin_class,

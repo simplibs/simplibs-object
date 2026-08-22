@@ -1,61 +1,50 @@
-# Outers
-from ........exceptions import SimpleMetadataError
+from simplibs.object.exceptions.SimpleDefinitionError import SimpleDefinitionError
+from simplibs.exception.testing.assert_exception_function import assert_exception_function
+from simplibs.object._core.metadata.init_processors.methods.verifiers.params.validations.validate_method_param_match_expected import (
+    validate_method_param_match_expected,
+)
 
 
-def validate_method_param_match_expected(
-    method_params: tuple[str, ...],
-    expected_params: tuple[str, ...],
-    exception_info: tuple[str, str, str],
-    expected_structure: tuple[str, ...],
-) -> None:
-    """Validates that parameter names and order match expectations."""
+def test_validate_method_param_match_expected_pass() -> None:
+    """Tests that matching parameter tuples pass validation."""
 
-    if method_params != expected_params:
-        class_name, method_name, context = exception_info
+    method_params = ("cls", "arg1", "arg2")
+    expected_params = ("cls", "arg1", "arg2")
 
-        raise SimpleMetadataError(
-            error_name="METHOD SIGNATURE ERROR",
-            label="_params",
-            value=method_params,
-            expected=repr(expected_params),
-            problem="Parameter names or their order do not match the expected signature.",
-            context=context,
-            how_to_fix=(
-                "Adjust the method signature to match the expected parameter layout.",
-                "The first parameter must always be 'cls'.",
-                "All other parameters must match the snake_case names of '_inners' components.",
-            ) + expected_structure,
-            exception=TypeError,
-        )
+    validate_method_param_match_expected(
+        method_params=method_params,
+        expected_params=expected_params,
+        exception_info=("MyClass", "my_method", "Context"),
+        expected_structure=("Blueprint",),
+    )
 
 
-_DESIGN_NOTES = """
-# validate_method_param_match_expected
+def test_validate_method_param_match_expected_raises_error(subtests) -> None:
+    """Tests that mismatched parameter tuples raise SimpleDefinitionError."""
 
-## Purpose
-Ensures that the method signature parameters match the expected names and order.
-This is critical because the metadata pipeline binds parameters directly to
-`_inners` components.
+    method_params = ("cls", "wrong_arg")
+    expected_params = ("cls", "expected_arg")
 
-## Why tuple inputs
-The validator receives:
-- `exception_info` — (class_name, method_name, context)
-- `expected_structure` — code blueprint
+    exception_info = ("MyClass", "my_method", "TestContext")
+    expected_structure = ("Expected structure line 1",)
 
-This keeps the function consistent with all other method‑validation helpers.
-
-## Behavior
-The function performs a strict tuple comparison:
-- same number of parameters,
-- same names,
-- same order.
-
-If any part differs, a structured `SimpleMetadataError` is raised with a
-copy‑paste ready blueprint showing the correct method layout.
-
-## Notes
-This validator is part of the parameter‑verification chain:
-- `validate_method_param_match_expected`
-- `validate_method_has_exact_args_count`
-- `validate_method_not_use_param_placeholders`
-"""
+    assert_exception_function(
+        subtests,
+        validate_method_param_match_expected,
+        invalid_params=(method_params, expected_params, exception_info, expected_structure),
+        exception_type=SimpleDefinitionError,
+        error_name="METHOD SIGNATURE ERROR",
+        label="_params",
+        value=method_params,
+        expected="('cls', 'expected_arg')",
+        problem="Parameter names or their order do not match the expected signature.",
+        context="TestContext",
+        how_to_fix=(
+            "Adjust the method signature to match the expected parameter layout.",
+            "The first parameter must always be 'cls'.",
+            "All other parameters must match the snake_case names of '_inners' components.",
+            "Expected structure line 1",
+        ),
+        exception=TypeError,
+        verbose=False,
+    )

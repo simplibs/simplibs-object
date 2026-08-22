@@ -17,7 +17,7 @@ def calculate_value(
     params_dict = _process_calculate_value_params(cls, *args, **kwargs)
 
     # 2. Compute the value using the class's logic function
-    outcome = cls.meta.logic(cls, **params_dict)
+    outcome = cls.meta.logic(**params_dict)
 
     # 3. Return the computed value
     return outcome

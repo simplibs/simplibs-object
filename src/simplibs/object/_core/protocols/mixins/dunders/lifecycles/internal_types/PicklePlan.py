@@ -1,5 +1,5 @@
-from typing import TypeAlias, Any
+from typing import Callable, Any
 
 
 # Reconstruction plan for pickle: (class, empty_args_tuple, state_dict)
-PicklePlan: TypeAlias = tuple[type, tuple[()], dict[str, Any]]
+PicklePlan = tuple[Callable[..., Any], tuple[Any, ...]]

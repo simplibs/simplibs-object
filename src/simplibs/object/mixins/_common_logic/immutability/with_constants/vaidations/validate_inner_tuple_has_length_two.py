@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, NoReturn
 # Outers
-from ......exceptions import SimpleLogicError
+from ......exceptions import SimpleRuntimeError
 # Annotations
 if TYPE_CHECKING:
     from ......_core.protocols.mixins.core_mixins import InfrastructureProtocol
@@ -18,7 +18,7 @@ def validate_inner_tuple_has_length_two(
     if isinstance(inner_tuple, tuple) and len(inner_tuple) == 2:
         return
 
-    raise SimpleLogicError(
+    raise SimpleRuntimeError(
         error_name="IMMUTABILITY BATCH UPDATE ERROR",
         label="change item length",
         expected="Tuple of exactly two items: (name, value).",

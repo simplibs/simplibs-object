@@ -1,83 +1,38 @@
-# Outers
-from ......exceptions import SimpleMetadataError
+from simplibs.object.exceptions.SimpleDefinitionError import SimpleDefinitionError
+from simplibs.exception.testing.assert_exception_function import assert_exception_function
+from simplibs.object._core.metadata.init_processors.names.validations.validate_class_name_is_identifier import (
+    validate_class_name_is_identifier,
+)
 
 
-def validate_class_name_is_identifier(
-    class_name: str
-) -> None:
-    """Validates that the class name is a valid Python identifier."""
+def test_validate_class_name_is_identifier_pass() -> None:
+    """Tests that a valid Python identifier passes validation."""
 
-    # 1. Check identifier validity
-    if class_name.isidentifier():
-        return
+    validate_class_name_is_identifier("MyClass")
+    validate_class_name_is_identifier("Class_123")
 
-    # 2. Raise structured metadata error
-    raise SimpleMetadataError(
+
+def test_validate_class_name_is_identifier_raises_error(subtests) -> None:
+    """Tests that an invalid Python identifier raises SimpleDefinitionError."""
+
+    invalid_class_name = "123Class"
+
+    assert_exception_function(
+        subtests,
+        validate_class_name_is_identifier,
+        invalid_params=(invalid_class_name,),
+        exception_type=SimpleDefinitionError,
         error_name="CLASS NAME NOT IDENTIFIER",
         label="class name",
-        value=class_name,
-        problem=(
-            f"The name '{class_name}' is not a valid Python identifier.",
-        ),
+        value=invalid_class_name,
         expected="A name using only letters, digits, and underscores.",
+        problem="The name '123Class' is not a valid Python identifier.",
+        context="Identifier validation during metadata name processing.",
         how_to_fix=(
             "Remove spaces, hyphens, dots, or other special characters.",
             "Ensure the name does not start with a digit.",
             "If creating classes dynamically via type(name, ...), verify the name first.",
         ),
-        context="Identifier validation during metadata name processing.",
-        exception=ValueError
+        exception=ValueError,
+        verbose=False,
     )
-
-
-
-
-_DESIGN_NOTES = """
-# validate_class_name_is_identifier
-
-## Purpose
-Ensures that the class name follows Python’s strict identifier rules before any
-metadata processing begins. This protects the naming pipeline from malformed
-dynamic class names.
-
-## Why this validation exists
-Static class definitions (`class MyClass:`) are checked by Python automatically.
-Dynamic class creation (`type("Bad-Name", ...)`) is not. Python allows names
-containing spaces, hyphens, dots, or names starting with digits.
-
-This validator guarantees that even dynamically generated classes have a safe,
-usable name.
-
-## Validation pipeline
-This function is the first step in a three‑stage name validation sequence:
-
-1. **validate_class_name_is_identifier**  
-   Removes names with spaces, hyphens, dots, or leading digits.  
-   Allows: `[a-zA-Z0-9_]` including Unicode letters.
-
-2. **validate_class_name_is_ascii**  
-   Removes diacritics and non‑ASCII characters.  
-   Allows: `[a-zA-Z0-9_]`.
-
-3. **validate_class_name_has_no_underscores**  
-   Removes underscores entirely.  
-   Enforces pure PascalCase.  
-   Allows: `[a-zA-Z0-9]`.
-
-## Native Python guarantees
-Python ensures:
-- the class name is always a `str`,
-- the name is never empty.
-
-## Examples
-
-### Valid
-- `"MyClass"`
-- `"Trida_1"` (diacritics handled later)
-
-### Invalid
-- `"123Class"` — starts with a digit  
-- `"My-Class"` — contains a hyphen  
-- `"My Class"` — contains a space  
-- `"My.Class"` — contains a dot
-"""

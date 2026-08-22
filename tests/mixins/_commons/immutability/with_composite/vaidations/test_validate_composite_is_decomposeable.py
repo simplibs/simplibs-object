@@ -1,71 +1,48 @@
-from typing import TYPE_CHECKING, NoReturn
-# Outers
-from ......exceptions import SimpleMixinError
-# Annotations
-if TYPE_CHECKING:
-    from ......_core.protocols.mixins.core_mixins import InfrastructureProtocol
+from types import SimpleNamespace
+from simplibs.object.exceptions import SimpleRuntimeError
+from simplibs.exception.testing.assert_exception_function import assert_exception_function
+from simplibs.object.mixins._common_logic.immutability.with_composite.vaidations.validate_composite_is_decomposeable import (
+    validate_composite_is_decomposeable,
+)
 
 
-def validate_composite_is_decomposeable(
-    instance: "InfrastructureProtocol",
-    name: str,
-) -> None:
-    """
-    Validates that the composite node supports decomposition.
-    """
+def test_validate_composite_is_decomposeable_success() -> None:
+    """Tests that decomposable composite passes validation without error."""
 
-    if instance.meta.is_decomposeable:
-        return
+    dummy_instance = SimpleNamespace(meta=SimpleNamespace(is_decomposeable=True))
+    validate_composite_is_decomposeable(dummy_instance, "composite_node")
 
-    raise SimpleMixinError(
+
+def test_validate_composite_is_decomposeable_raises_error(subtests) -> None:
+    """Tests that non-decomposable composite raises SimpleRuntimeError with TypeError exception type."""
+
+    class MyClass:
+        meta = SimpleNamespace(is_decomposeable=False)
+
+    dummy_instance = MyClass()
+
+    assert_exception_function(
+        subtests,
+        validate_composite_is_decomposeable,
+        invalid_params=(dummy_instance, "non_decomposable_node"),
+        exception_type=SimpleRuntimeError,
         error_name="IMMUTABILITY COMPOSITE UPDATE ERROR",
         label="composite decomposability",
+        value="non_decomposable_node",
         expected="Composite nodes must support decomposition.",
-        value=name,
         problem=(
-            f"Composite '{name}' is not decomposable.",
-            "Inner values cannot be recalculated for this node."
+            "Composite 'non_decomposable_node' is not decomposable.",
+            "Inner values cannot be recalculated for this node.",
         ),
         context=(
-            f"Composite update attempted on instance '{type(instance).__name__}'.",
-            "The instance metadata reports that decomposition is disabled."
+            "Composite update attempted on instance 'MyClass'.",
+            "The instance metadata reports that decomposition is disabled.",
         ),
         how_to_fix=(
             "Enable decomposition for this composite node in its metadata.",
             "If the node is meant to be constant, use with_constant instead.",
-            "If decomposition is intentionally disabled, do not update this node as a composite."
+            "If decomposition is intentionally disabled, do not update this node as a composite.",
         ),
         exception=TypeError,
+        verbose=False,
     )
-
-
-_DESIGN_NOTES = """
-# validate_composite_is_decomposeable
-
-## Purpose
-Ensures that composite updates are only applied to nodes that support
-decomposition.  
-Composite updates require inner-node recalculation, which is impossible when
-`meta.is_decomposeable` is False.
-
-## Why this validation exists
-Decomposition is the mechanism that propagates composite values into their
-inner nodes.  
-If decomposition is disabled:
-
-- inner recalculation cannot run,
-- owner propagation becomes inconsistent,
-- the composite update would produce an invalid snapshot.
-
-Failing early prevents structural corruption.
-
-## Execution context
-This validation is used inside `with_composite` immediately after verifying
-that the composite name exists.  
-It is the second structural check before any snapshot manipulation occurs.
-
-## Notes
-- Pure validation function, no additional logic.
-- Used exclusively by the immutability pipeline.
-- Composite nodes must explicitly support decomposition.
-"""

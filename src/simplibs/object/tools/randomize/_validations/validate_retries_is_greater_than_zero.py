@@ -1,5 +1,5 @@
 # Outers
-from ....exceptions import SimpleLogicError
+from ....exceptions import SimpleRuntimeError
 
 
 def validate_retries_is_greater_than_zero(
@@ -11,13 +11,13 @@ def validate_retries_is_greater_than_zero(
         retries: Numeric retries attempt count to validate.
 
     Raises:
-        SimpleLogicError: If retries <= 0.
+        SimpleRuntimeError: If retries <= 0.
     """
 
     if retries > 0:
         return
 
-    raise SimpleLogicError(
+    raise SimpleRuntimeError(
         error_name="INVALID RETRIES BOUNDS ERROR",
         label="retries",
         expected="An integer strictly greater than 0 (e.g. 1, 5, 10).",

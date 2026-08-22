@@ -1,147 +1,196 @@
-from typing import TYPE_CHECKING
-# Outers
-from ...core_mixins import Snapshot
-# Annotations
-if TYPE_CHECKING:
-    from ...._core.protocols.mixins.state import DirtyTrackingProtocol
-    from ...._core.protocols.alias_typings import SnapshotDiffTuple, SnapshotTuple
+# 🧱 `DirtyTracking` — Snapshot-Based Change Detection
 
+`DirtyTracking` tracks whether a mutable instance has changed since a reference
+point — `is_dirty`, `dirty_paths`, `reset_to_clean()`, `mark_clean()` — the same
+concept as "unsaved changes" indicators in editors, generalized to nested composites.
+
+```python
+from ...core_mixins import Snapshot
 
 class DirtyTracking(Snapshot):
-    """
-    Modern snapshot-based dirty tracking.
-    Works for atoms, composites, and nested structures.
-    """
+    ...
+```
 
-    # ----------------------------------------
-    # Basic interface
-    # ----------------------------------------
+`_mutable_only = True`.
 
-    # Compatibility declaration
-    _mutable_only = True
+---
 
-    # Slot definition
-    __slots__ = ("_clean_snapshot",)
+## 🧭 Table of Contents
 
-    # ----------------------------------------
-    # Initialization hook
-    # ----------------------------------------
+* [`init_mixins`](#init_mixins)
+* [`is_dirty`](#is_dirty)
+* [`dirty_paths`](#dirty_paths)
+* [`clean_snapshot`](#clean_snapshot)
+* [`get_dirty_paths`](#get_dirty_paths)
+* [`reset_to_clean`](#reset_to_clean)
+* [`mark_clean`](#mark_clean)
 
-    # noinspection PyAttributeOutsideInit
-    def init_mixins(
-        self: "DirtyTrackingProtocol"
-    ) -> None:
-        """
-        Method forwarding its logic into the instance's initialization
-        process.
-        """
+---
 
-        # 1. Initialize parents
-        super().init_mixins()
+### `init_mixins`
 
-        # 2. Build a snapshot of the default state
-        self._clean_snapshot = self._build_snapshot()
+Captures the initial clean snapshot right after construction.
 
-    # ----------------------------------------
-    # Property - getters
-    # ----------------------------------------
+**Parameters:**
+* *(none)*
 
-    @property
-    def is_dirty(
-        self: "DirtyTrackingProtocol"
-    ) -> bool:
-        """True if the current state differs from the clean snapshot."""
-        current_snapshot = self._build_snapshot()
-        return current_snapshot != self._clean_snapshot
+**Returns:**
+* `None`
 
-    @property
-    def dirty_paths(
-        self: "DirtyTrackingProtocol"
-    ) -> "SnapshotDiffTuple":
-        """Returns a tuple of changed paths (path, old_value, new_value)."""
-        current_snapshot = self._build_snapshot()
-        return self._compare_snapshots(
-            self._clean_snapshot,
-            current_snapshot,
-            constants_only=True
-        )
+**Under the hood:**
+```python
+def init_mixins(self):
+    super().init_mixins()
+    self._clean_snapshot = self._build_snapshot()
+```
 
-    @property
-    def clean_snapshot(
-        self: "DirtyTrackingProtocol"
-    ) -> "SnapshotTuple":
-        return self._clean_snapshot
+[▲ Back to top](#-table-of-contents)
 
-    # ----------------------------------------
-    # Methods - GET DIRTY / RESET / MARK CLEAN
-    # ----------------------------------------
+---
 
-    def get_dirty_paths(
-        self: "DirtyTrackingProtocol",
-        *,
-        constants_only: bool = True
-    ) -> "SnapshotDiffTuple":
-        """Returns changed paths, with the option to include only constants or everything."""
-        return self._compare_snapshots(
-            self._clean_snapshot,
-            self._build_snapshot(),
-            constants_only=constants_only
-        )
+### `is_dirty`
 
-    def reset_to_clean(
-        self: "DirtyTrackingProtocol"
-    ) -> None:
-        """Restores the object to its clean snapshot."""
-        self._restore_snapshot(self._clean_snapshot)
+`True` if the current state differs from the clean snapshot.
 
-    def mark_clean(
-        self: "DirtyTrackingProtocol"
-    ) -> None:
-        """Marks the current state as the new clean snapshot."""
-        # noinspection PyAttributeOutsideInit
-        self._clean_snapshot = self._build_snapshot()
+**Parameters:**
+* *(none — property getter)*
 
+**Returns:**
+* `bool`
 
-_DESIGN_NOTES = """
-# DirtyTracking
+**Example usage:**
+```python
+person.first_name = "Bob"
+person.is_dirty  # True
+```
 
-## Purpose
-Tracks whether a mutable instance has changed since a reference point —
-`is_dirty`, `dirty_paths`, `reset_to_clean()`, `mark_clean()` — the same
-concept as "unsaved changes" indicators in editors, but generalized to
-any Simple instance, including nested composites.
+**Under the hood:**
+```python
+@property
+def is_dirty(self) -> bool:
+    current_snapshot = self._build_snapshot()
+    return current_snapshot != self._clean_snapshot
+```
 
-## Compatibility
-- `_mutable_only = True` — "dirty" only means something relative to
-  in-place changes; an immutable instance never mutates, so it can never
-  become dirty in this sense.
+[▲ Back to top](#-table-of-contents)
 
-## Logic
-- On `init_mixins`, a `_clean_snapshot` is captured immediately — the
-  instance starts out "clean" by definition, relative to its own initial
-  state.
-- `is_dirty` rebuilds a fresh snapshot and compares it against
-  `_clean_snapshot` for inequality — a full snapshot comparison on every
-  access, not a cached flag that's incrementally updated on each write.
-- `dirty_paths` and `get_dirty_paths(constants_only=...)` both delegate
-  to `_compare_snapshots` (from `Snapshot`), turning positional
-  differences into meaningful `(path, old, new)` triples.
-  `dirty_paths` is a fixed `constants_only=True` property; `get_dirty_paths`
-  is the more flexible method form, letting a caller include
-  composite-level changes too.
-- `reset_to_clean()` restores the instance back to `_clean_snapshot`,
-  discarding all changes since the last clean mark.
-- `mark_clean()` re-captures the current state as the new baseline —
-  useful after a "save" operation, where the current dirty state should
-  become the new clean reference point.
+---
 
-## Notes
-- "Modern" in the class docstring implies a prior, presumably
-  attribute-flag-based dirty-tracking approach existed before this
-  snapshot-based one — worth knowing if older code or docs reference a
-  different mechanism.
-- Every dirty check does a full snapshot rebuild and comparison rather
-  than tracking writes incrementally — simple and correct, but worth
-  keeping in mind for very large composites where this could become a
-  noticeable cost if checked frequently.
-"""
+### `dirty_paths`
+
+Returns the changed constant paths as `(path, old_value, new_value)` triples.
+
+**Parameters:**
+* *(none — property getter)*
+
+**Returns:**
+* `SnapshotDiffTuple`
+
+**Example usage:**
+```python
+person.dirty_paths
+```
+
+**Under the hood:**
+```python
+@property
+def dirty_paths(self):
+    current_snapshot = self._build_snapshot()
+    return self._compare_snapshots(
+        self._clean_snapshot, current_snapshot, constants_only=True
+    )
+```
+
+[▲ Back to top](#-table-of-contents)
+
+---
+
+### `clean_snapshot`
+
+Returns the stored clean snapshot itself.
+
+**Parameters:**
+* *(none — property getter)*
+
+**Returns:**
+* `SnapshotTuple`
+
+**Under the hood:**
+```python
+@property
+def clean_snapshot(self):
+    return self._clean_snapshot
+```
+
+[▲ Back to top](#-table-of-contents)
+
+---
+
+### `get_dirty_paths`
+
+Like `dirty_paths`, but lets the caller include composite-level changes too.
+
+**Parameters:**
+* `constants_only` (*bool*, keyword-only, default `True`)
+
+**Returns:**
+* `SnapshotDiffTuple`
+
+**Example usage:**
+```python
+person.get_dirty_paths(constants_only=False)
+```
+
+**Under the hood:**
+```python
+def get_dirty_paths(self, *, constants_only=True):
+    return self._compare_snapshots(
+        self._clean_snapshot, self._build_snapshot(), constants_only=constants_only
+    )
+```
+
+[▲ Back to top](#-table-of-contents)
+
+---
+
+### `reset_to_clean`
+
+Restores the object to its clean snapshot, discarding all changes.
+
+**Parameters:**
+* *(none)*
+
+**Returns:**
+* `None`
+
+**Under the hood:**
+```python
+def reset_to_clean(self) -> None:
+    self._restore_snapshot(self._clean_snapshot)
+```
+
+[▲ Back to top](#-table-of-contents)
+
+---
+
+### `mark_clean`
+
+Marks the current state as the new clean snapshot (e.g. after a "save").
+
+**Parameters:**
+* *(none)*
+
+**Returns:**
+* `None`
+
+**Under the hood:**
+```python
+def mark_clean(self) -> None:
+    self._clean_snapshot = self._build_snapshot()
+```
+
+[▲ Back to top](#-table-of-contents)
+
+---
+
+[⬅️ Back to Mixins Overview](../../../README_MIXINS_OVERVIEW.md)

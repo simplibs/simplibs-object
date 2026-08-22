@@ -1,23 +1,33 @@
-# Outers
-from ......exceptions import SimpleInstanceError
+import pytest
+from simplibs.object.exceptions import SimpleInitializationError
+from simplibs.exception.testing.assert_exception_function import assert_exception_function
+from simplibs.object._core.metadata.instance_builders.instance.validations.validate_param_is_bool import (
+    validate_param_is_bool,
+)
 
 
-def validate_param_is_bool(
-    as_atom: bool,
-) -> None:
-    """Validates that a parameter is of type bool."""
+@pytest.mark.parametrize("valid_bool", [True, False])
+def test_validate_param_is_bool_pass(valid_bool: bool) -> None:
+    """Tests that boolean values pass validation."""
 
-    # 1. Check type
-    if isinstance(as_atom, bool):
-        return
+    validate_param_is_bool(valid_bool)
 
-    # 2. Raise error
-    raise SimpleInstanceError(
+
+def test_validate_param_is_bool_raises_error(subtests) -> None:
+    """Tests that non-boolean values raise SimpleInitializationError."""
+
+    invalid_param = "True"
+
+    assert_exception_function(
+        subtests,
+        validate_param_is_bool,
+        invalid_params=(invalid_param,),
+        exception_type=SimpleInitializationError,
         error_name="INVALID PARAMETER",
         label="param_not_bool",
+        value=invalid_param,
         expected="Boolean value (True or False)",
-        value=as_atom,
-        problem=f"Parameter is not bool. Received: {as_atom!r} ({type(as_atom).__name__}).",
+        problem="Parameter is not bool. Received: 'True' (str).",
         context="create_instance(..., as_atom=...)",
         how_to_fix=(
             "Set the parameter to True or False.",
@@ -25,23 +35,5 @@ def validate_param_is_bool(
             "    create_instance(MyClass, mixins=(), as_atom=True)",
         ),
         exception=TypeError,
+        verbose=False,
     )
-
-
-_DESING_NOTES = """
-# validate_param_is_bool
-
-## Purpose
-Ensures that boolean configuration parameters (`as_atom`, `mutable`) are strictly
-typed as `bool`. Prevents silent coercion or accidental misuse of truthy/falsy
-values.
-
-## Behavior
-1. Checks whether the parameter is an instance of `bool`.
-2. If not, raises `SimpleInstanceError` with a clear remediation message.
-
-## Notes
-- Boolean flags control structural behavior (atomic vs composite, mutable vs immutable).
-- Accepting non-boolean values would break determinism in the instance‑builder pipeline.
-- This validator is used early to guarantee predictable branching logic.
-"""

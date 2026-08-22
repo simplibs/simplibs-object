@@ -1,52 +1,63 @@
-from typing import TYPE_CHECKING, Callable
-from simplibs.sentinels import UNSET
-# Annotations
-if TYPE_CHECKING:
-    from .....protocols.metadata import SimpleMetadataLike
-    from .....protocols.instance import SimpleInstanceLike
-
-
-def create_atom_init(
-    meta: "SimpleMetadataLike",
-    base_class_name: str,
-) -> Callable:
-    """Creates the __init__ method for atomic instances."""
-
-    # 1. Constructor closure
-    def __init__(self: "SimpleInstanceLike") -> None:
-        self._value = meta.default
-        self._owner = UNSET
-        self._locked = False
-        self.init_mixins()
-
-    # 2. Reflection alignment
-    __init__.__name__ = "__init__"
-    __init__.__qualname__ = f"{base_class_name}.__init__"
-    __init__.__annotations__ = {"return": None}
-
-    # 3. Return constructor
-    return __init__
-
-
-
-_DESIGN_NOTES = """
-# create_atom_init
-
-## Purpose
-Generates the `__init__` method for dynamically created atomic instance classes.
-The method is implemented as a closure so that metadata values (`meta.default`)
-are captured efficiently without repeated lookups.
-
-## Behavior
-1. Initializes:
-   - `_value` from metadata default,
-   - `_owner` as UNSET,
-   - `_locked` as False.
-2. Calls `init_mixins()` to allow dynamic extensions.
-3. Rebinds `__name__` and `__qualname__` so stack traces and introspection
-   show the method as a native member of the generated class.
-
-## Notes
-This function is internal to the instance-building pipeline and is not part of
-the public API.
 """
+Tests for `_core/metadata/instance_builders/atom_class/helpers/create_atom_init.py`.
+"""
+from types import SimpleNamespace
+from simplibs.object._core.metadata.instance_builders.atom_class.helpers.create_atom_init import (
+    create_atom_init,
+)
+from simplibs.sentinels import UNSET
+
+
+class FakeAtomInstance:
+    """Mock class providing the base methods required by an atomic instance."""
+    def init_mixins(self) -> None:
+        pass
+
+
+class TestCreateAtomInit:
+
+    def test_sets_value_to_meta_default(self):
+        meta = SimpleNamespace(default=42)
+        init = create_atom_init(meta, "FakeAtom")
+
+        instance = FakeAtomInstance()
+        init(instance)
+        assert instance._value == 42
+
+    def test_sets_owner_to_unset(self):
+        meta = SimpleNamespace(default=0)
+        init = create_atom_init(meta, "FakeAtom")
+
+        instance = FakeAtomInstance()
+        init(instance)
+        assert instance._owner is UNSET
+
+    def test_sets_locked_to_false(self):
+        meta = SimpleNamespace(default=0)
+        init = create_atom_init(meta, "FakeAtom")
+
+        instance = FakeAtomInstance()
+        init(instance)
+        assert instance._locked is False
+
+    def test_calls_init_mixins(self):
+        meta = SimpleNamespace(default=0)
+        init = create_atom_init(meta, "FakeAtom")
+
+        calls = []
+
+        class CustomFake(FakeAtomInstance):
+            def init_mixins(self):
+                calls.append(True)
+
+        instance = CustomFake()
+        init(instance)
+        assert calls == [True]
+
+    def test_reflection_alignment(self):
+        meta = SimpleNamespace(default=0)
+        init = create_atom_init(meta, "FakeAtom")
+
+        assert init.__name__ == "__init__"
+        assert init.__qualname__ == "FakeAtom.__init__"
+        assert init.__annotations__ == {"return": None}

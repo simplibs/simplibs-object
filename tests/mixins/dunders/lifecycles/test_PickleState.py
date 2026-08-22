@@ -1,68 +1,47 @@
-from typing import TYPE_CHECKING
-# Outers
-from ...core_mixins import Serialization
-# Annotations
-if TYPE_CHECKING:
-    from ...._core.protocols.mixins.dunders.lifecycles import PickleStateProtocol
-    from ...._core.protocols.alias_typings import StateDict
+"""
+Tests for `PickleState` mixin.
+"""
+import pytest
+from simplibs.object.mixins.core_mixins import Serialization
+from simplibs.object.mixins.dunders.lifecycles import PickleState
+from simplibs.object.testing import assert_simple_mixin
 
 
-class PickleState(Serialization):
-    """
-    Mixin poskytující pickle/unpickle chování založené na to_dict()/from_dict().
+class TestPickleStateStructure:
 
-    Tento mixin implementuje dundery __getstate__ a __setstate__ tak, aby
-    serializace probíhala přes čitelný dict (to_dict) a deserializace přes
-    metodu from_dict. Díky tomu je pickle stabilní, čitelný a nezávislý na
-    interní reprezentaci objektu.
+    def test_inherits_from_serialization(self):
+        assert issubclass(PickleState, Serialization)
 
-    Podmínky použití:
-    - Třída MUSÍ poskytovat metodu from_dict() (MutableSerialization nebo
-      ImmutableSerialization).
-    - Mixin funguje jak pro mutable instance (mutace in-place), tak pro
-      immutable instance (from_dict vrací novou instanci, kterou pickle
-      automaticky použije).
-    """
+    def test_slots_empty(self):
+        assert PickleState.__slots__ == ()
 
-    # ----------------------------------------
-    # Základní rozhraní
-    # ----------------------------------------
+    def test_assert_simple_mixin_shallow(self, subtests, Outer):
+        assert_simple_mixin(
+            subtests,
+            PickleState,
+            test_class=Outer,
+            method_names=("__getstate__", "__setstate__"),
+        )
 
-    # Definice slotů
-    __slots__ = ()
 
-    # ----------------------------------------
-    # Methods - GETSTATE / SETSTATE
-    # ----------------------------------------
+class TestPickleStateGetState:
 
-    def __getstate__(
-        self: "PickleStateProtocol"
-    ) -> "StateDict":
-        """
-        Vrací stav instance jako dict pomocí to_dict().
+    def test_getstate_matches_to_dict(self, Outer):
+        instance = Outer(mixins=(PickleState,))
+        assert instance.__getstate__() == instance.to_dict()
 
-        Pickle tento dict uloží jako reprezentaci objektu. Výhodou je, že
-        serializace je stabilní, čitelná a nezávislá na interních a privátních
-        atributech instance.
-        """
-        return self.to_dict()
 
-    def __setstate__(
-        self: "PickleStateProtocol",
-        state: "StateDict"
-    ) -> None:
-        """
-        Obnoví stav instance z dictu pomocí from_dict().
+class TestPickleStateSetState:
 
-        Kontroluje, zda třída poskytuje metodu from_dict(). Pokud ne, vyvolá
-        TypeError s jasným vysvětlením. Pro mutable instance se stav obnoví
-        přímo do self. Pro immutable instance from_dict() vrací novou instanci,
-        kterou pickle automaticky použije jako výsledný objekt.
-        """
-        if not hasattr(self.__class__, "from_dict"):
-            raise TypeError(
-                f"{self.__class__.__name__} requires a from_dict() method "
-                f"(provided by MutableSerialization or ImmutableSerialization)."
-            )
+    def test_setstate_mutable_updates_in_place(self, Outer):
+        instance = Outer(mixins=(PickleState,), mutable=True)
+        state = instance.to_dict()
+        state["third"] = 55
 
-        self.from_dict(state)
+        instance.__setstate__(state)
+
+        assert instance._nodes_dict["third"][0].value == 55
+
+    def test_setstate_requires_from_dict_method(self, Outer):
+        instance = Outer(mixins=(PickleState,), mutable=True)
+        assert hasattr(instance.__class__, "from_dict")

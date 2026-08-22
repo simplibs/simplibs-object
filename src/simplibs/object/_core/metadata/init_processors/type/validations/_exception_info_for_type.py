@@ -14,9 +14,10 @@ def _exception_info_for_type(
     class_name = owner_class.__name__
 
     # 2. Parent type (constant vs object)
+    from ......SimpleObject import SimpleObject
     class_parent = (
         "SimpleObject"
-        if "SimpleObject" in owner_class.__mro__
+        if SimpleObject in owner_class.__mro__
         else "SimpleConstant"
     )
 

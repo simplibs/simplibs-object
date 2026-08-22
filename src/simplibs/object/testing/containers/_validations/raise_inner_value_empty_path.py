@@ -1,12 +1,12 @@
 from typing import NoReturn
 # Outers
-from ....exceptions import SimpleLogicError
+from ....exceptions import SimpleRuntimeError
 
 
 def raise_inner_value_empty_path() -> NoReturn:
     """Raises a structured error when an InnerValue path resolution yields an empty path."""
 
-    raise SimpleLogicError(
+    raise SimpleRuntimeError(
         error_name="INNER VALUE EMPTY PATH ERROR",
         label="path",
         expected="A non-empty string path (e.g. 'address.city') or iterable of path parts.",
@@ -27,7 +27,7 @@ _DESIGN_NOTES = """
 # raise_inner_value_empty_path
 
 ## Purpose
-Raises a structured `SimpleLogicError` when an `InnerValue` instance is constructed 
+Raises a structured `SimpleRuntimeError` when an `InnerValue` instance is constructed 
 with an empty path specification.
 
 ## Why this validation exists

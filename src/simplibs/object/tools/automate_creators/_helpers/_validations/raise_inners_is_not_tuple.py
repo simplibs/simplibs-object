@@ -1,6 +1,6 @@
 from typing import Any, NoReturn
 # Outers
-from .....exceptions import SimpleLogicError
+from .....exceptions import SimpleRuntimeError
 
 
 def raise_inners_is_not_tuple(
@@ -8,7 +8,7 @@ def raise_inners_is_not_tuple(
     inners: Any
 ) -> NoReturn:
 
-    raise SimpleLogicError(
+    raise SimpleRuntimeError(
         error_name="INVALID INNERS CONTAINER TYPE ERROR",
         label="inners_is_not_tuple",
         expected="A tuple containing SimpleConstant subclasses",
@@ -37,5 +37,5 @@ Guarantees that the `inners` argument passed to composite creators is structured
 
 ## Behavior
 1. Uses a guard clause checking `isinstance(inners, tuple)`.
-2. Raises `SimpleLogicError` wrapping `TypeError` if non-tuple containers are passed.
+2. Raises `SimpleRuntimeError` wrapping `TypeError` if non-tuple containers are passed.
 """

@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, NoReturn
 # Outers
-from .....exceptions import SimpleLogicError
+from .....exceptions import SimpleRuntimeError
 # Annotations
 if TYPE_CHECKING:
     from ....protocols.classes import SimpleConstantProtocol
@@ -14,7 +14,7 @@ def raise_missing_value_error(
     class_name = cls.__name__
     expected_type = cls.meta.value_type_name
 
-    raise SimpleLogicError(
+    raise SimpleRuntimeError(
         error_name="MISSING VALUE ERROR",
         label="value",
         value=None,
@@ -57,7 +57,7 @@ replace `None` with the class’s default value.
 ---
 
 ## Behavior
-- Always raises a structured `SimpleLogicError`.
+- Always raises a structured `SimpleRuntimeError`.
 - Explains that the class requires a concrete value.
 - Provides guidance on how to use `process_none=True` when appropriate.
 

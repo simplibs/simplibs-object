@@ -1,120 +1,157 @@
-from typing import TYPE_CHECKING
+# 🧱 `Serialization` — Universal Import/Export API
+
+`Serialization` is the universal, "master" import/export mixin — `to_dict()` /
+`to_json()` for reading an instance out as plain data, and `from_dict()` /
+`from_json()` / `update_constants()` for rebuilding or updating one from plain data. It
+automatically respects mutable-vs-immutable mode without branching itself.
+
+```python
 import json
-# Inners
 from .Infrastructure import Infrastructure
 from ._utils.serialization import to_dict, from_dict, from_dict_constants
-# Annotations
-if TYPE_CHECKING:
-    from ..._core.protocols.mixins.core_mixins import SerializationProtocol
-    from ..._core.protocols.alias_typings import StateDict
-
 
 class Serialization(Infrastructure):
-    """
-    Universal master mixin for complete object serialization and
-    deserialization.
+    ...
+```
 
-    Covers both export (to_dict, to_json) and import (from_dict,
-    from_json, update). Thanks to a built-in closed type system, it
-    automatically reacts to whether the object operates in mutable mode
-    (in-place mutation) or immutable mode (returns a modified new
-    instance).
-    """
+---
 
-    # ----------------------------------------
-    # Basic interface
-    # ----------------------------------------
+## 🧭 Table of Contents
 
-    # Slot definition
-    __slots__ = ()
+* [`to_dict`](#to_dict)
+* [`to_json`](#to_json)
+* [`from_dict`](#from_dict)
+* [`from_json`](#from_json)
+* [`update_constants`](#update_constants)
 
-    # ----------------------------------------
-    # Methods - EXPORT TO DICT / JSON
-    # ----------------------------------------
+---
 
-    def to_dict(
-        self: "SerializationProtocol",
-        *,
-        constant_only: bool = False
-    ) -> "StateDict":
-        """Serializes the instance into a readable flat dict."""
-        return to_dict(self, constant_only=constant_only)
+### `to_dict`
 
-    def to_json(
-        self: "SerializationProtocol",
-        **kwargs
-    ) -> str:
-        """Serializes the instance into a JSON string."""
-        return json.dumps(self.to_dict(), ensure_ascii=False, **kwargs)
+Serializes the instance into a readable flat dict.
 
-    # ----------------------------------------
-    # Methods - IMPORT & UPDATE FROM DICT / JSON
-    # ----------------------------------------
+**Parameters:**
+* `constant_only` (*bool*, keyword-only, default `False`): if `True`, only constants
+  (atoms) are included.
 
-    def from_dict(
-        self: "SerializationProtocol",
-        user_dict: "StateDict"
-    ) -> "SerializationProtocol":
-        """
-        Reconstructs the instance's state from the given dict.
+**Returns:**
+* `StateDict`: a flat dict representation of the instance.
 
-        - In mutable mode: modifies the instance directly in place.
-        - In immutable mode: returns a new, modified instance.
-        """
-        return from_dict(self, user_dict)
+**Example usage:**
+```python
+data = person.to_dict()
+# {"first_name": "Alice", "last_name": "Smith"}
+```
 
-    def from_json(
-        self: "SerializationProtocol",
-        json_str: str
-    ) -> "SerializationProtocol":
-        """Reconstructs the instance's state from a JSON string."""
-        return self.from_dict(json.loads(json_str))
+**Under the hood:**
+```python
+def to_dict(self, *, constant_only: bool = False) -> dict:
+    return to_dict(self, constant_only=constant_only)
+```
 
-    def update_constants(
-        self: "SerializationProtocol",
-        user_dict: "StateDict"
-    ) -> "SerializationProtocol":
-        """
-        Updates constants (atoms) from the given dict.
-        The dict may be partial. Respects mutable/immutable mode.
-        """
-        return from_dict_constants(self, user_dict)
+[▲ Back to top](#-table-of-contents)
 
+---
 
-_DESIGN_NOTES = """
-# Serialization
+### `to_json`
 
-## Purpose
-The universal, "master" import/export mixin — `to_dict()`/`to_json()` for
-reading an instance out as plain data, and `from_dict()`/`from_json()`/
-`update_constants()` for rebuilding or updating one from plain data.
+Serializes the instance into a JSON string, via `to_dict()`.
 
-## Compatibility
-- No compatibility flags — deliberately universal. Rather than branching
-  on mutability itself, this mixin relies on `from_dict`/`from_dict_constants`
-  internally detecting the instance's mode and doing the right thing.
+**Parameters:**
+* `**kwargs`: forwarded to `json.dumps`.
 
-## Logic
-- `to_dict(constant_only=False)` and `to_json(**kwargs)` are thin
-  wrappers over the `to_dict` utility — `to_json` simply forwards
-  `self.to_dict()` into `json.dumps`, passing through any extra kwargs
-  (indent, sort_keys, etc.) and forcing `ensure_ascii=False` so non-ASCII
-  text serializes readably rather than as escape sequences.
-- `from_dict(user_dict)` delegates entirely to the `from_dict` utility,
-  which is where the mutable-vs-immutable branching actually lives:
-  **mutable** instances are updated in place and `self` is effectively
-  returned; **immutable** instances get a new instance back, unaffected
-  by the original.
-- `from_json(json_str)` is just `json.loads` piped into `from_dict`.
-- `update_constants(user_dict)` is the partial-update variant — it only
-  touches constants (atoms), and accepts a dict that doesn't need to
-  cover every field, delegating to `from_dict_constants`.
+**Returns:**
+* `str`: JSON representation of the instance.
 
-## Notes
-- Because this mixin builds on `Infrastructure` (→ `NodesDicts` +
-  `Snapshot`), the serialization utilities it calls have direct access to
-  the node tree and snapshot machinery without re-deriving it.
-- `PickleState` (in the dunders package) builds directly on top of this
-  mixin's `to_dict()`/`from_dict()` for `pickle` support — this is the
-  shared foundation both "plain" serialization and pickling rely on.
-"""
+**Example usage:**
+```python
+json_str = person.to_json(indent=2)
+```
+
+**Under the hood:**
+```python
+def to_json(self, **kwargs) -> str:
+    return json.dumps(self.to_dict(), ensure_ascii=False, **kwargs)
+```
+
+[▲ Back to top](#-table-of-contents)
+
+---
+
+### `from_dict`
+
+Reconstructs the instance's state from a dict. Mutable instances are updated in place;
+immutable instances return a new instance.
+
+**Parameters:**
+* `user_dict` (*StateDict*): the dict to reconstruct from.
+
+**Returns:**
+* `SerializationProtocol`: `self` (mutable) or a new instance (immutable).
+
+**Example usage:**
+```python
+person = person.from_dict({"first_name": "Bob"})
+```
+
+**Under the hood:**
+```python
+def from_dict(self, user_dict: dict) -> "Serialization":
+    return from_dict(self, user_dict)
+```
+
+[▲ Back to top](#-table-of-contents)
+
+---
+
+### `from_json`
+
+Reconstructs the instance's state from a JSON string, via `from_dict()`.
+
+**Parameters:**
+* `json_str` (*str*): the JSON string to reconstruct from.
+
+**Returns:**
+* `SerializationProtocol`: `self` (mutable) or a new instance (immutable).
+
+**Example usage:**
+```python
+person = person.from_json('{"first_name": "Bob"}')
+```
+
+**Under the hood:**
+```python
+def from_json(self, json_str: str) -> "Serialization":
+    return self.from_dict(json.loads(json_str))
+```
+
+[▲ Back to top](#-table-of-contents)
+
+---
+
+### `update_constants`
+
+Updates only the constants (atoms) from a possibly partial dict.
+
+**Parameters:**
+* `user_dict` (*StateDict*): a partial dict containing only constant fields to update.
+
+**Returns:**
+* `SerializationProtocol`: `self` (mutable) or a new instance (immutable).
+
+**Example usage:**
+```python
+person = person.update_constants({"first_name": "Bob"})
+```
+
+**Under the hood:**
+```python
+def update_constants(self, user_dict: dict) -> "Serialization":
+    return from_dict_constants(self, user_dict)
+```
+
+[▲ Back to top](#-table-of-contents)
+
+---
+
+[⬅️ Back to Mixins Overview](../../README_MIXINS_OVERVIEW.md)

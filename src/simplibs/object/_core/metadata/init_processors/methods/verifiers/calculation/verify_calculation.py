@@ -21,6 +21,9 @@ def verify_calculation(
 ) -> Any:
     """Executes a dry-run of the method and validates its return type and structure."""
 
+    if bound_method is UNSET:
+        return UNSET
+
     # 1. Initialize result placeholder
     calculate_result = UNSET
 

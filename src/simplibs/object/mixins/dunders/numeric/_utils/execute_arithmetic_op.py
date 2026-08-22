@@ -93,8 +93,11 @@ The function supports both:
 
 It resolves the operand via:
 
+
 ```
+
 other_value = getattr(other, "value", other)
+
 ```
 
 ### 2. Direct computation
@@ -105,15 +108,21 @@ The operator is executed in the correct direction:
 
 If successful, a new composite instance is created using:
 
+
 ```
+
 with_composite(self, self.meta.name_snake, value)
+
 ```
 
 ### 3. Lazy fallback type alignment
 If the operation fails with `TypeError`, the function attempts safe alignment:
 
+
 ```
+
 coerced = _align_operand_type(self, other_value)
+
 ```
 
 This allows operations like:
@@ -129,8 +138,11 @@ The operator is retried with the aligned operand.
 
 If it still fails, the function returns:
 
+
 ```
+
 NotImplemented
+
 ```
 
 which correctly signals Python to try the reversed dunder or raise an error.

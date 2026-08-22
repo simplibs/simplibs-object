@@ -1,172 +1,188 @@
-from typing import TYPE_CHECKING, Any
+# 🧱 `Bitwise` — Bitwise Operators for Atoms
+
+`Bitwise` gives a SimpleObject atom the standard bitwise operators (`&`, `|`, `^`,
+`<<`, `>>`, `~`), including reflected forms, so integer-valued constants behave like
+plain `int` in bit-manipulation code.
+
+```python
 import operator
 from numbers import Integral
-# Outers
 from ...core_mixins import NodesDicts, Snapshot
-from ..._common_logic.immutability import with_constant
-# Inners
+from ..._commons.immutability import with_constant
 from ._utils import execute_bitwise_op
-# Annotations
-if TYPE_CHECKING:
-    from ...._core.protocols.mixins.dunders.numeric import BitwiseProtocol
-
 
 class Bitwise(NodesDicts, Snapshot):
-    """
-    Provides bitwise operations (&, |, ^, <<, >>, ~) for SimpleObject
-    atoms.
+    ...
+```
 
-    Properties:
-    - works only for atoms (constants)
-    - works only for integral types (int, custom integer-like types)
-    - operations are pure -> return a new instance via the with_constant
-      pipeline
-    """
+`_constant_only = True`, `_only_types = Integral` — restricted to atoms holding
+integral values.
 
-    # ----------------------------------------
-    # Basic interface
-    # ----------------------------------------
+---
 
-    # Compatibility declaration
-    _constant_only = True
-    _only_types = Integral
+## 🧭 Table of Contents
 
-    # Slot definition
-    __slots__ = ()
+* [`__and__` / `__rand__`](#__and__--__rand__)
+* [`__or__` / `__ror__`](#__or__--__ror__)
+* [`__xor__` / `__rxor__`](#__xor__--__rxor__)
+* [`__lshift__` / `__rlshift__`](#__lshift__--__rlshift__)
+* [`__rshift__` / `__rrshift__`](#__rshift__--__rrshift__)
+* [`__invert__`](#__invert__)
 
-    # ----------------------------------------
-    # Methods - & (Bitwise AND)
-    # ----------------------------------------
-    def __and__(
-        self: "BitwiseProtocol",
-        other: Any
-    ) -> "BitwiseProtocol":
-        """Returns a new instance with the value self.value & other."""
-        return execute_bitwise_op(self, operator.and_, other)
+---
 
-    def __rand__(
-        self: "BitwiseProtocol",
-        other: Any
-    ) -> "BitwiseProtocol":
-        """Returns a new instance with the value other & self.value."""
-        return execute_bitwise_op(self, operator.and_, other, is_reversed=True)
+### `__and__` / `__rand__`
 
-    # ----------------------------------------
-    # Methods - | (Bitwise OR)
-    # ----------------------------------------
-    def __or__(
-        self: "BitwiseProtocol",
-        other: Any
-    ) -> "BitwiseProtocol":
-        """Returns a new instance with the value self.value | other."""
-        return execute_bitwise_op(self, operator.or_, other)
+Returns a new instance with the value `self.value & other` (or reversed).
 
-    def __ror__(
-        self: "BitwiseProtocol",
-        other: Any
-    ) -> "BitwiseProtocol":
-        """Returns a new instance with the value other | self.value."""
-        return execute_bitwise_op(self, operator.or_, other, is_reversed=True)
+**Parameters:**
+* `other` (*Any*)
 
-    # ----------------------------------------
-    # Methods - ^ (Bitwise XOR)
-    # ----------------------------------------
-    def __xor__(
-        self: "BitwiseProtocol",
-        other: Any
-    ) -> "BitwiseProtocol":
-        """Returns a new instance with the value self.value ^ other."""
-        return execute_bitwise_op(self, operator.xor, other)
+**Returns:**
+* a new instance.
 
-    def __rxor__(
-        self: "BitwiseProtocol",
-        other: Any
-    ) -> "BitwiseProtocol":
-        """Returns a new instance with the value other ^ self.value."""
-        return execute_bitwise_op(self, operator.xor, other, is_reversed=True)
+**Example usage:**
+```python
+flags & 0b0011
+```
 
-    # ----------------------------------------
-    # Methods - << (Bitwise Left Shift)
-    # ----------------------------------------
-    def __lshift__(
-        self: "BitwiseProtocol",
-        other: Any
-    ) -> "BitwiseProtocol":
-        """Returns a new instance with the value self.value << other."""
-        return execute_bitwise_op(self, operator.lshift, other)
+**Under the hood:**
+```python
+def __and__(self, other):
+    return execute_bitwise_op(self, operator.and_, other)
+```
 
-    def __rlshift__(
-        self: "BitwiseProtocol",
-        other: Any
-    ) -> "BitwiseProtocol":
-        """Returns a new instance with the value other << self.value."""
-        return execute_bitwise_op(self, operator.lshift, other, is_reversed=True)
+[▲ Back to top](#-table-of-contents)
 
-    # ----------------------------------------
-    # Methods - >> (Bitwise Right Shift)
-    # ----------------------------------------
-    def __rshift__(
-        self: "BitwiseProtocol",
-        other: Any
-    ) -> "BitwiseProtocol":
-        """Returns a new instance with the value self.value >> other."""
-        return execute_bitwise_op(self, operator.rshift, other)
+---
 
-    def __rrshift__(
-        self: "BitwiseProtocol",
-        other: Any
-    ) -> "BitwiseProtocol":
-        """Returns a new instance with the value other >> self.value."""
-        return execute_bitwise_op(self, operator.rshift, other, is_reversed=True)
+### `__or__` / `__ror__`
 
-    # ----------------------------------------
-    # Methods - ~x (Bitwise Invert / Unary operator)
-    # ----------------------------------------
-    def __invert__(
-        self: "BitwiseProtocol",
-    ) -> Any:
-        """Returns a new instance with the value ~self.value."""
-        try:
-            value = ~self.value
-            return with_constant(self, self.meta.name_snake, value)
-        except TypeError:
-            return NotImplemented
+Same shape, using `operator.or_`.
 
+**Parameters:**
+* `other` (*Any*)
 
-_DESIGN_NOTES = """
-# Bitwise
+**Returns:**
+* a new instance holding `self.value | other` (or reversed).
 
-## Purpose
-Gives a SimpleObject atom the standard bitwise operators (`&`, `|`, `^`,
-`<<`, `>>`, `~`), including reflected forms, so integer-valued constants
-behave like plain `int` in bit-manipulation code — flags, masks, bit
-shifting, etc.
+**Example usage:**
+```python
+flags | 0b0100
+```
 
-## Compatibility
-- `_constant_only = True` — bitwise operations only make sense on a
-  single scalar value, not on a composite's tree of inners, so this
-  mixin is restricted to atoms.
-- `_only_types = Integral` — narrower than `Arithmetic`'s `Number`: bit
-  operations are only meaningful on integral types (`int` and
-  integer-like custom types), not on floats.
+**Under the hood:**
+```python
+def __or__(self, other):
+    return execute_bitwise_op(self, operator.or_, other)
+```
 
-## Logic
-`&`, `|`, `^`, `<<`, `>>` all follow the same pattern as `Arithmetic`:
-delegate to `execute_bitwise_op` with the matching `operator.*` function,
-using `is_reversed=True` for the reflected variants.
+[▲ Back to top](#-table-of-contents)
 
-`__invert__` (`~x`) is handled separately since it's unary and has no
-reflected counterpart: it computes `~self.value` directly and wraps the
-result via `with_constant`, catching `TypeError` and returning
-`NotImplemented` if the value doesn't support inversion.
+---
 
-## Notes
-- "Operations are pure" — every operator returns a **new** instance via
-  the `with_constant` pipeline rather than mutating in place, consistent
-  with `Arithmetic`.
-- Deliberately narrower than `Arithmetic` in two ways at once
-  (`_constant_only` + `Integral`) — this is what distinguishes "a
-  constant that behaves like an int with bit ops" from "a value that
-  supports general math," which composites and floats can still get via
-  `Arithmetic` alone.
-"""
+### `__xor__` / `__rxor__`
+
+Same shape, using `operator.xor`.
+
+**Parameters:**
+* `other` (*Any*)
+
+**Returns:**
+* a new instance holding `self.value ^ other` (or reversed).
+
+**Example usage:**
+```python
+flags ^ 0b0001
+```
+
+**Under the hood:**
+```python
+def __xor__(self, other):
+    return execute_bitwise_op(self, operator.xor, other)
+```
+
+[▲ Back to top](#-table-of-contents)
+
+---
+
+### `__lshift__` / `__rlshift__`
+
+Same shape, using `operator.lshift`.
+
+**Parameters:**
+* `other` (*Any*)
+
+**Returns:**
+* a new instance holding `self.value << other` (or reversed).
+
+**Example usage:**
+```python
+flags << 1
+```
+
+**Under the hood:**
+```python
+def __lshift__(self, other):
+    return execute_bitwise_op(self, operator.lshift, other)
+```
+
+[▲ Back to top](#-table-of-contents)
+
+---
+
+### `__rshift__` / `__rrshift__`
+
+Same shape, using `operator.rshift`.
+
+**Parameters:**
+* `other` (*Any*)
+
+**Returns:**
+* a new instance holding `self.value >> other` (or reversed).
+
+**Example usage:**
+```python
+flags >> 1
+```
+
+**Under the hood:**
+```python
+def __rshift__(self, other):
+    return execute_bitwise_op(self, operator.rshift, other)
+```
+
+[▲ Back to top](#-table-of-contents)
+
+---
+
+### `__invert__`
+
+Returns a new instance with the value `~self.value`. Unary — no reflected form.
+
+**Parameters:**
+* *(none)*
+
+**Returns:**
+* a new instance, or `NotImplemented` if the value doesn't support inversion.
+
+**Example usage:**
+```python
+~flags
+```
+
+**Under the hood:**
+```python
+def __invert__(self):
+    try:
+        value = ~self.value
+        return with_constant(self, self.meta.name_snake, value)
+    except TypeError:
+        return NotImplemented
+```
+
+[▲ Back to top](#-table-of-contents)
+
+---
+
+[⬅️ Back to Mixins Overview](../../../README_MIXINS_OVERVIEW.md)

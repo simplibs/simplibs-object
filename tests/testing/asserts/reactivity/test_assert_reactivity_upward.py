@@ -1,71 +1,49 @@
-from typing import Any, TYPE_CHECKING
+"""
+Tests for `testing/asserts/reactivity/assert_reactivity_upward.py`.
+"""
 import pytest
-from simplibs.exception.testing import maybe_subtest
-# Outers
-from ...tools.InnerValue import InnerValue
-from ..base.assert_value_change import assert_value_change
-# Annotations
-if TYPE_CHECKING:
-    from ...._core.protocols import SimpleInstanceLike
+from simplibs.object.testing.asserts.reactivity.assert_reactivity_upward import (
+    assert_reactivity_upward,
+)
+from simplibs.object.testing.containers.InnerValue import InnerValue
 
 
-def assert_reactivity_upward(
-    subtests: Any,
-    instance: "SimpleInstanceLike",
-    *,
-    new_value: InnerValue,
-    verbose: bool = True,
-    verbose_value_change: bool = True,
-    intro: str = "",
-) -> None:
-    """
-    Verifies upward reactivity of composite instances:
-    - inner value change must update composite value
-    """
+class TestAssertReactivityUpwardHappyPath:
 
-    subintro = "test_reactivity_upward::"
-
-    # 1) Capture original composite value
-    with maybe_subtest(
-        subtests,
-        name=f"{intro}{subintro}capture_original_composite",
-        verbose=verbose,
+    def test_passes_when_inner_change_propagates_to_root(
+        self, NonDecomposablePairObject, subtests
     ):
-        original_composite_value = instance.value
+        instance = NonDecomposablePairObject(mixins=())
+        iv = InnerValue(path="first", value=instance.first + 1)
 
-    # 2) new_value MUST be InnerValue
-    with maybe_subtest(
-        subtests,
-        name=f"{intro}{subintro}validate_input_type",
-        verbose=verbose,
-    ):
-        if not isinstance(new_value, InnerValue):
-            pytest.fail(
-                "Upward reactivity requires InnerValue, direct value cannot be used."
-            )
+        assert_reactivity_upward(subtests, instance, new_value=iv)
 
-    # 3) Apply inner value change (validation + setter handled inside)
-    with maybe_subtest(
-        subtests,
-        name=f"{intro}{subintro}apply_inner_value",
-        verbose=verbose,
-    ):
-        assert_value_change(
-            subtests,
-            instance,
-            value=new_value,
-            verbose=verbose_value_change and verbose,
-            intro=intro,
-        )
+    def test_root_value_reflects_new_sum(self, NonDecomposablePairObject, subtests):
+        instance = NonDecomposablePairObject(mixins=())
+        original_second = instance.second
+        iv = InnerValue(path="first", value=50)
 
-    # 4) Composite value MUST change
-    with maybe_subtest(
-        subtests,
-        name=f"{intro}{subintro}composite_changed",
-        verbose=verbose,
+        assert_reactivity_upward(subtests, instance, new_value=iv)
+        assert instance.value == 50 + original_second
+
+
+class TestAssertReactivityUpwardRequiresInnerValue:
+
+    def test_raw_value_instead_of_inner_value_fails(
+        self, NonDecomposablePairObject, subtests
     ):
-        if instance.value == original_composite_value:
-            pytest.fail(
-                "Composite value did not change after inner update — "
-                "upward reactivity is broken."
-            )
+        instance = NonDecomposablePairObject(mixins=())
+        with pytest.raises(BaseException):
+            assert_reactivity_upward(subtests, instance, new_value=5, verbose=False)
+
+
+class TestAssertReactivityUpwardNoChange:
+
+    def test_fails_when_inner_value_does_not_actually_change_root(
+        self, NonDecomposablePairObject, subtests
+    ):
+        instance = NonDecomposablePairObject(mixins=())
+        iv = InnerValue(path="first", value=instance.first)
+
+        with pytest.raises(BaseException):
+            assert_reactivity_upward(subtests, instance, new_value=iv, verbose=False)

@@ -1,66 +1,59 @@
-from typing import Any, TYPE_CHECKING
-import copy as _copy
-# Outers
-from ...core_mixins import NodesDicts, Snapshot
-from ..._commons.immutability import create_new_instance
-# Annotations
-if TYPE_CHECKING:
-    from ...._core.protocols.mixins.dunders.lifecycles import CopyableProtocol
+"""
+Tests for `Copyable` mixin.
+"""
+import copy
+import pytest
+from simplibs.object.mixins.core_mixins import NodesDicts, Snapshot
+from simplibs.object.mixins.dunders.lifecycles import Copyable
+from simplibs.object.testing import assert_simple_mixin
 
 
-class Copyable(NodesDicts, Snapshot):
-    """
-    Společný mixin pro mutable a immutbale verzy.
+class TestCopyableStructure:
 
-    Mutable lifecycle:
-    - mělká kopie přes create_instance(validate=False)
-    - hluboká kopie přes create_instance(validate=False)
+    def test_inherits_from_nodes_dicts_and_snapshot(self):
+        assert issubclass(Copyable, NodesDicts)
+        assert issubclass(Copyable, Snapshot)
 
-    Immutable lifecycle:
-    - mělká kopie přes snapshot
-    - hluboká kopie přes deepcopy snapshotu
-    """
+    def test_slots_empty(self):
+        assert Copyable.__slots__ == ()
 
-    # ----------------------------------------
-    # Základní rozhraní
-    # ----------------------------------------
-
-    # Definice slotů
-    __slots__ = ()
-
-    # ----------------------------------------
-    # Methods - COPY / DEEPCOPY
-    # ----------------------------------------
-
-    def __copy__(
-        self: "CopyableProtocol"
-    ) -> "CopyableProtocol":
-        """
-        Vytvoří a vrátí mělkou kopii (shallow copy) této instance.
-        Bezpečně reaguje na mutable/immutable režim objektu.
-        """
-
-        # 1. Vytvoření snapshotu
-        snapshot = self._build_snapshot()
-
-        # 2. Vytvoření a vrácení nové instace
-        return create_new_instance(self, snapshot)
-
-    def __deepcopy__(
-        self: "CopyableProtocol",
-        memo: dict[int, Any]
-    ) -> "CopyableProtocol":
-        """
-        Vytvoří a vrátí hlubokou kopii (deep copy) této instance.
-        Slovník `memo` slouží k internímu sledování již navštívených
-        objektů kvůli zamezení zacyklení.
-        """
-
-        # 1. Vytvoření snapshotu
-        snapshot = tuple(
-            _copy.deepcopy(v, memo)
-            for v in self._build_snapshot()
+    def test_assert_simple_mixin_shallow(self, subtests, Outer):
+        assert_simple_mixin(
+            subtests,
+            Copyable,
+            test_class=Outer,
+            method_names=("__copy__", "__deepcopy__"),
         )
 
-        # 2. Vytvoření a vrácení nové instace
-        return create_new_instance(self, snapshot)
+
+class TestCopyableShallowCopy:
+
+    def test_copy_returns_new_instance(self, Outer):
+        instance = Outer(mixins=(Copyable,), mutable=False)
+        result = copy.copy(instance)
+        assert result is not instance
+
+    def test_copy_matches_original_state(self, Outer):
+        instance = Outer(mixins=(Copyable,), mutable=False)
+        result = copy.copy(instance)
+        assert result._build_snapshot() == instance._build_snapshot()
+
+    def test_copy_works_for_mutable_instance(self, Outer):
+        instance = Outer(mixins=(Copyable,), mutable=True)
+        result = copy.copy(instance)
+        assert result is not instance
+        assert result._build_snapshot() == instance._build_snapshot()
+
+
+class TestCopyableDeepCopy:
+
+    def test_deepcopy_returns_new_instance(self, Outer):
+        instance = Outer(mixins=(Copyable,), mutable=False)
+        result = copy.deepcopy(instance)
+        assert result is not instance
+        assert result._build_snapshot() == instance._build_snapshot()
+
+    def test_deepcopy_via_direct_dunder_call(self, Outer):
+        instance = Outer(mixins=(Copyable,), mutable=False)
+        result = instance.__deepcopy__({})
+        assert result._build_snapshot() == instance._build_snapshot()

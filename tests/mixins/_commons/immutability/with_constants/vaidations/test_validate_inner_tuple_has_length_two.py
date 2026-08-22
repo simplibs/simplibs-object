@@ -1,35 +1,45 @@
-from typing import TYPE_CHECKING, NoReturn
-# Outers
-from ......exceptions import SimpleMixinError
-# Annotations
-if TYPE_CHECKING:
-    from ......_core.protocols.mixins.core_mixins import InfrastructureProtocol
+from simplibs.object.exceptions import SimpleRuntimeError
+from simplibs.exception.testing.assert_exception_function import assert_exception_function
+from simplibs.object.mixins._common_logic.immutability.with_constants.vaidations.validate_inner_tuple_has_length_two import (
+    validate_inner_tuple_has_length_two,
+)
 
 
-def validate_inner_tuple_has_length_two(
-    instance: "InfrastructureProtocol",
-    inner_tuple: object,
-) -> None:
-    """
-    Validates that the provided inner_tuple has exactly two items:
-    (name, value).
-    """
+def test_validate_inner_tuple_has_length_two_success() -> None:
+    """Tests that valid 2-item tuple passes without error."""
 
-    if isinstance(inner_tuple, tuple) and len(inner_tuple) == 2:
-        return
+    class MyClass:
+        pass
 
-    raise SimpleMixinError(
+    dummy_instance = MyClass()
+    validate_inner_tuple_has_length_two(dummy_instance, ("attr", 123))
+
+
+def test_validate_inner_tuple_has_length_two_raises_error(subtests) -> None:
+    """Tests that invalid length tuple raises SimpleRuntimeError."""
+
+    class MyClass:
+        pass
+
+    dummy_instance = MyClass()
+    invalid_tuple = ("attr", 123, "extra")
+
+    assert_exception_function(
+        subtests,
+        validate_inner_tuple_has_length_two,
+        invalid_params=(dummy_instance, invalid_tuple),
+        exception_type=SimpleRuntimeError,
         error_name="IMMUTABILITY BATCH UPDATE ERROR",
         label="change item length",
+        value="length=3",
         expected="Tuple of exactly two items: (name, value).",
-        value=f"length={len(inner_tuple)}" if isinstance(inner_tuple, tuple) else "not a tuple",
         problem=(
             "Invalid structure for change item. ",
-            "Each change must be a 2‑item tuple representing (name, value)."
+            "Each change must be a 2‑item tuple representing (name, value).",
         ),
         context=(
-            f"Batch update attempted on instance '{type(instance).__name__}'. ",
-            "The provided tuple does not have exactly two items."
+            "Batch update attempted on instance 'MyClass'. ",
+            "The provided tuple does not have exactly two items.",
         ),
         how_to_fix=(
             "Ensure each change is provided as a 2‑item tuple.",
@@ -37,55 +47,5 @@ def validate_inner_tuple_has_length_two(
             "Incorrect formats include: (name,), (name, value, extra), or any other size.",
         ),
         exception=ValueError,
+        verbose=False,
     )
-
-
-_DESIGN_NOTES = """
-# validate_inner_tuple_has_length_two
-
-## Purpose
-Ensures that each change item inside a batch update has exactly two elements:
-`(name, value)`.  
-This is the minimal structural requirement for immutable updates — without it,
-the pipeline cannot determine what should be updated or how.
-
-## Architectural reasoning
-The immutability pipeline relies on strict tuple structure:
-
-- index `0` → the node name,
-- index `1` → the new value.
-
-If the tuple has a different length:
-
-- unpacking becomes ambiguous,
-- routing logic cannot determine whether the item is a constant or composite,
-- validation cannot proceed,
-- debugging becomes significantly harder.
-
-Failing early prevents structural corruption.
-
-## Pipeline position
-This validation is part of step **4.3.1** in `with_constants`:
-
-1. Check that `inner_tuple` has length 2.  
-2. If not → raise this error immediately.  
-3. No further validation is performed on this item.
-
-This ensures that only structurally correct items enter deeper validation layers.
-
-## Diagnostic value
-The error message provides:
-
-- the actual tuple length,
-- the expected structure,
-- the context of the batch update,
-- actionable steps to fix the issue.
-
-This makes the error friendly, actionable, and easy to understand.
-
-## Notes
-- This is a pure validation function: it performs no additional logic.
-- It is used by both `with_constants` and `with_any`.
-- All batch update items must pass this check before further validation.
-
-"""

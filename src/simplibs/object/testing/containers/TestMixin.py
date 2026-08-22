@@ -15,6 +15,8 @@ class TestMixin(SimpleMixin):
         - Dynamic class structure extension hooks (``__extend_instance_class__``)
     """
 
+    __test__ = False  # Prevents pytest from discovering this class as a test suite
+
     # ------------------------------------------------------------
     # Compatibility Flags (Unrestricted for test flexibility)
     # ------------------------------------------------------------
@@ -38,7 +40,6 @@ class TestMixin(SimpleMixin):
         Sets the test slot attribute to a deterministic default value to enable
         downstream slot presence and initialization assertions.
         """
-        super().init_mixins()
         self._test_slot = "test_value"
 
     # ------------------------------------------------------------

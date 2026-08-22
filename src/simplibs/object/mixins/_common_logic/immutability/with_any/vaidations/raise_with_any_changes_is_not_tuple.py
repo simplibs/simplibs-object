@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, NoReturn
 # Outers
-from ......exceptions import SimpleLogicError
+from ......exceptions import SimpleRuntimeError
 # Annotations
 if TYPE_CHECKING:
     from ......_core.protocols.mixins.core_mixins import InfrastructureProtocol
@@ -15,7 +15,7 @@ def raise_with_any_changes_is_not_tuple(
     is not a tuple.
     """
 
-    raise SimpleLogicError(
+    raise SimpleRuntimeError(
         error_name="IMMUTABILITY UPDATE ERROR",
         label="changes",
         expected="Tuple of (name, value) pairs or a single (name, value) tuple.",

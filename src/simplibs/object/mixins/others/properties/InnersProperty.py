@@ -1,8 +1,8 @@
 from typing import TYPE_CHECKING
 # Outers
-from ..base_class import SimpleMixin
+from ...base_class import SimpleMixin
 # Inners
-from ._utils._utils_for_inners_property import collect_all_nested_properties
+from ._inners_property_utils import collect_all_nested_properties
 # Annotations
 if TYPE_CHECKING:
     from ...._core.protocols.instance import SimpleInstanceLike

@@ -28,6 +28,7 @@ def assert_mixins_slots_values(
     subintro = "assert_mixins_slots_values::"
 
     # 1. Normalize input structure
+    normalized = None
     with maybe_subtest(
         subtests,
         name=f"{intro}{subintro}normalize_input",
@@ -45,7 +46,12 @@ def assert_mixins_slots_values(
                 f"got: {slots_values!r}"
             )
 
+    # 1.1 Guard clause: Halt execution if input normalization failed
+    if normalized is None:
+        return
+
     # 2. Validate structural integrity of each pair
+    valid_pairs = False
     with maybe_subtest(
         subtests,
         name=f"{intro}{subintro}validate_pairs",
@@ -57,6 +63,7 @@ def assert_mixins_slots_values(
                     f"Each item in 'slots_values' must be a 2-element tuple of (name, value), "
                     f"got: {pair!r}"
                 )
+                return
 
             name, _ = pair
             if not isinstance(name, str):
@@ -64,6 +71,13 @@ def assert_mixins_slots_values(
                     f"Slot name '{name!r}' is not a string identifier. "
                     f"All slot names must be strings."
                 )
+                return
+
+        valid_pairs = True
+
+    # 2.1 Guard clause: Halt execution if pair structure validation failed
+    if not valid_pairs:
+        return
 
     # 3. Validate slot attribute presence and state values
     with maybe_subtest(
@@ -98,9 +112,11 @@ expected initial or calculated values. It acts as a value-level verification ste
 structural presence checks.
 
 ## Input Flexibility & Normalization Pipeline
-1. **Schema Normalization Gate:** Accepts both single pairs `("slot_name", value)` and composite tuples 
-   `(("slot_1", val_1), ("slot_2", val_2))` automatically normalizing single-pair inputs into uniform sequences.
-2. **Pair Validation:** Ensures every item in the sequence is a 2-element tuple whose first element is a string identifier.
+1. **Schema Normalization & Guard Gate:** Accepts both single pairs `("slot_name", value)` and composite tuples 
+   `(("slot_1", val_1), ("slot_2", val_2))`, automatically normalizing single-pair inputs into uniform sequences. 
+   Halts execution early via a guard clause if input formatting is invalid.
+2. **Pair Validation & Guard Gate:** Ensures every item in the sequence is a 2-element tuple whose first element 
+   is a string identifier, guarded by a fail-fast exit.
 3. **Presence & State Reconciliation:** Iterates over normalized pairs, verifying that `hasattr(instance, slot_name)` 
    evaluates to `True` and that `getattr(instance, slot_name) == expected_value`.
 

@@ -1,6 +1,6 @@
 from typing import NoReturn, TYPE_CHECKING
 # Outers
-from .....exceptions import SimpleLogicError
+from .....exceptions import SimpleRuntimeError
 # Annotations
 if TYPE_CHECKING:
     from ....protocols.classes import SimpleObjectProtocol
@@ -15,7 +15,7 @@ def raise_unknown_parameter_error(
     class_name = cls.__name__
     formatted = ", ".join(f"'{p}'" for p in unknown_params)
 
-    raise SimpleLogicError(
+    raise SimpleRuntimeError(
         error_name="INVALID PARAMETERS",
         label="kwargs",
         value=formatted,
@@ -50,7 +50,7 @@ and prevents silent misuse of the API.
 
 ## Behavior
 - Collects all unknown keyword parameters.
-- Raises a structured `SimpleLogicError` describing the mismatch.
+- Raises a structured `SimpleRuntimeError` describing the mismatch.
 - Provides actionable guidance on how to correct the call.
 
 ---

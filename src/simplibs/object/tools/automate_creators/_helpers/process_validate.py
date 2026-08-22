@@ -24,7 +24,7 @@ def process_validate(
         return validate
 
     # 2. Wrap anonymous lambda to accept (cls, value, *, return_bool=False) signature
-    def _validate(cls: Any, value: Any, *, return_bool: bool = False) -> Any:
+    def _validate(cls: Any, value: Any, *, return_bool: bool = False):
         return validate(value)
 
     return _validate

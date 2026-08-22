@@ -1,78 +1,107 @@
-from typing import Any, NoReturn, TYPE_CHECKING
-# Outers
-from .....exceptions import SimpleLogicError
-# Inners
-from ._extract_clean_code_lines import _extract_clean_code_lines
-# Annotations
-if TYPE_CHECKING:
-    from ....protocols.classes import SimpleConstantProtocol
+import pytest
+from typing import Any
+from unittest.mock import Mock
+
+from simplibs.exception.testing import (
+    assert_exception_function,
+)
+from simplibs.object._core.logic.constant_methods.validations.raise_validation_error import (
+    raise_validation_error,
+)
+from simplibs.object.exceptions import SimpleRuntimeError
 
 
-def raise_validation_error(
-    cls: "SimpleConstantProtocol",
-    value: Any,
-) -> NoReturn:
-    """Raises a standardized error when user-defined validation returns False."""
+def dummy_validate_func(val):
+    """Dummy validation function for code extraction tests."""
+    # Check value condition
+    return val > 0
 
-    # 1. Extract user-defined validation logic
-    # noinspection PyBroadException
-    try:
-        validate_method = cls.meta.validate
-        validate_func = getattr(validate_method, "__func__", validate_method)
-        validate_source_list = _extract_clean_code_lines(validate_func)
-    except Exception:
-        validate_source_list = ["    <source code not available>"]
 
-    # 2. Raise structured validation failure error
-    raise SimpleLogicError(
+@pytest.mark.parametrize(
+    "class_name, invalid_value",
+    [
+        ("PositiveIntClass", -5),
+        ("EmailValidator", "invalid_email"),
+    ],
+)
+def test_raise_validation_error(
+    subtests, class_name: str, invalid_value: Any
+) -> None:
+    """Test that boolean validation failure raises SimpleRuntimeError containing extracted code lines."""
+
+    dummy_cls = Mock()
+    dummy_cls.__name__ = class_name
+    dummy_cls.meta.validate = dummy_validate_func
+
+    expected_extracted_lines = [
+        "    return val > 0"
+    ]
+
+    assert_exception_function(
+        subtests,
+        raise_validation_error,
+
+        invalid_params=(dummy_cls, invalid_value),
+        exception_type=SimpleRuntimeError,
+
         error_name="VALIDATION ERROR",
         label="value",
-        value=value,
+        value=invalid_value,
         expected="A value that satisfies the user-defined validation logic.",
         problem="The provided value did not pass the user-defined validation rules.",
         context=(
-            f"The '_validate' method of '{cls.__name__}' returned False, indicating "
+            f"The '_validate' method of '{class_name}' returned False, indicating "
             f"that the value does not meet the required validation criteria."
         ),
         how_to_fix=(
             "Review the validation logic shown below to understand why the value "
             "was rejected:",
-            *validate_source_list,
+            *expected_extracted_lines,
             "Ensure that the input value matches the assumptions and constraints "
             "defined in your validation method.",
             "If you intend to raise custom validation errors instead of returning "
-            "False, use 'SimpleError' or 'cls.bool_or_raise_validate_error()'.",
+            "False, use 'SimpleObjectError' or 'cls.bool_or_raise_validate_error()'.",
         ),
         exception=ValueError,
+
+        verbose=False,
     )
 
 
-_DESIGN_NOTES = """
-# raise_validation_error
+def test_raise_validation_error_fallback(subtests) -> None:
+    """Test fallback placeholder behavior when source extraction fails."""
 
-## Purpose
-Handles the case where user-defined validation (`_validate`) returns `False`
-instead of raising an exception. This error is user-facing and explains that the
-value failed the validation rules defined by the developer.
+    dummy_cls = Mock()
+    dummy_cls.__name__ = "FallbackClass"
+    # Cause source extraction to fail (e.g. invalid attribute object)
+    dummy_cls.meta.validate = None
 
-## Behavior
-- Extracts the body of the `_validate` method using `extract_clean_code_lines`.
-- Displays the validation logic directly in the error message.
-- Raises a structured `SimpleLogicError` indicating that the value did not meet
-  the validation criteria.
+    assert_exception_function(
+        subtests,
+        raise_validation_error,
 
-## Why this exists
-Users may implement `_validate` in two ways:
-1. **Boolean style** — return `True` or `False`.
-2. **Exception style** — raise `SimpleError` or a subclass.
+        invalid_params=(dummy_cls, "some_value"),
+        exception_type=SimpleRuntimeError,
 
-This function handles the first case, providing a clear and helpful error message
-when `_validate` returns `False`.
+        error_name="VALIDATION ERROR",
+        label="value",
+        value="some_value",
+        expected="A value that satisfies the user-defined validation logic.",
+        problem="The provided value did not pass the user-defined validation rules.",
+        context=(
+            "The '_validate' method of 'FallbackClass' returned False, indicating "
+            "that the value does not meet the required validation criteria."
+        ),
+        how_to_fix=(
+            "Review the validation logic shown below to understand why the value "
+            "was rejected:",
+            "    <source code not available>",
+            "Ensure that the input value matches the assumptions and constraints "
+            "defined in your validation method.",
+            "If you intend to raise custom validation errors instead of returning "
+            "False, use 'SimpleObjectError' or 'cls.bool_or_raise_validate_error()'.",
+        ),
+        exception=ValueError,
 
-## Notes
-- The extracted code helps users understand exactly which part of their logic
-  rejected the value.
-- If the source code cannot be retrieved, a placeholder is shown.
-- This function is part of the main validation pipeline:
-  `validate_type` → `validate` → `raise_validation_error`.
-"""
+        verbose=False,
+    )

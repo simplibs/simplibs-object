@@ -1,5 +1,5 @@
 from typing import Any
-from ....exceptions import SimpleLogicError
+from ....exceptions import SimpleRuntimeError
 
 
 def validate_skip_immutable_is_bool(
@@ -11,12 +11,12 @@ def validate_skip_immutable_is_bool(
         skip_immutable: Candidate argument to validate.
 
     Raises:
-        SimpleLogicError: If skip_immutable is not a bool.
+        SimpleRuntimeError: If skip_immutable is not a bool.
     """
     if isinstance(skip_immutable, bool):
         return
 
-    raise SimpleLogicError(
+    raise SimpleRuntimeError(
         error_name="INVALID SKIP_IMMUTABLE TYPE ERROR",
         label="skip_immutable",
         expected="A boolean value (True or False).",

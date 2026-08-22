@@ -15,18 +15,20 @@ def assert_mixin_instance_creation(
     mixin_class: "SimpleMixinType",
     test_class: "SimpleClassType",
     *,
+    mutable: bool = True,
     verbose: bool = True,
     intro: str = "",
 ) -> Any:
     """Assert that a target blueprint class can be instantiated with a specific mixin attached.
 
     Validates that both the base blueprint class and the mixin satisfy framework inheritance requirements,
-    executes dynamic instantiation with ``mixins=(mixin_class,)``, and verifies that the mixin class
-    is correctly injected into the resulting runtime class's Method Resolution Order (MRO).
+    executes dynamic instantiation with ``mixins=(mixin_class,)``, and verifies that the mixin's members
+    are correctly injected into the resulting runtime instance/class namespace.
 
     Args:
         subtests: The native pytest subtests fixture manager instance.
         mixin_class: Target mixin class blueprint under test.
+        mutable: Defines whether the underlying instance should be created in mutable mode (default True).
         test_class: Base framework blueprint class used to bind the mixin.
         verbose: Enables isolated pytest subtests reporting.
         intro: Optional prefix string added to the generated subtest identity name.
@@ -62,13 +64,14 @@ def assert_mixin_instance_creation(
             )
 
     # 3. Instantiate target class with mixin injection
+    instance = None
     with maybe_subtest(
         subtests,
         name=f"{intro}{subintro}create_instance",
         verbose=verbose,
     ):
         try:
-            instance = test_class(mixins=(mixin_class,))
+            instance = test_class(mixins=(mixin_class,), mutable=mutable)
         except Exception as exc:
             pytest.fail(
                 f"Failed to create instance of '{test_class.__name__}' "
@@ -81,16 +84,36 @@ def assert_mixin_instance_creation(
                 f"with mixin '{mixin_class.__name__}'."
             )
 
-    # 4. Verify mixin presence in runtime MRO
+    # 3.1 Guard clause: If instance creation failed, abort downstream member verification
+    if instance is None:
+        return None
+
+    # 4. Verify mixin members presence in runtime instance namespace
     with maybe_subtest(
         subtests,
-        name=f"{intro}{subintro}mixin_in_mro",
+        name=f"{intro}{subintro}mixin_members_injected",
         verbose=verbose,
     ):
-        if mixin_class not in instance.__class__.__mro__:
+        # Ignorujeme atributy definované na samotném SimpleMixin a object,
+        # protože slouží jako kompilační direktivy a nevkládají se do cílového class_dict.
+        base_mixin_attrs = set(dir(SimpleMixin))
+
+        # Testujeme pouze atributy specificky deklarované na testovaném mixinu
+        mixin_members = {
+            name for name in dir(mixin_class)
+            if not (name.startswith("__") and name.endswith("__"))
+               and name not in base_mixin_attrs
+        }
+
+        missing_members = [
+            name for name in mixin_members
+            if not hasattr(instance, name)
+        ]
+
+        if missing_members:
             pytest.fail(
-                f"Mixin '{mixin_class.__name__}' is not present in the MRO of the "
-                f"created instance. Instance class MRO: {instance.__class__.__mro__}"
+                f"Mixin '{mixin_class.__name__}' members {missing_members} "
+                f"were not found on the created instance of '{test_class.__name__}'."
             )
 
     return instance
@@ -102,15 +125,15 @@ _DESIGN_NOTES = """
 ## Purpose
 Verifies the integration between the framework's dynamic instance builder and a given mixin class. 
 It ensures that a base blueprint class (`SimpleObject` or `SimpleConstant`) can be instantiated with 
-a candidate mixin, and that the mixin class properly binds into the runtime class hierarchy.
+a candidate mixin, and that the mixin members properly bind into the runtime class namespace.
 
 ## Verification Pipeline
 1. **Blueprint Validation:** Confirms `test_class` derives from `SimpleConstant` (which covers `SimpleObject` as well).
 2. **Mixin Contract Validation:** Confirms `mixin_class` derives from `SimpleMixin`.
-3. **Dynamic Instantiation:** Invokes `test_class(mixins=(mixin_class,))` within a protected context, 
-   ensuring zero runtime construction errors.
-4. **MRO Inspection Gate:** Inspects `instance.__class__.__mro__` to guarantee that `mixin_class` is explicitly 
-   present in the runtime class inheritance chain.
+3. **Dynamic Instantiation & Guard Gate:** Invokes `test_class(mixins=(mixin_class,))` within a protected context, 
+   ensuring zero runtime construction errors. Aborts early via a guard clause if creation fails.
+4. **Member Injection Gate:** Verifies that all non-dunder attributes, properties, and methods defined on `mixin_class` 
+   are present on the created runtime instance namespace.
 
 ## Pipeline Lifecycle Role
 Serves as the structural setup and verification gate within mixin testing runners (e.g., `assert_simple_mixin`). 

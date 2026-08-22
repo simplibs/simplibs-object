@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, NoReturn, Any
 # Outers
-from .....exceptions import SimpleLogicError
+from .....exceptions import SimpleRuntimeError
 
 # Annotations
 if TYPE_CHECKING:
@@ -15,7 +15,7 @@ def raise_with_changes_input_not_dict(
     Raises an error when the input to `with_changes` is not a dictionary.
     """
 
-    raise SimpleLogicError(
+    raise SimpleRuntimeError(
         error_name="IMMUTABILITY UPDATE ERROR",
         label="changes_dict",
         expected="A dictionary mapping constant names to new values.",

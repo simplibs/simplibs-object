@@ -34,5 +34,5 @@ all values, limits, and actions are valid before entering the runtime pipeline.
 - These utilities are internal and not part of the public API.
 - They are used exclusively during Stepper initialization and configuration.
 - All structural logic is delegated to validation helpers and instance-level rules.
-- Errors raised here follow the SimpleLogicError diagnostic format.
+- Errors raised here follow the SimpleRuntimeError diagnostic format.
 """

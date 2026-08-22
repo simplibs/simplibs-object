@@ -1,60 +1,46 @@
-from typing import Any
-# Outers
-from ........exceptions import SimpleMetadataError
+from simplibs.object.exceptions.SimpleDefinitionError import SimpleDefinitionError
+from simplibs.exception.testing.assert_exception_function import assert_exception_function
+from simplibs.object._core.metadata.init_processors.methods.verifiers.classmethod.validations.validate_method_is_callable import (
+    validate_method_is_callable,
+)
 
 
-def validate_method_is_callable(
-    raw_method: Any,
-    exception_info: tuple[str, str, str],
-    expected_structure: tuple[str, ...],
-) -> None:
-    """Validates that the reflected method is callable."""
+def test_validate_method_is_callable_pass() -> None:
+    """Tests that a callable object passes validation."""
 
-    if not callable(raw_method):
-        class_name, method_name, context = exception_info
+    def dummy_function():
+        pass
 
-        raise SimpleMetadataError(
-            error_name="METHOD LOGIC ERROR",
-            label="_method",
-            value=raw_method,
-            problem=f"'{class_name}.{method_name}' is not callable.",
-            expected="A callable classmethod.",
-            how_to_fix=(
-                f"Ensure '{method_name}' is defined as a function.",
-                "Verify it was not overwritten by a data attribute.",
-            ) + expected_structure,
-            context=context,
-            exception=TypeError,
-        )
+    validate_method_is_callable(
+        raw_method=dummy_function,
+        exception_info=("MyClass", "my_method", "Context"),
+        expected_structure=("Blueprint",),
+    )
 
 
-_DESIGN_NOTES = """
-# validate_method_is_callable
+def test_validate_method_is_callable_raises_error(subtests) -> None:
+    """Tests that non-callable raw attributes raise SimpleDefinitionError."""
 
-## Purpose
-Ensures that the reflected class attribute is a callable object.  
-This prevents signature validation from running on non‑callable values such as
-strings, integers, or accidental data attributes.
+    invalid_raw_method = "not_a_callable_string"
+    exception_info = ("MyClass", "my_method", "TestContext")
+    expected_structure = ("Expected structure line 1",)
 
-## Why tuple inputs
-The function receives:
-- `exception_info` — (class_name, method_name, context)
-- `expected_structure` — code blueprint
-
-This keeps the validator consistent with all other method‑validation helpers.
-
-## Behavior
-If `callable(raw_method)` is false, the validator raises a structured
-`SimpleMetadataError` containing:
-- the class and method name,
-- a clear explanation of the issue,
-- a copy‑paste ready blueprint showing the correct method layout.
-
-## Notes
-This validator is used for all three method types:
-- `_validate`
-- `_logic`
-- `_decompose`
-
-It is the second guard in the classmethod verification chain.
-"""
+    assert_exception_function(
+        subtests,
+        validate_method_is_callable,
+        invalid_params=(invalid_raw_method, exception_info, expected_structure),
+        exception_type=SimpleDefinitionError,
+        error_name="METHOD LOGIC ERROR",
+        label="_method",
+        value=invalid_raw_method,
+        expected="A callable classmethod.",
+        problem="'MyClass.my_method' is not callable.",
+        context="TestContext",
+        how_to_fix=(
+            "Ensure 'my_method' is defined as a function.",
+            "Verify it was not overwritten by a data attribute.",
+            "Expected structure line 1",
+        ),
+        exception=TypeError,
+        verbose=False,
+    )

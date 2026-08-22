@@ -1,71 +1,22 @@
-from typing import Any
-import pytest
-from simplibs.exception.testing import maybe_subtest
-# Outers
-from ..base.assert_value_change import assert_value_change
+"""
+Tests for `testing/asserts/mutability/assert_mutable_behavior.py`.
+"""
+from simplibs.object.testing.asserts.mutability.assert_mutable_behavior import (
+    assert_mutable_behavior,
+)
 
 
-def assert_mutable_behavior(
-    subtests: Any,
-    test_class: Any,
-    *,
-    new_value: Any,
-    verbose: bool = True,
-    verbose_value_change: bool = True,
-    intro: str = "",
-) -> None:
-    """
-    Verifies correct mutable behavior:
+class TestAssertMutableBehaviorHappyPath:
 
-    - instance created with mutable=True must NOT change identity
-    - setter must update the internal value in-place
-    """
+    def test_passes_for_correctly_mutable_constant(self, IntConst, subtests):
+        assert_mutable_behavior(subtests, IntConst, new_value=99)
 
-    subintro = "test_mutable_behavior::"
-
-    # 1) Create mutable instance
-    with maybe_subtest(
-        subtests,
-        name=f"{intro}{subintro}create_mutable_instance",
-        verbose=verbose,
-    ):
-        try:
-            instance = test_class(mutable=True)
-        except Exception as exc:
-            pytest.fail(f"Failed to create mutable instance: {exc}")
-
-        assert instance is not None
-
-    # 2) Capture original identity
-    with maybe_subtest(
-        subtests,
-        name=f"{intro}{subintro}capture_original_identity",
-        verbose=verbose,
-    ):
-        original_id = id(instance)
-
-    # 3) Apply new value (validation + setter handled inside)
-    with maybe_subtest(
-        subtests,
-        name=f"{intro}{subintro}apply_value",
-        verbose=verbose,
-    ):
-        assert_value_change(
-            subtests,
-            instance,
-            value=new_value,
-            verbose=verbose_value_change and verbose,
-            intro=intro,
+    def test_intro_and_verbose_do_not_affect_outcome(self, IntConst, subtests):
+        assert_mutable_behavior(
+            subtests, IntConst, new_value=42, verbose=False, intro="Suite::"
         )
 
-    # 4) Identity MUST remain unchanged
-    with maybe_subtest(
-        subtests,
-        name=f"{intro}{subintro}identity_preserved",
-        verbose=verbose,
-    ):
-        if id(instance) != original_id:
-            pytest.fail(
-                "Mutable instance changed identity after value update, "
-                "but mutable instances must preserve identity."
-            )
+    def test_verbose_value_change_flag_is_forwarded(self, IntConst, subtests):
+        assert_mutable_behavior(
+            subtests, IntConst, new_value=7, verbose_value_change=False
+        )

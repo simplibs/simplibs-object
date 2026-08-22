@@ -1,6 +1,6 @@
 from typing import Any, Callable, NoReturn
 # Outers
-from .....exceptions import SimpleLogicError
+from .....exceptions import SimpleRuntimeError
 
 
 def raise_calculate_default_failed(
@@ -13,7 +13,7 @@ def raise_calculate_default_failed(
 
     logic_name = getattr(logic, "__name__", str(logic))
 
-    raise SimpleLogicError(
+    raise SimpleRuntimeError(
         error_name="CALCULATE DEFAULT FAILED ERROR",
         label="calculate_default_failed",
         expected="A valid logic callable that executes successfully with default inner values",
@@ -46,6 +46,6 @@ Provides diagnostic feedback when automatic type inference fails due to an error
 
 ## Behavior
 1. Captures the original exception raised by `logic`.
-2. Wraps it into a structured `SimpleLogicError`.
+2. Wraps it into a structured `SimpleRuntimeError`.
 3. Advises either fixing default values in child nodes or providing explicit `value_type`.
 """

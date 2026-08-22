@@ -1,65 +1,44 @@
-from typing import TYPE_CHECKING, NoReturn, Any
-# Outers
-from ......exceptions import SimpleMixinError
-# Annotations
-if TYPE_CHECKING:
-    from ......_core.protocols.mixins.core_mixins import SerializationProtocol
+from unittest.mock import Mock
+from simplibs.object.exceptions import SimpleRuntimeError
+from simplibs.exception.testing.assert_exception_function import assert_exception_function
+from simplibs.object.mixins.core_mixins._utils.serialization.validations.raise_invalid_composite_structure import (
+    raise_invalid_composite_structure,
+)
 
 
-def raise_invalid_composite_structure(
-    instance: "SerializationProtocol",
-    key: str,
-    value: Any,
-    full_path: tuple[str, ...],
-) -> NoReturn:
-    """
-    Raises an error when a composite dictionary branch contains an invalid
-    structure (expected a dictionary, got something else).
-    """
+def test_raise_invalid_composite_structure(subtests) -> None:
+    """Tests that raise_invalid_composite_structure raises SimpleRuntimeError."""
 
-    raise SimpleMixinError(
+    dummy_instance = Mock()
+    type(dummy_instance).__name__ = "MySerializableClass"
+
+    key = "sub_component"
+    invalid_value = "string_instead_of_dict"
+    full_path = ("root", "sub_component")
+
+    assert_exception_function(
+        subtests,
+        raise_invalid_composite_structure,
+        invalid_params=(dummy_instance, key, invalid_value, full_path),
+        exception_type=SimpleRuntimeError,
         error_name="STATE DICT INVALID COMPOSITE STRUCTURE",
         label="composite structure",
-        expected=f"A dictionary at key '{key}'.",
-        value=repr(value),
+        value="'string_instead_of_dict'",
+        expected="A dictionary at key 'sub_component'.",
         problem=(
             "Invalid structure encountered in composite branch.",
-            f"Expected a dictionary at key '{key}', but got {type(value).__name__}."
+            "Expected a dictionary at key 'sub_component', but got str.",
         ),
         context=(
-            f"State import attempted on instance '{type(instance).__name__}'.",
-            f"Traversal path: {full_path}",
-            "Composite nodes must be represented as nested dictionaries."
+            "State import attempted on instance 'MySerializableClass'.",
+            "Traversal path: ('root', 'sub_component')",
+            "Composite nodes must be represented as nested dictionaries.",
         ),
         how_to_fix=(
             "Ensure that all composite branches in the state dictionary are dictionaries.",
             "Use `to_dict()` to generate a correct nested structure.",
-            "Verify that no composite node was replaced by a scalar or list."
+            "Verify that no composite node was replaced by a scalar or list.",
         ),
         exception=KeyError,
+        verbose=False,
     )
-
-
-_DESIGN_NOTES = """
-# raise_invalid_composite_structure
-
-## Purpose
-Raises a structured error when a composite dictionary branch contains a value
-that is not a dictionary, even though the structural path requires one.
-
-## Why this validation exists
-Composite nodes represent nested structures.  
-If any branch is not a dictionary, the object cannot be reconstructed safely.
-
-Failing early ensures:
-- structural correctness,
-- predictable deserialization,
-- clear diagnostics.
-
-## Execution context
-Used inside `from_dict` during traversal of nested composite dictionaries.
-
-## Notes
-- Pure raise function, no conditional logic.
-- Used exclusively by the Serialization mixin.
-"""

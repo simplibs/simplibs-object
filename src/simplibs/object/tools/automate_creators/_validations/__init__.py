@@ -5,4 +5,3 @@ from .validate_constant_has_not_decompose import validate_constant_has_not_decom
 from .validate_constant_has_not_logic import validate_constant_has_not_logic
 from .validate_class_name_is_str import validate_class_name_is_str
 from .validate_composite_has_inners import validate_composite_has_inners
-from .raise_bulk_item_is_not_bulk_dict import raise_bulk_item_is_not_bulk_dict

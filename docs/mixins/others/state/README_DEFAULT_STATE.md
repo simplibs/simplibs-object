@@ -1,122 +1,127 @@
-from typing import TYPE_CHECKING
-# Outers
+# 🧱 `DefaultState` — Construction-Time State Memory
+
+`DefaultState` remembers the state a mutable instance was created with, and provides
+three ways to use that memory: reset to it, build a fresh instance from it, or clone
+the current state into a new instance.
+
+```python
 from ...core_mixins import Snapshot
-from ..._common_logic.immutability import create_new_instance
-# Annotations
-if TYPE_CHECKING:
-    from ...._core.protocols.mixins.state import DefaultStateProtocol
-    from ...._core.protocols.alias_typings import SnapshotTuple
+from .._commons.immutability import create_new_instance
 
-
-# noinspection PyProtectedMember
 class DefaultState(Snapshot):
-    """
-    Mixin providing the instance with:
-    - a stored default state (_default_state)
-    - the methods clone_instance(), reset_to_default_values(),
-      create_new_default_instance()
-    """
+    ...
+```
 
-    # ----------------------------------------
-    # Basic interface
-    # ----------------------------------------
+`_mutable_only = True`.
 
-    # Compatibility declaration
-    _mutable_only = True
+---
 
-    # Slot definition
-    __slots__ = ("_default_state_snapshot",)
+## 🧭 Table of Contents
 
-    # ----------------------------------------
-    # Initialization hook
-    # ----------------------------------------
+* [`init_mixins`](#init_mixins)
+* [`clone_instance`](#clone_instance)
+* [`reset_to_default_values`](#reset_to_default_values)
+* [`create_new_default_instance`](#create_new_default_instance)
 
-    # noinspection PyAttributeOutsideInit
-    def init_mixins(
-        self: "DefaultStateProtocol"
-    ) -> None:
-        """
-        Method forwarding its logic into the instance's initialization
-        process.
-        """
+---
 
-        # 1. Initialize parents
-        super().init_mixins()
+### `init_mixins`
 
-        # 2. Build a snapshot of the default state
-        self._default_state_snapshot: "SnapshotTuple" = self._build_snapshot()
+Captures the default-state snapshot once, right after construction.
 
-    # ----------------------------------------
-    # Methods - CLONE / RESET / NEW
-    # ----------------------------------------
+**Parameters:**
+* *(none)*
 
-    def clone_instance(
-        self: "DefaultStateProtocol"
-    ) -> "DefaultStateProtocol":
-        """Creates a new instance with the same state as this instance."""
-        new_instance = self.create_new_default_instance()
-        new_instance._restore_snapshot(self._build_snapshot())
-        return new_instance
+**Returns:**
+* `None`
 
-    def reset_to_default_values(
-        self: "DefaultStateProtocol"
-    ) -> None:
-        """Resets the instance to its default state (_default_state)."""
-        self._restore_snapshot(self._default_state_snapshot)
+**Under the hood:**
+```python
+def init_mixins(self):
+    super().init_mixins()
+    self._default_state_snapshot = self._build_snapshot()
+```
 
-    # noinspection PyTypeChecker
-    def create_new_default_instance(
-        self: "DefaultStateProtocol"
-    ) -> "DefaultStateProtocol":
-        """
-        Returns a new instance of the same type, with the same default
-        state this instance had when it was created.
-        """
-        return create_new_instance(self, self._default_state_snapshot)
+[▲ Back to top](#-table-of-contents)
 
+---
 
-_DESIGN_NOTES = """
-# DefaultState
+### `clone_instance`
 
-## Purpose
-Remembers the state a mutable instance was created with, and provides
-three ways to use that memory: `reset_to_default_values()` (go back to
-it), `create_new_default_instance()` (build a fresh instance starting
-from it), and `clone_instance()` (build a new instance matching the
-*current* state).
+Creates a new instance with the same state as this instance right now.
 
-> For newcomers: "default state" here means "what this specific instance
-> looked like at construction time" — not the blueprint's class-level
-> defaults. Two instances of the same class, created with different
-> initial values, will each remember their own default state.
+**Parameters:**
+* *(none)*
 
-## Compatibility
-- `_mutable_only = True` — resetting/restoring in place only makes sense
-  for mutable instances; an immutable instance can't have its state
-  overwritten regardless.
+**Returns:**
+* a new instance matching the current state.
 
-## Logic
-- On `init_mixins`, `_default_state_snapshot` is captured once, right
-  after construction — this becomes the fixed reference point for the
-  rest of the instance's life.
-- `reset_to_default_values()` simply restores that snapshot via
-  `_restore_snapshot`, discarding any changes made since creation.
-- `create_new_default_instance()` builds a brand-new instance using
-  `create_new_instance` seeded with `_default_state_snapshot` — the
-  result reflects where *this* instance started, not where it is now.
-- `clone_instance()` combines both ideas: it first creates a fresh
-  default instance via `create_new_default_instance()`, then immediately
-  overwrites it with a snapshot of the *current* state via
-  `_restore_snapshot`. The two-step approach (build clean, then restore
-  current) reuses the default-instance construction path rather than
-  duplicating instance-creation logic for the "clone" case.
+**Example usage:**
+```python
+clone = person.clone_instance()
+```
 
-## Notes
-- Compare with `DirtyTracking`, which answers "has this changed since a
-  reference point" — `DefaultState` instead answers "let me get back to
-  or start fresh from that reference point." The two mixins share the
-  same snapshot foundation but serve different questions.
-- `clone_instance()`'s two-step build is worth noting for anyone
-  debugging performance — it constructs a full default instance as an
-  intermediate step, even though only the final restored state is kept.
-"""
+**Under the hood:**
+```python
+def clone_instance(self):
+    new_instance = self.create_new_default_instance()
+    new_instance._restore_snapshot(self._build_snapshot())
+    return new_instance
+```
+
+[▲ Back to top](#-table-of-contents)
+
+---
+
+### `reset_to_default_values`
+
+Resets the instance back to the state it had at construction time.
+
+**Parameters:**
+* *(none)*
+
+**Returns:**
+* `None`
+
+**Example usage:**
+```python
+person.reset_to_default_values()
+```
+
+**Under the hood:**
+```python
+def reset_to_default_values(self):
+    self._restore_snapshot(self._default_state_snapshot)
+```
+
+[▲ Back to top](#-table-of-contents)
+
+---
+
+### `create_new_default_instance`
+
+Returns a brand-new instance of the same type, seeded with this instance's original
+construction-time state.
+
+**Parameters:**
+* *(none)*
+
+**Returns:**
+* a new instance reflecting the original default state.
+
+**Example usage:**
+```python
+fresh = person.create_new_default_instance()
+```
+
+**Under the hood:**
+```python
+def create_new_default_instance(self):
+    return create_new_instance(self, self._default_state_snapshot)
+```
+
+[▲ Back to top](#-table-of-contents)
+
+---
+
+[⬅️ Back to Mixins Overview](../../../README_MIXINS_OVERVIEW.md)

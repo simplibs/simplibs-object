@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, NoReturn, Any
 # Outers
-from .......exceptions import SimpleLogicError
+from ......exceptions import SimpleRuntimeError
 from simplibs.sentinels import UNSET
 
 # Annotations
@@ -18,7 +18,7 @@ def raise_unvalid_owner_class_mismatch_for_state_dict(
     """
     expected_owner_class = instance.meta.owner_class
 
-    raise SimpleLogicError(
+    raise SimpleRuntimeError(
         error_name="STATE DICT OWNER CLASS MISMATCH",
         label="owner_class",
         expected=f"Owner class: {expected_owner_class!r}",

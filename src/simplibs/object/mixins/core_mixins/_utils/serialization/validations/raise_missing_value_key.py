@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, NoReturn
 # Outers
-from .......exceptions import SimpleLogicError
+from ......exceptions import SimpleRuntimeError
 from simplibs.sentinels import UNSET
 
 # Annotations
@@ -18,7 +18,7 @@ def raise_missing_value_key(
     during reconstruction.
     """
 
-    raise SimpleLogicError(
+    raise SimpleRuntimeError(
         error_name="STATE DICT MISSING VALUE KEY",
         label="value key",
         expected=f"Key '{missing_key}' to exist in the dictionary.",

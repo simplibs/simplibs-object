@@ -3,8 +3,6 @@ from typing import Any, TYPE_CHECKING
 from simplibs.sentinels import UNSET, UnsetType
 # Inners
 from .InnerValue import InnerValue
-# Outers
-from ..assert_simple_object import assert_simple_object
 # Annotations
 if TYPE_CHECKING:
     from ..._core.protocols import SimpleClassLike, SimpleMixinLike
@@ -68,6 +66,7 @@ class ObjectCase:
         Returns:
             The created instance with optional mixins applied.
         """
+        from ..assert_simple_object import assert_simple_object
         return assert_simple_object(
             subtests,
             self.test_class,

@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING, Any
 from datetime import datetime
 # Outers
-from ..core_mixins import Serialization
+from ...core_mixins import Serialization
 # Inners
 from ._history_utils.core import set_history_limit, record_state, find_snapshot
 from ._history_utils.transfer import export_history_to_dict, import_history_from_dict
@@ -14,8 +14,8 @@ from ._history_utils.navigations import (
 )
 # Annotations
 if TYPE_CHECKING:
-    from ..._core.protocols.mixins.state import HistoryProtocol
-    from ..._core.protocols.alias_typings import HistoryEntry, HistoryDict, SnapshotDiffTuple
+    from ...._core.protocols.mixins.state import HistoryProtocol
+    from ...._core.protocols.alias_typings import HistoryEntry, HistoryDict, SnapshotDiffTuple
 
 
 class History(Serialization):
@@ -56,16 +56,13 @@ class History(Serialization):
         process.
         """
 
-        # 1. Initialize parents
-        super().init_mixins()
-
-        # 2. Create internal elements
+        # 1. Create internal elements
         self._history: list["HistoryEntry"] = []
         self._history_limit: int | None  = None
         self._history_index: int = 0
         self._history_count: int = 0
 
-        # 3. Create the first entry
+        # 2. Create the first entry
         self.record_state()
 
     # ----------------------------------------

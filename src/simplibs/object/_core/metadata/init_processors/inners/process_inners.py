@@ -1,9 +1,7 @@
 from typing import TYPE_CHECKING, Any
-from simplibs.sentinels import UNSET
 # Inners
 from .validations import (
     validate_inners_is_not_empty,
-    validate_inners_is_defined,
     validate_inners_is_tuple,
     validate_inner_is_simple_subclass,
     validate_inner_is_not_simple_class,
@@ -23,18 +21,16 @@ def process_inners(
 ) -> tuple[tuple["SimpleClassLike", ...], set]:
     """Validates and processes _inners for a composite class."""
 
-    # 1. Acquire attribute
-    raw_inners = getattr(owner_class, "_inners", UNSET)
+    # 1. Acquire attribute (Guaranteed to exist by SimpleMeta routing)
+    raw_inners = getattr(owner_class, "_inners")
 
-    # 2. Check if validations are needed
-    need_validations = "_inners" in owner_class.__dict__ and raw_inners is not UNSET
+    # 2. Check if validations are needed (only for locally declared _inners)
+    need_validations = "_inners" in owner_class.__dict__
 
     # 3. Base validations
     if need_validations:
-        if not raw_inners or not isinstance(raw_inners, tuple):
-            validate_inners_is_defined(raw_inners, owner_class)
-            validate_inners_is_tuple(raw_inners, owner_class)
-            validate_inners_is_not_empty(raw_inners, owner_class)
+        validate_inners_is_tuple(raw_inners, owner_class)
+        validate_inners_is_not_empty(raw_inners, owner_class)
 
         from .....SimpleConstant import SimpleConstant
         from .....SimpleObject import SimpleObject
@@ -91,38 +87,39 @@ _DESIGN_NOTES = """
 # process_inners
 
 ## Purpose
-Validates and processes `_inners` for composite classes.  
-Determines whether a class behaves as a constant (no `_inners`) or a composition (with `_inners`).  
+Validates and processes `_inners` for composite classes.
 Ensures strict determinism, predictable structure, and globally unique naming across the entire tree.
 
+## Architectural Context & Routing
+`SimpleMeta.__new__` routes class creation strictly based on the presence of `_inners`:
+- If `_inners` is present -> routed to `SimpleObjectMetadata` -> invokes `process_inners`.
+- If `_inners` is absent -> routed to `SimpleConstantMetadata` -> treats class as atomic.
+
+Because of this top-level meta routing, `process_inners` operates under the strict invariant 
+that `_inners` **always exists** on `owner_class` (it is never `UNSET`). Consequently, checking 
+for missing `_inners` or fallback sentinel handling is intentionally omitted as redundant.
+
 ## Why inners matter
-Each inner must be a class inheriting from `SimpleConstant` (which includes `SimpleObject`).  
+Each inner must be a concrete class inheriting from `SimpleConstant` (which includes `SimpleObject`).
 This guarantees:
 - consistent metadata (`__metadata__`)
 - defined type boundary (`_type`)
 - default fallback (`_default`)
 - unique nested identifier index (`node_names_set`)
 
-If `_inners` is defined → class is a `SimpleObject`.  
-If `_inners` is absent → class is a `SimpleConstant`.
-
 ## Control flow
 
 ### 1. Attribute extraction & validation
-Checks:
-- `_inners` is explicitly defined
-- `_inners` is a tuple
-- `_inners` is not empty
-
-Empty tuple is invalid: a class with no inners must omit `_inners` entirely.
+Extracts `_inners` and validates that local declarations:
+- are structured as a `tuple`
+- are not empty (an empty tuple `_inners = ()` is invalid; classes without inners omit `_inners`)
 
 ### 2. Namespace accumulator
-`new_node_names_set` is a shallow copy of the parent namespace.  
+`new_node_names_set` is a shallow copy of the parent namespace.
 This prevents sibling pollution and ensures deterministic propagation of names.
 
 ### 3. Local base-class imports
-`SimpleConstant` and `SimpleObject` are imported lazily to avoid circular dependencies.  
-Imports are skipped if early validations fail.
+`SimpleConstant` and `SimpleObject` are imported lazily to avoid circular dependencies.
 
 ### 4. Iteration over inners
 
@@ -132,34 +129,15 @@ Each inner must:
 - inherit from `SimpleConstant`
 - not be the raw base classes `SimpleConstant` or `SimpleObject`
 
-Only concrete subclasses are allowed.
-
 #### 4.2 Name collision detection
 Checks intersection between `new_node_names_set` and `inner.meta.node_names_set`.
-
-Two types of collisions:
-- **owner-class collision** → `validate_if_collision_with_owner_class`
-- **sibling collision** → `validate_collision_within_inners`
-
-Both use `_get_collision_path` to produce precise breadcrumb diagnostics.
+Distinguishes between owner-class collisions and sibling collisions.
 
 #### 4.3 Namespace registration
-`new_node_names_set.update(inner.meta.node_names_set)`  
-This ensures all nested names are immediately visible to subsequent inners.
+Updates `new_node_names_set` so all nested names are immediately visible to subsequent inners.
 
 ### 5. Return value
 Returns:
-- `raw_inners` — original tuple of inner classes
+- `raw_inners` — verified tuple of inner classes
 - `new_node_names_set` — fully updated namespace for this subtree
-
-## Performance notes
-The function is optimized for the “happy path”:
-- early boundary checks prevent unnecessary work
-- recursion only occurs on guaranteed branches (via `node_names_set`)
-- no redundant buffers or allocations
-
-## Architectural notes
-- Namespace isolation via `.copy()` ensures deterministic behavior.
-- Lazy imports prevent circular dependencies.
-- Any structural violation stops compilation immediately with a precise error.
 """

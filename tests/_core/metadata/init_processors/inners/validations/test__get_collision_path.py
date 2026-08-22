@@ -1,45 +1,50 @@
-from typing import TYPE_CHECKING
-# Annotations
-if TYPE_CHECKING:
-    from .....protocols.classes import SimpleClassLike
+import pytest
+from unittest.mock import Mock
+
+from simplibs.object._core.metadata.init_processors.inners.validations._get_collision_path import (
+    _get_collision_path,
+)
 
 
-def _get_collision_path(
-    current_class: "SimpleClassLike",
-    collision_name: str,
-) -> str | None:
-    """Returns structural path to the class causing a name collision."""
+def test_get_collision_path_direct_match() -> None:
+    """Test path computation when the current class itself matches collision_name."""
 
-    # 1. Direct match
-    if current_class.meta.name_snake == collision_name:
-        return current_class.__name__
+    dummy_class = Mock(__name__="Address")
+    dummy_class.meta.name_snake = "address"
 
-    # 2. Scan inners
-    raw_inners = getattr(current_class, "_inners", ())
-
-    for inner in raw_inners:
-        if collision_name in inner.meta.node_names_set:
-            sub_path = _get_collision_path(inner, collision_name)
-            if sub_path:
-                return f"{current_class.__name__}/{sub_path}"
-
-    # 3. No match
-    return None
+    path = _get_collision_path(dummy_class, "address")
+    assert path == "Address"
 
 
-_DESIGN_NOTES = """
-# _get_collision_path
+def test_get_collision_path_nested_match() -> None:
+    """Test recursive path computation through nested inner components."""
 
-## Purpose
-Computes a structural breadcrumb path to the class where a name collision originates.
-Used by name‑collision validators to produce clear diagnostic messages.
+    # Leaf inner (musíme definovat node_names_set i pro koncový uzlík)
+    leaf_inner = Mock(__name__="ZipCode")
+    leaf_inner.meta.name_snake = "zip_code"
+    leaf_inner.meta.node_names_set = {"zip_code"}
+    leaf_inner._inners = ()
 
-## Behavior
-1. Checks whether the current class owns the name.
-2. If not, scans `_inners` using `node_names_set` as a fast pre-filter.
-3. Recursively descends only into branches guaranteed to contain the collision.
-4. Returns a path like `Order/Delivery/Address` or `None` if not found.
+    # Middle inner containing leaf
+    middle_inner = Mock(__name__="Delivery")
+    middle_inner.meta.name_snake = "delivery"
+    middle_inner.meta.node_names_set = {"delivery", "zip_code"}
+    middle_inner._inners = (leaf_inner,)
 
-## Notes
-Internal helper; does not raise exceptions. Pure path computation.
-"""
+    # Root class
+    root_class = Mock(__name__="Order")
+    root_class.meta.name_snake = "order"
+    root_class._inners = (middle_inner,)
+
+    path = _get_collision_path(root_class, "zip_code")
+    assert path == "Order/Delivery/ZipCode"
+
+
+def test_get_collision_path_no_match() -> None:
+    """Test returning None when no matching collision_name is found."""
+    dummy_class = Mock(__name__="Order")
+    dummy_class.meta.name_snake = "order"
+    dummy_class._inners = ()
+
+    path = _get_collision_path(dummy_class, "unknown_identifier")
+    assert path is None

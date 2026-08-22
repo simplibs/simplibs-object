@@ -30,7 +30,7 @@ class ValueFormatting(SimpleMixin):
         pattern: str | None = None
     ) -> str:
         """
-        Formats the instance's value according to the given pattern.
+        Formats the instance's value according to the given pattern or mask.
         If no pattern is given, uses the mask from metadata (meta.mask),
         if it exists. Suitable for formatting numbers, text, and simple
         composite values.
@@ -39,19 +39,28 @@ class ValueFormatting(SimpleMixin):
         mask = pattern or getattr(self.meta, "mask", None)
 
         if mask and isinstance(value, (str, int, float)):
-            return mask.format(value)
+            # If pattern is a format string template like '{:03d}' or has replacement fields
+            if "{" in mask and "}" in mask:
+                return mask.format(value)
+            # Otherwise treat as a standard format specifier (e.g. '03d', '.2f')
+            try:
+                return format(value, mask)
+            except (ValueError, TypeError):
+                return mask.format(value)
 
         return str(value)
 
     def __format__(
-        self,
+        self: "ValueDisplayProtocol",
         format_spec: str = ""
     ) -> str:
         """
-        Support for f-string formatting.
-        Enables syntax like: f"{obj:pattern}".
+        Support for f-string formatting and the built-in format() function.
+        Enables syntax like: f"{obj:03d}" or format(obj, "03d").
         """
-        return self.format(format_spec or None)
+        if not format_spec:
+            return self.format()
+        return format(self.value, format_spec)
 
     # ----------------------------------------
     # Methods = BYTES / BOOL
@@ -108,21 +117,23 @@ default from `InstanceBase`).
   constant-only. Both atoms and composites have a `.value`, so both can
   reasonably be formatted, converted to bytes, or tested for truthiness.
 
-## Logic
-- `format(pattern)` — uses the given pattern if provided, otherwise falls
-  back to `meta.mask` if the blueprint declared one. The mask is only
-  applied to `str`/`int`/`float` values; anything else just falls back to
-  `str(value)`.
-- `__format__` is a thin adapter so f-strings work: `f"{obj:pattern}"`
-  calls `__format__(pattern)`, which forwards to `format()`.
-- `__bytes__` handles the common convertible types explicitly
-  (`bytes` passthrough, `bytearray`/`memoryview` via `bytes(...)`, `str`
-  via UTF-8 encoding) and raises a descriptive `TypeError` for anything
-  else, rather than letting Python's generic bytes-conversion error
-  surface.
-- `__bool__` simply forwards to `bool(self.value)`, so an instance
-  wrapping `0`, `""`, or an empty collection is falsy exactly like the
-  raw value would be.
+## Logic & Architecture
+- **Distinction between `format()` and `__format__`:**
+  - `__format__(format_spec)` directly delegates to Python's built-in 
+    `format(self.value, format_spec)`. When using standard f-strings like 
+    `f"{instance:03d}"`, Python passes `"03d"` (a format specification, not 
+    a template containing `{}`). Forwarding this to standard `str.format()` 
+    would fail or return raw specifier strings.
+  - `format(pattern=...)` serves as a higher-level convenience method that 
+    accepts either template strings (e.g. `"{:03d}"`, `"{}_formatted"`), format 
+    specifiers (e.g. `"03d"`), or blueprint-level masks via `meta.mask`.
+- **`__bytes__`:**
+  Handles common convertible types explicitly (`bytes` passthrough, 
+  `bytearray`/`memoryview` via `bytes(...)`, `str` via UTF-8 encoding) 
+  and raises a descriptive `TypeError` for anything else.
+- **`__bool__`:**
+  Forwards to `bool(self.value)` to ensure that truthiness directly reflects 
+  the wrapped inner value.
 
 ## Notes
 - Deliberately independent from `ValueDisplay` — a class can use one,

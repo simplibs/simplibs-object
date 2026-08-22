@@ -1,51 +1,53 @@
-from typing import TYPE_CHECKING
-# Annotations
-if TYPE_CHECKING:
-    from .....protocols.metadata import SimpleMetadataLike
-    from .....protocols.instance import AtomInstanceProtocol, CompositeInstanceProtocol
-
-
-def _get_inner_instance_class(
-    inner_meta: "SimpleMetadataLike",
-    mutable: bool,
-) -> "AtomInstanceProtocol | CompositeInstanceProtocol":
-    """Returns the correct instance class for an inner element."""
-
-    # 1. Mutable branch
-    if mutable:
-        return (
-            inner_meta.atom_class_mutable
-            if inner_meta.is_constant
-            else inner_meta.composite_class_mutable
-        )
-
-    # 2. Immutable branch
-    return (
-        inner_meta.atom_class_immutable
-        if inner_meta.is_constant
-        else inner_meta.composite_class_immutable
-    )
-
-
-
-_DESIGN_NOTES = """
-# _get_inner_instance_class
-
-## Purpose
-Resolves the correct instance class for an inner element based on:
-- mutability (mutable vs immutable)
-- structural identity (constant vs composite)
-
-## Behavior
-1. If the composite instance is mutable:
-   - constants use `atom_class_mutable`
-   - composites use `composite_class_mutable`
-2. If immutable:
-   - constants use `atom_class_immutable`
-   - composites use `composite_class_immutable`
-
-## Notes
-This helper isolates the resolution matrix from the composite builder.  
-It also triggers lazy class creation defined on metadata, ensuring efficient
-runtime behavior even for deeply nested composition trees.
 """
+Tests for `_core/metadata/instance_builders/composite_class/helpers/_get_inner_instance_class.py`.
+"""
+from types import SimpleNamespace
+from simplibs.object._core.metadata.instance_builders.composite_class.helpers._get_inner_instance_class import (
+    _get_inner_instance_class,
+)
+
+
+class TestGetInnerInstanceClassConstant:
+
+    def test_mutable_constant_returns_atom_class_mutable(self):
+        meta = SimpleNamespace(
+            is_constant=True,
+            atom_class_mutable="ATOM_MUTABLE",
+            atom_class_immutable="ATOM_IMMUTABLE",
+            composite_class_mutable="COMPOSITE_MUTABLE",
+            composite_class_immutable="COMPOSITE_IMMUTABLE",
+        )
+        assert _get_inner_instance_class(meta, mutable=True) == "ATOM_MUTABLE"
+
+    def test_immutable_constant_returns_atom_class_immutable(self):
+        meta = SimpleNamespace(
+            is_constant=True,
+            atom_class_mutable="ATOM_MUTABLE",
+            atom_class_immutable="ATOM_IMMUTABLE",
+            composite_class_mutable="COMPOSITE_MUTABLE",
+            composite_class_immutable="COMPOSITE_IMMUTABLE",
+        )
+        assert _get_inner_instance_class(meta, mutable=False) == "ATOM_IMMUTABLE"
+
+
+class TestGetInnerInstanceClassComposite:
+
+    def test_mutable_composite_returns_composite_class_mutable(self):
+        meta = SimpleNamespace(
+            is_constant=False,
+            atom_class_mutable="ATOM_MUTABLE",
+            atom_class_immutable="ATOM_IMMUTABLE",
+            composite_class_mutable="COMPOSITE_MUTABLE",
+            composite_class_immutable="COMPOSITE_IMMUTABLE",
+        )
+        assert _get_inner_instance_class(meta, mutable=True) == "COMPOSITE_MUTABLE"
+
+    def test_immutable_composite_returns_composite_class_immutable(self):
+        meta = SimpleNamespace(
+            is_constant=False,
+            atom_class_mutable="ATOM_MUTABLE",
+            atom_class_immutable="ATOM_IMMUTABLE",
+            composite_class_mutable="COMPOSITE_MUTABLE",
+            composite_class_immutable="COMPOSITE_IMMUTABLE",
+        )
+        assert _get_inner_instance_class(meta, mutable=False) == "COMPOSITE_IMMUTABLE"

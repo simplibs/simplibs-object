@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, NoReturn, Any
 # Outers
-from .......exceptions import SimpleLogicError
+from .......exceptions import SimpleRuntimeError
 # Annotations
 if TYPE_CHECKING:
     from ......._core.protocols.mixins.state import HistoryProtocol
@@ -15,7 +15,7 @@ def raise_unvalide_owner_class_mismatch(
     """
     expected_owner_class = instance.meta.owner_class
 
-    raise SimpleLogicError(
+    raise SimpleRuntimeError(
         error_name="HISTORY OWNER CLASS MISMATCH",
         label="owner_class",
         expected=f"Owner class: {expected_owner_class}",

@@ -1,59 +1,55 @@
-from typing import Any, Callable, TYPE_CHECKING
-from simplibs.sentinels import UNSET, UnsetType
-# Inners
-from .create_constant_class import create_constant_class
-from .create_object_class import create_object_class
-# Annotations
-if TYPE_CHECKING:
-    from .._core.protocols import SimpleClassType, SimpleMixinLike
+"""
+Tests for `tools/automate_creators/create_simple_object.py`.
+
+Verifies routing logic based on presence of `inners` and proper forwarding
+of parameters like `return_instance`, `mixins`, and `mutable`.
+"""
+import pytest
+from simplibs.object import SimpleConstant, SimpleObject
+from simplibs.object.tools.automate_creators.create_simple_object import (
+    create_simple_object,
+)
 
 
-def create_simple_object(
-    class_name: str,
-    default: Any | UnsetType = UNSET,
-    inners: tuple["SimpleClassType", ...] | UnsetType = UNSET,
-    value_type: type | UnsetType = UNSET,
-    validate: Callable | UnsetType = UNSET,
-    logic: Callable | UnsetType = UNSET,
-    decompose: Callable | UnsetType = UNSET,
-    return_instance: bool = False,
-    mixins: tuple["SimpleMixinLike", ...] = (),
-    as_atom: bool = False,
-    mutable: bool = True,
-):
+def _int_const(name, default=0):
+    return type(name, (SimpleConstant,), {"_type": int, "_default": default})
 
-    # Vtyovření třídy pro konstantu
-    if default is not UNSET:
-        if inners is not UNSET or logic is not UNSET or decompose is not UNSET:
-            raise "Default může být zadáím pouze pro konstantu"
-        _class = create_constant_class(
-            class_name=class_name,
-            default=default,
-            value_type=value_type,
-            validate=validate,
+
+class TestCreateSimpleObjectConstantRouting:
+
+    def test_no_inners_routes_to_constant_class(self):
+        Age = create_simple_object("Age", default=18)
+        assert issubclass(Age, SimpleConstant)
+        assert not issubclass(Age, SimpleObject)
+        assert Age.meta.default == 18
+
+    def test_return_instance_true_returns_instance_not_class(self):
+        age_instance = create_simple_object("Age", default=18, return_instance=True)
+        assert age_instance.value == 18
+
+    def test_return_instance_false_returns_class(self):
+        Age = create_simple_object("Age", default=18, return_instance=False)
+        assert isinstance(Age, type)
+
+    def test_mutable_flag_is_forwarded_to_instance(self):
+        age_instance = create_simple_object(
+            "Age", default=18, return_instance=True, mutable=False
         )
+        with pytest.raises(AttributeError):
+            age_instance.value = 99
 
-    # Vtyvoření třídy pro kompoizici
-    elif inners is not UNSET:
-        if logic is UNSET:
-            raise "Nevyplněné logic"
-        _class = create_object_class(
-            class_name=class_name,
-            inners=inners,
-            logic=logic,
-            value_type=value_type,
-            validate=validate,
-            decompose=decompose,
+
+class TestCreateSimpleObjectObjectRouting:
+
+    def test_inners_routes_to_object_class(self):
+        First = _int_const("First", default=2)
+        Second = _int_const("Second", default=3)
+
+        def logic(cls, first, second):
+            return first + second
+
+        Pair = create_simple_object(
+            "Pair", inners=(First, Second), logic=logic, value_type=int
         )
-
-    else:
-        raise "nevalidní vstupní data - musí být zadán default pro konstantu a nebo inners a logic pro kompozicii"
-
-    # Navrácení instance
-    if return_instance:
-        return _class(mixins, as_atom=as_atom, mutable=mutable)
-
-    # Navráícení třídy
-    return _class
-
-
+        assert issubclass(Pair, SimpleObject)
+        assert Pair.meta.default == 5

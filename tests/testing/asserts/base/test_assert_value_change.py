@@ -1,89 +1,47 @@
-from typing import Any
+"""
+Tests for `testing/asserts/base/assert_value_change.py`.
+"""
 import pytest
-from simplibs.sentinels import UNSET
-from simplibs.exception.testing import maybe_subtest
-# Outers
-from ...tools.InnerValue import InnerValue
+from simplibs.object.testing.asserts.base.assert_value_change import assert_value_change
+from simplibs.object.testing.containers.InnerValue import InnerValue
 
 
-def assert_value_change(
-    subtests: Any,
-    instance: Any,
-    *,
-    value: Any | InnerValue,
-    verbose: bool = True,
-    intro: str = "",
-) -> Any:
-    """
-    Universal value-change assertion.
+class TestAssertValueChangeDirectValue:
 
-    - Accepts Any or InnerValue
-    - Resolves target instance (main or inner)
-    - Validates new value
-    - Ensures value differs from default and original
-    - Applies value via setter
-    - Ensures value actually changed
+    def test_changes_root_value_successfully(self, IntConst, subtests):
+        instance = IntConst()
+        result = assert_value_change(subtests, instance, value=42)
 
-    Returns:
-        new_value
-    """
+        assert result == 42
+        assert instance.value == 42
 
-    subintro = "assert_value_change::"
+    def test_returns_the_applied_value(self, IntConst, subtests):
+        instance = IntConst()
+        result = assert_value_change(subtests, instance, value=7)
+        assert result == 7
 
-    # 1. Resolve target instance + value
-    with maybe_subtest(
-        subtests,
-        name=f"{intro}{subintro}resolve_target",
-        verbose=verbose,
-    ):
-        if isinstance(value, InnerValue):
-            target, value = value.as_instance_tuple(instance)
-            if target is UNSET:
-                pytest.fail("InnerValue path could not be resolved.")
-        else:
-            target = instance
-            new_value = value
 
-    # 2. Validate new value
-    with maybe_subtest(
-        subtests,
-        name=f"{intro}{subintro}validate_new_value",
-        verbose=verbose,
-    ):
-        if not target.validate(value, return_bool=True):
-            pytest.fail(f"Value '{value}' is not valid for '{target.meta.name_snake}'.")
+class TestAssertValueChangeInnerValue:
 
-    # 3. Ensure new value differs from original
-    with maybe_subtest(
-        subtests,
-        name=f"{intro}{subintro}not_original",
-        verbose=verbose,
-    ):
-        if new_value == target.value:
-            pytest.fail(
-                f"New value must differ from original value ({old_value})."
+    def test_changes_nested_inner_value(self, NonDecomposablePairObject, subtests):
+        instance = NonDecomposablePairObject(mixins=())
+        iv = InnerValue(path="first", value=999)
+
+        result = assert_value_change(subtests, instance, value=iv)
+        assert result == 999
+        assert instance.first == 999
+
+
+class TestAssertValueChangeSameValueFails:
+
+    def test_same_value_as_current_state_fails(self, IntConst, subtests):
+        instance = IntConst()
+        current = instance.value
+
+        with pytest.raises(pytest.fail.Exception, match="New value must differ from current state value"):
+            assert_value_change(
+                subtests,
+                instance,
+                value=current,
+                verbose=False,
             )
-
-    # 4. Apply new value
-    with maybe_subtest(
-        subtests,
-        name=f"{intro}{subintro}apply_value",
-        verbose=verbose,
-    ):
-        try:
-            target.value = new_value
-        except Exception as exc:
-            pytest.fail(f"Failed to apply new value: {exc}")
-
-    # 5. Ensure value actually changed
-    with maybe_subtest(
-        subtests,
-        name=f"{intro}{subintro}value_changed",
-        verbose=verbose,
-    ):
-        if target.value != new_value:
-            pytest.fail(
-                f"Value did not change: expected {value}, got {target.value}"
-            )
-
-    return new_value

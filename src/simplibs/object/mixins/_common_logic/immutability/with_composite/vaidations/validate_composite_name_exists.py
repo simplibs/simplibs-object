@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, NoReturn
 # Outers
-from ......exceptions import SimpleLogicError
+from ......exceptions import SimpleRuntimeError
 # Annotations
 if TYPE_CHECKING:
     from ......_core.protocols.mixins.core_mixins import InfrastructureProtocol
@@ -17,7 +17,7 @@ def validate_composite_name_exists(
     if name in instance.meta.node_names_set:
         return
 
-    raise SimpleLogicError(
+    raise SimpleRuntimeError(
         error_name="IMMUTABILITY COMPOSITE UPDATE ERROR",
         label="composite name",
         expected="Name must refer to a valid composite node.",

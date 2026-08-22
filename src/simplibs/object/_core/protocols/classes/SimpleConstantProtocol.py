@@ -43,7 +43,7 @@ class SimpleConstantProtocol(
 
     @classmethod
     def normalize(cls, value: Any, *, process_none: bool = False) -> Any:
-        """Normalizes value. Returns normalized value or raises SimpleLogicError."""
+        """Normalizes value. Returns normalized value or raises SimpleRuntimeError."""
         ...
 
     @classmethod

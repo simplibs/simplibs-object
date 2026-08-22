@@ -1,57 +1,45 @@
-from typing import TYPE_CHECKING
-# Outers
-from ...base_class import SimpleMixin
-# Annotations
-if TYPE_CHECKING:
-    from ...._core.protocols.mixins.dunders.representation import ValueDisplayProtocol
+"""
+Tests for `ValueDisplay` mixin.
+"""
+import pytest
+from simplibs.object.mixins.dunders.representation import ValueDisplay
+from simplibs.object.testing import assert_simple_mixin
 
 
-class ValueDisplay(SimpleMixin):
-    """
-    Přepíše __repr__ a __str__ tak, aby objekt vystupoval
-    jako surová hodnota kterou obaluje.
+class TestValueDisplayStructure:
 
-    Změní způsob zobrazení objektu tak, aby reprezentoval svou hodnotu.
-    Určeno pouze pro atomické (constant-only) typy, které se mají chovat
-    jako „value-like“ objekty (např. Decimal, UUID, PhoneNumber…).
+    def test_constant_only_flag(self):
+        assert ValueDisplay._constant_only is True
 
-    ValueReprMixin je common, ale není to standardní mixin,
-    nýbrž specializovaný, opt‑in, constant‑only mixin,
-    který má být použit jen tehdy, když chceš,
-    aby se objekt choval jako „value object“
-    (např. Decimal, UUID, Path, Enum, …).
+    def test_assert_simple_mixin_shallow(self, subtests, IntLeaf):
+        assert_simple_mixin(
+            subtests,
+            ValueDisplay,
+            test_class=IntLeaf,
+            method_names=("__repr__", "__str__"),
+        )
 
-    """
 
-    # ----------------------------------------
-    # Základní rozhraní
-    # ----------------------------------------
+class TestValueDisplayRepr:
 
-    # Definice určení
-    _constant_only = True
+    def test_repr_format(self, IntLeaf):
+        instance = IntLeaf(mixins=(ValueDisplay,), as_atom=True)
+        assert repr(instance) == f"{instance.meta.class_name}({instance.value!r})"
 
-    # Definice slotů
-    __slots__ = ()
+    def test_repr_contains_class_name(self, IntLeaf):
+        instance = IntLeaf(mixins=(ValueDisplay,), as_atom=True)
+        assert instance.meta.class_name in repr(instance)
 
-    # ----------------------------------------
-    # Methods - REPR / STR
-    # ----------------------------------------
 
-    def __repr__(
-        self: "ValueDisplayProtocol"
-    ) -> str:
-        """
-        Technická reprezentace objektu ve formátu:
-            ClassName(value_repr)
-        Používá se pro debugging a logování.
-        """
-        return f"{self.meta.class_name}({self.value!r})"
+class TestValueDisplayStr:
 
-    def __str__(
-        self: "ValueDisplayProtocol"
-    ) -> str:
-        """
-        Uživatelská reprezentace objektu.
-        Vrací čistou hodnotu převedenou na řetězec.
-        """
-        return str(self.value)
+    def test_str_returns_plain_value_string(self, IntLeaf):
+        instance = IntLeaf(mixins=(ValueDisplay,), as_atom=True)
+        assert str(instance) == str(instance.value)
+
+
+class TestValueDisplayCompatibility:
+
+    def test_rejects_composite_instance(self, Outer):
+        with pytest.raises(Exception):
+            Outer(mixins=(ValueDisplay,))

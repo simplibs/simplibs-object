@@ -1,20 +1,37 @@
-from typing import NoReturn, TYPE_CHECKING
-# Outers
-from .....exceptions import SimpleLogicError
-# Annotations
-if TYPE_CHECKING:
-    from ....protocols.classes import SimpleObjectProtocol
+import pytest
+from unittest.mock import Mock
+
+from simplibs.exception.testing import (
+    assert_exception_function,
+)
+from simplibs.object._core.logic.object_methods.validations.raise_duplicate_argument_error import (
+    raise_duplicate_argument_error,
+)
+from simplibs.object.exceptions import SimpleRuntimeError
 
 
-def raise_duplicate_argument_error(
-    cls: "SimpleObjectProtocol",
-    param_name: str,
-) -> NoReturn:
-    """Raises an error when an argument is provided both positionally and by keyword."""
+@pytest.mark.parametrize(
+    "class_name, param_name",
+    [
+        ("UserObject", "age"),
+        ("CustomComposite", "value_list"),
+    ],
+)
+def test_raise_duplicate_argument_error(
+    subtests, class_name: str, param_name: str
+) -> None:
+    """Test that passing argument positionally AND by keyword raises SimpleRuntimeError."""
 
-    class_name = cls.__name__
+    dummy_cls = Mock()
+    dummy_cls.__name__ = class_name
 
-    raise SimpleLogicError(
+    assert_exception_function(
+        subtests,
+        raise_duplicate_argument_error,
+
+        invalid_params=(dummy_cls, param_name),
+        exception_type=SimpleRuntimeError,
+
         error_name="INVALID PARAMETERS",
         label=param_name,
         value=f"Positional and keyword argument for '{param_name}'",
@@ -35,43 +52,6 @@ def raise_duplicate_argument_error(
             "Ensure that each inner element is mapped to exactly one argument.",
         ),
         exception=ValueError,
+
+        verbose=False,
     )
-
-
-_DESIGN_NOTES = """
-# raise_duplicate_argument_error
-
-## Purpose
-Signals that a parameter was supplied both positionally and as a keyword when
-calling `calculate_value`. This is a user-facing error that prevents ambiguous
-argument mapping in composite objects.
-
----
-
-## Behavior
-- Detects when the same parameter name appears in both `args` and `kwargs`.
-- Raises a structured `SimpleLogicError` explaining the conflict.
-- Provides actionable guidance on how to correct the call.
-
----
-
-## Why this error exists
-Composite objects map positional arguments to inner elements **by order**.  
-Keyword arguments map them **by name**.
-
-If a parameter is supplied twice:
-
-- the system cannot determine which value should be used,
-- the mapping becomes ambiguous,
-- the resulting composite value could be incorrect.
-
-This error ensures predictable behavior and prevents silent overwrites.
-
----
-
-## Notes
-- Used inside `process_calculate_value_params`.
-- The public-facing documentation belongs to `SimpleObject.calculate_value`.
-- Uses `ValueError` as the underlying exception type for consistency with Python’s
-  argument handling semantics.
-"""

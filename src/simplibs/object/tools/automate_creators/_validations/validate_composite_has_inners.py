@@ -1,14 +1,14 @@
 from typing import Any, NoReturn
 from simplibs.sentinels import UNSET
 # Outers
-from ....exceptions import SimpleLogicError
+from ....exceptions import SimpleRuntimeError
 
 
 def validate_composite_has_inners(class_name: str, inners: Any) -> None | NoReturn:
     """Validates that a composite object class definition provides a valid tuple of inner components."""
 
     if inners in (UNSET, None):
-        raise SimpleLogicError(
+        raise SimpleRuntimeError(
             error_name="COMPOSITE MISSING INNERS ERROR",
             label="composite_missing_or_none_inners",
             expected="A valid non-empty tuple of inner component classes (inners not in (UNSET, None))",
@@ -39,5 +39,5 @@ Ensures that composite `SimpleObject` definitions explicitly specify their inner
 
 ## Behavior
 1. Checks if `inners` is in `(UNSET, None)`.
-2. Raises structured `SimpleLogicError` guiding the developer to pass a valid tuple of child classes.
+2. Raises structured `SimpleRuntimeError` guiding the developer to pass a valid tuple of child classes.
 """

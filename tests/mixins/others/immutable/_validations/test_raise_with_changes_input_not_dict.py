@@ -1,60 +1,41 @@
-from typing import TYPE_CHECKING, NoReturn, Any
-# Outers
-from ....exceptions import SimpleMixinError
+from unittest.mock import Mock
+from simplibs.object.exceptions import SimpleRuntimeError
+from simplibs.exception.testing.assert_exception_function import assert_exception_function
+from simplibs.object.mixins.others.immutable._validations.raise_with_changes_input_not_dict import (
+    raise_with_changes_input_not_dict,
+)
 
-# Annotations
-if TYPE_CHECKING:
-    from ...._core.protocols.mixins.immutable import ImmutableMethodsProtocol
 
+def test_raise_with_changes_input_not_dict(subtests) -> None:
+    """Tests that raise_with_changes_input_not_dict raises SimpleRuntimeError."""
 
-def raise_with_changes_input_not_dict(
-    instance: "ImmutableMethodsProtocol",
-    value: Any,
-) -> NoReturn:
-    """
-    Raises an error when the input to `with_changes` is not a dictionary.
-    """
+    dummy_instance = Mock()
+    type(dummy_instance).__name__ = "MyImmutableObj"
 
-    raise SimpleMixinError(
+    invalid_value = ["width", 10]  # Neplatný vstup (list místo dict)
+
+    assert_exception_function(
+        subtests,
+        raise_with_changes_input_not_dict,
+        invalid_params=(dummy_instance, invalid_value),
+        exception_type=SimpleRuntimeError,
         error_name="IMMUTABILITY UPDATE ERROR",
         label="changes_dict",
+        value="['width', 10]",
         expected="A dictionary mapping constant names to new values.",
-        value=repr(value),
         problem=(
             "Invalid input provided to `with_changes`.",
-            "The method expects a dictionary of constant updates."
+            "The method expects a dictionary of constant updates.",
         ),
         context=(
-            f"Immutable update attempted on instance '{type(instance).__name__}'.",
-            f"Provided value type: {type(value).__name__}"
+            "Immutable update attempted on instance 'MyImmutableObj'.",
+            "Provided value type: list",
         ),
         how_to_fix=(
             "Ensure that `changes_dict` is a dictionary.",
             "Example: {'width': 10, 'height': 20}",
-            "For tuple-based updates, use `with_constants` instead."
+            "For tuple-based updates, use `with_constants` instead.",
         ),
         exception=TypeError,
+        verbose=False,
     )
-
-
-_DESIGN_NOTES = """
-# raise_with_changes_input_not_dict
-
-## Purpose
-Raises a structured error when `with_changes` receives a non-dictionary input.
-
-## Why this validation exists
-`with_changes` is a convenience wrapper over `with_any`, which expects a tuple
-of `(name, value)` pairs.  
-To keep the API ergonomic, `with_changes` accepts a dictionary and converts it
-to a tuple internally.
-
-If the input is not a dictionary, the conversion cannot be performed safely.
-
-## Execution context
-Used inside `ImmutableMethods.with_changes` before delegating to `with_any`.
-
-## Notes
-- Pure raise function, no conditional logic.
-- Consistent with the immutability validation style.
-"""

@@ -103,6 +103,6 @@ parameter handling and provides structured error reporting for all invalid cases
 ## Notes
 - This function is used internally by `calculate_value`.
 - It ensures that composite objects behave predictably and consistently.
-- All diagnostics are delegated to structured `SimpleLogicError` helpers.
+- All diagnostics are delegated to structured `SimpleRuntimeError` helpers.
 - The public-facing documentation belongs to `SimpleObject.calculate_value`.
 """

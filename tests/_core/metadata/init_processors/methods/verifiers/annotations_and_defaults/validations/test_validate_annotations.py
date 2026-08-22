@@ -1,84 +1,75 @@
-from typing import TYPE_CHECKING
-# Outers
-from ........exceptions import SimpleMetadataError
-# Inners
-from ._convert_annotation_to_type_set import _convert_annotation_to_type_set
-# Annotations
-if TYPE_CHECKING:
-    from .......protocols.methods import ClassMethodProtocol
+from unittest.mock import Mock
+from simplibs.object.exceptions.SimpleDefinitionError import SimpleDefinitionError
+from simplibs.exception.testing.assert_exception_function import assert_exception_function
+from simplibs.object._core.metadata.init_processors.methods.verifiers.annotations_and_defaults.validations.validate_annotations import (
+    validate_annotations,
+)
 
 
-def validate_annotations(
-    bound_method_annotations: dict[str, type],
-    bound_method: "ClassMethodProtocol",
-    exception_info: tuple[str, str, str],
-    expected_structure: tuple[str, ...],
-) -> None:
-    """Validates that user-declared type annotations match expected types."""
+def test_validate_annotations_pass() -> None:
+    """Tests that valid annotations or empty annotations pass validation."""
 
-    # 1. Extract user annotations
-    method_annotations = bound_method.__func__.__annotations__ or {}
+    mock_func = Mock()
+    mock_func.__annotations__ = {"a": int, "b": str}
+    mock_bound_method = Mock()
+    mock_bound_method.__func__ = mock_func
 
-    # 2. Happy path: no annotations declared
-    if not method_annotations:
-        return
+    expected_annotations = {"a": int | str, "b": str}
+    exception_info = ("TestClass", "test_method", "Context")
+    expected_structure = ("Blueprint",)
 
-    class_name, method_name, context = exception_info
+    # Valid subset annotation passes
+    validate_annotations(
+        bound_method_annotations=expected_annotations,
+        bound_method=mock_bound_method,
+        exception_info=exception_info,
+        expected_structure=expected_structure,
+    )
 
-    # 3. Validate each annotation
-    for name, annotation in method_annotations.items():
-        expected_type = bound_method_annotations.get(name)
-
-        expected_type_set = _convert_annotation_to_type_set(expected_type)
-        annotation_set = _convert_annotation_to_type_set(annotation)
-
-        # 4. Check subset relationship
-        if not annotation_set.issubset(expected_type_set):
-            expected_names = " | ".join(t.__name__ for t in expected_type_set)
-            annotation_names = " | ".join(t.__name__ for t in annotation_set)
-
-            raise SimpleMetadataError(
-                error_name="METHOD SIGNATURE ERROR",
-                label="_annotation",
-                value=annotation_names,
-                expected=expected_names,
-                problem=f"Annotation for '{name}' does not match expected types.",
-                context=context,
-                how_to_fix=(
-                    f"Change the annotation to match '{expected_names}'.",
-                    "The annotation must be the same type or a valid subset.",
-                    "You may also remove the annotation entirely; the framework will inject it automatically.",
-                ) + expected_structure,
-                exception=TypeError,
-            )
+    # Empty annotations pass immediately
+    mock_func.__annotations__ = {}
+    validate_annotations(
+        bound_method_annotations=expected_annotations,
+        bound_method=mock_bound_method,
+        exception_info=exception_info,
+        expected_structure=expected_structure,
+    )
 
 
-_DESIGN_NOTES = """
-# validate_annotations
+def test_validate_annotations_raises_error(subtests) -> None:
+    """Tests that mismatching type annotations raise SimpleDefinitionError."""
 
-## Purpose
-Ensures that user-declared type annotations match the expected types defined by
-the metadata pipeline.  
-Annotations are normalized into sets so that union types can be compared using
-simple subset logic.
+    mock_func = Mock()
+    mock_func.__annotations__ = {"a": str}
+    mock_bound_method = Mock()
+    mock_bound_method.__func__ = mock_func
 
-## Why tuple inputs
-The validator receives:
-- `exception_info` — (class_name, method_name, context)
-- `expected_structure` — code blueprint
+    expected_annotations = {"a": int}
+    exception_info = ("TestClass", "test_method", "TestContext")
+    expected_structure = ("Expected structure line 1",)
 
-This keeps the function consistent with all other method-validation helpers.
-
-## Behavior
-1. Extract user annotations.
-2. If none exist → exit immediately.
-3. Convert both expected and actual annotations into type sets.
-4. Check whether the actual set is a subset of the expected set.
-5. If not, raise a structured `SimpleMetadataError` with a copy-paste blueprint.
-
-## Notes
-This validator is part of the annotation/defaults verification chain:
-- `validate_annotations`
-- `validate_args_defaults`
-- `validate_kwargs_defaults`
-"""
+    assert_exception_function(
+        subtests,
+        validate_annotations,
+        invalid_params=(
+            expected_annotations,
+            mock_bound_method,
+            exception_info,
+            expected_structure,
+        ),
+        exception_type=SimpleDefinitionError,
+        error_name="METHOD SIGNATURE ERROR",
+        label="_annotation",
+        expected="int",
+        value="str",
+        problem="Annotation for 'a' does not match expected types.",
+        context="TestContext",
+        how_to_fix=(
+            "Change the annotation to match 'int'.",
+            "The annotation must be the same type or a valid subset.",
+            "You may also remove the annotation entirely; the framework will inject it automatically.",
+            "Expected structure line 1",
+        ),
+        exception=TypeError,
+        verbose=False,
+    )

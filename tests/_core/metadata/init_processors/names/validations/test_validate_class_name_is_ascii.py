@@ -1,95 +1,38 @@
-# Outers
-from ......exceptions import SimpleMetadataError
+from simplibs.object.exceptions.SimpleDefinitionError import SimpleDefinitionError
+from simplibs.exception.testing.assert_exception_function import assert_exception_function
+from simplibs.object._core.metadata.init_processors.names.validations.validate_class_name_is_ascii import (
+    validate_class_name_is_ascii,
+)
 
 
-def validate_class_name_is_ascii(
-    class_name: str
-) -> None:
-    """Validates that the class name contains only ASCII characters."""
+def test_validate_class_name_is_ascii_pass() -> None:
+    """Tests that a purely ASCII class name passes validation."""
 
-    # 1. Check ASCII constraint
-    if class_name.isascii():
-        return
+    validate_class_name_is_ascii("MyClass")
+    validate_class_name_is_ascii("Class_123")
 
-    # 2. Raise structured metadata error
-    raise SimpleMetadataError(
+
+def test_validate_class_name_is_ascii_raises_error(subtests) -> None:
+    """Tests that a class name containing non-ASCII characters raises SimpleDefinitionError."""
+
+    invalid_class_name = "Třída"
+
+    assert_exception_function(
+        subtests,
+        validate_class_name_is_ascii,
+        invalid_params=(invalid_class_name,),
+        exception_type=SimpleDefinitionError,
         error_name="CLASS NAME NOT ASCII",
         label="class name",
-        value=class_name,
-        problem=(
-            "The name contains non-ASCII characters.",
-        ),
+        value=invalid_class_name,
         expected="Only basic ASCII characters (A–Z, a–z, 0–9, _).",
+        problem="The name contains non-ASCII characters.",
+        context="ASCII validation during metadata name processing.",
         how_to_fix=(
             "Remove accents, hooks, and diacritics.",
             "Convert localized letters to plain ASCII (e.g., 'Měna' → 'Mena').",
             "If the name was created dynamically, verify the input string first.",
         ),
-        context="ASCII validation during metadata name processing.",
-        exception=ValueError
+        exception=ValueError,
+        verbose=False,
     )
-
-
-
-_DESIGN_NOTES = """
-# validate_class_name_is_ascii
-
-## Purpose
-Ensures that the class name contains only ASCII characters. This prevents
-localized letters, diacritics, and extended Unicode symbols from entering the
-metadata naming pipeline.
-
-## Why this validation exists
-Python allows Unicode letters inside identifiers.  
-Static class definitions rarely contain diacritics, but dynamically generated
-classes (`type("Třída", ...)`) often do.
-
-This validator guarantees that all class names remain ASCII-only, which keeps
-the naming pipeline predictable and safe.
-
-## What Python already guarantees
-Before this check runs, Python ensures:
-- the name is always a `str`,
-- the name is never empty,
-- the name satisfies `isidentifier()` (letters, digits, underscores),
-- the name is not a reserved keyword.
-
-Because of this, the only remaining risk is the presence of Unicode letters.
-
-## What this validation enforces
-By requiring `isascii()`, the allowed character set becomes:
-
-```
-[a-zA-Z0-9_]
-```
-
-This excludes:
-- diacritics (ě, š, č, ř, í, á, …),
-- non-English alphabets (Greek, Cyrillic, Hebrew, …),
-- extended Unicode symbols.
-
-## Position in the validation pipeline
-This is the second step in the name validation sequence:
-
-1. `validate_class_name_is_identifier`  
-   Removes illegal symbols, spaces, hyphens, dots, and leading digits.
-
-2. `validate_class_name_is_ascii`  
-   Removes diacritics and non-ASCII characters.
-
-3. `validate_class_name_has_no_underscores`  
-   Removes underscores and enforces pure PascalCase.
-
-## Examples
-
-### Valid
-- `"MyClass"`
-- `"Class123"`
-- `"My_Class"`
-
-### Invalid
-- `"Třída"` — contains diacritics  
-- `"Měsíc"` — contains accented letters  
-- `"Ελληνικά"` — Greek alphabet
-```
-"""

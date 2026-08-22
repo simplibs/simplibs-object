@@ -1,7 +1,7 @@
 from typing import Any
 # Outers
 from ....SimpleConstant import SimpleConstant
-from ....exceptions import SimpleLogicError
+from ....exceptions import SimpleRuntimeError
 
 
 def validate_instance_is_simple_constant_base(
@@ -13,13 +13,13 @@ def validate_instance_is_simple_constant_base(
         instance: Candidate instance object to validate.
 
     Raises:
-        SimpleLogicError: If instance is not a SimpleConstant subclass instance.
+        SimpleRuntimeError: If instance is not a SimpleConstant subclass instance.
     """
 
     if isinstance(instance, SimpleConstant):
         return
 
-    raise SimpleLogicError(
+    raise SimpleRuntimeError(
         error_name="INVALID INSTANCE TYPE ERROR",
         label="instance",
         expected="An instance inheriting from SimpleConstant or SimpleObject.",

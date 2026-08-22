@@ -83,7 +83,7 @@ class SimpleConstant(SimpleBase):
             None if `return_bool=False` and validation succeeds.
 
         Raises:
-            SimpleLogicError: If `return_bool=False` and the value does not match the type.
+            SimpleRuntimeError: If `return_bool=False` and the value does not match the type.
         """
         return _validate_type(cls, value, return_bool=return_bool)
 
@@ -110,7 +110,7 @@ class SimpleConstant(SimpleBase):
             None if `return_bool=False` and validation succeeds.
 
         Raises:
-            SimpleLogicError: If `return_bool=False` and validation fails.
+            SimpleRuntimeError: If `return_bool=False` and validation fails.
         """
         return _validate(cls, value, return_bool=return_bool)
 
@@ -154,7 +154,7 @@ class SimpleConstant(SimpleBase):
             The normalized value.
 
         Raises:
-            SimpleLogicError: If the value cannot be normalized or fails validation.
+            SimpleRuntimeError: If the value cannot be normalized or fails validation.
         """
         return _normalize(cls, value, process_none=process_none)
 
@@ -180,7 +180,7 @@ class SimpleConstant(SimpleBase):
             False if `return_bool=True`.
 
         Raises:
-            SimpleLogicError: If `return_bool=False` and validation fails.
+            SimpleRuntimeError: If `return_bool=False` and validation fails.
         """
         return _bool_or_raise_validate_error(cls, value, problem, return_bool=return_bool)
 

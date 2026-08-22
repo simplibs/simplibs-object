@@ -1,66 +1,43 @@
-# Outers
-from ........exceptions import SimpleMetadataError
+from simplibs.object.exceptions.SimpleDefinitionError import SimpleDefinitionError
+from simplibs.exception.testing.assert_exception_function import assert_exception_function
+from simplibs.object._core.metadata.init_processors.methods.verifiers.params.validations.validate_method_not_use_param_placeholders import (
+    validate_method_not_use_param_placeholders,
+)
 
 
-def validate_method_not_use_param_placeholders(
-    has_varargs: bool,
-    has_varkwargs: bool,
-    exception_info: tuple[str, str, str],
-    expected_structure: tuple[str, ...],
-) -> None:
-    """Validates that *args and **kwargs are not used in the method signature."""
+def test_validate_method_not_use_param_placeholders_pass() -> None:
+    """Tests that signatures without *args and **kwargs pass validation."""
 
-    if has_varargs or has_varkwargs:
-        class_name, method_name, context = exception_info
-
-        tokens = []
-        if has_varargs:
-            tokens.append("*args")
-        if has_varkwargs:
-            tokens.append("**kwargs")
-
-        joined = ", ".join(tokens)
-
-        raise SimpleMetadataError(
-            error_name="METHOD SIGNATURE ERROR",
-            label="_params",
-            value=joined,
-            expected="Explicitly named parameters.",
-            problem=f"'{class_name}.{method_name}' uses prohibited placeholders: {joined}.",
-            context=context,
-            how_to_fix=(
-                f"Remove '{joined}' from the method signature.",
-                "Declare each parameter explicitly by its exact semantic name.",
-            ) + expected_structure,
-            exception=TypeError,
-        )
+    validate_method_not_use_param_placeholders(
+        has_varargs=False,
+        has_varkwargs=False,
+        exception_info=("MyClass", "my_method", "Context"),
+        expected_structure=("Blueprint",),
+    )
 
 
-_DESIGN_NOTES = """
-# validate_method_not_use_param_placeholders
+def test_validate_method_not_use_param_placeholders_raises_error(subtests) -> None:
+    """Tests that signatures using *args or **kwargs raise SimpleDefinitionError."""
 
-## Purpose
-Ensures deterministic method signatures by forbidding `*args` and `**kwargs`.
-Every parameter must be explicitly named and mapped to a specific semantic role.
+    exception_info = ("MyClass", "my_method", "TestContext")
+    expected_structure = ("Expected structure line 1",)
 
-## Why tuple inputs
-The validator receives:
-- `exception_info` — (class_name, method_name, context)
-- `expected_structure` — code blueprint
-
-This keeps the function consistent with all other method‑validation helpers.
-
-## Behavior
-The function checks bytecode flags:
-- `has_varargs` → presence of `*args`
-- `has_varkwargs` → presence of `**kwargs`
-
-If either is present, a structured `SimpleMetadataError` is raised with a clear
-explanation and a copy‑paste ready blueprint.
-
-## Notes
-This validator is part of the parameter‑verification chain:
-- `validate_method_param_match_expected`
-- `validate_method_has_exact_args_count`
-- `validate_method_not_use_param_placeholders`
-"""
+    assert_exception_function(
+        subtests,
+        validate_method_not_use_param_placeholders,
+        invalid_params=(True, True, exception_info, expected_structure),
+        exception_type=SimpleDefinitionError,
+        error_name="METHOD SIGNATURE ERROR",
+        label="_params",
+        value="*args, **kwargs",
+        expected="Explicitly named parameters.",
+        problem="'MyClass.my_method' uses prohibited placeholders: *args, **kwargs.",
+        context="TestContext",
+        how_to_fix=(
+            "Remove '*args, **kwargs' from the method signature.",
+            "Declare each parameter explicitly by its exact semantic name.",
+            "Expected structure line 1",
+        ),
+        exception=TypeError,
+        verbose=False,
+    )

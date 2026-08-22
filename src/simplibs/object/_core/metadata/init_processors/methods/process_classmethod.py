@@ -1,5 +1,6 @@
 from typing import Any, TYPE_CHECKING
 from types import UnionType
+from simplibs.sentinels import UNSET
 # Inners
 from .verifiers.classmethod import verify_classmethod
 from .verifiers.params import verify_params
@@ -32,25 +33,29 @@ def process_classmethod(
         expected_params=expected_params,
         expected_args_params_count=expected_args_params_count,
     )
+
+    # 2. Pokud je metoda volitelná a není na třídě přítomna, vrací se UNSET bez spouštění dry-runu
+    if bound_method is UNSET:
+        return (UNSET, UNSET) if return_calculated_value else UNSET
     bound_method: "ClassMethodProtocol"
 
-    # 2. Perform signature and annotation validations if needed
+    # 3. Perform signature and annotation validations if needed
     if need_validations:
 
-        # 2.1 Validate parameters
+        # 3.1 Validate parameters
         verify_params(
             expected_params=expected_params,
             expected_args_params_count=expected_args_params_count,
             bound_method=bound_method,
         )
 
-        # 2.2 Build unified annotation map
+        # 3.2 Build unified annotation map
         bound_method_annotations = {
             **expected_param_types,
             "return": expected_return_type,
         }
 
-        # 2.3 Validate developer overrides (annotations/defaults)
+        # 3.3 Validate developer overrides (annotations/defaults)
         func = bound_method.__func__
         if func.__annotations__ or func.__defaults__ or func.__kwdefaults__:
             verify_annotations_and_defaults(
@@ -62,12 +67,12 @@ def process_classmethod(
                 expected_kwargs_defaults=expected_kwargs_defaults,
             )
 
-        # 2.4 Inject normalized defaults and annotations
+        # 3.4 Inject normalized defaults and annotations
         func.__defaults__ = expected_args_defaults
         func.__kwdefaults__ = expected_kwargs_defaults
         func.__annotations__ = bound_method_annotations
 
-    # 3. Execute deterministic dry-run calculation
+    # 4. Execute deterministic dry-run calculation
     calculated_value = verify_calculation(
         bound_method=bound_method,
         test_value=test_value,
@@ -75,7 +80,7 @@ def process_classmethod(
         owner_class=owner_class,
     )
 
-    # 4. Return method or (method, calculated_value)
+    # 5. Return method or (method, calculated_value)
     if return_calculated_value:
         return bound_method, calculated_value
 

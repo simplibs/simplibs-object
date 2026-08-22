@@ -1,131 +1,192 @@
-from typing import TYPE_CHECKING, Any
-# Inners
-from .CollectionBase import CollectionBase
-# Annotations
-if TYPE_CHECKING:
-    from ...._core.protocols.mixins.dunders.collections import MappingProtocol
+# 🧱 `Mapping` — Dict-Style Item Access for Composites
 
+`Mapping` gives a composite instance `dict`-style item access: `obj[key]`,
+`obj[key] = value`, `key in obj`, `obj.get(key, default)`, `len(obj)`.
+
+```python
+from .CollectionBase import CollectionBase
 
 class Mapping(CollectionBase):
-    """
-    Dict-like API for composite instances.
-    Provides access via obj[key], value assignment, and existence checks.
-    """
+    ...
+```
 
-    # ----------------------------------------
-    # Basic interface
-    # ----------------------------------------
+`_composite_only = True` — item access only makes sense over a composite's inners.
 
-    # Compatibility declaration
-    _composite_only = True
+---
 
-    # Slot definition
-    __slots__ = ()
+## 🧭 Table of Contents
 
-    # ----------------------------------------
-    # Methods - LEN / CONTAINS / MISSING
-    # ----------------------------------------
+* [`__len__`](#__len__)
+* [`__contains__`](#__contains__)
+* [`__missing__`](#__missing__)
+* [`__getitem__`](#__getitem__)
+* [`get`](#get)
+* [`__setitem__`](#__setitem__)
 
-    def __len__(
-        self: "MappingProtocol"
-    ) -> int:
-        """Returns the number of direct inners."""
-        return len(self._inners_name_tuple)
+---
 
-    def __contains__(
-        self: "MappingProtocol",
-        key: str
-    ) -> bool:
-        """Returns True if the composite contains an inner with the given key."""
-        return key in self._inners_name_set
+### `__len__`
 
-    def __missing__(
-        self: "MappingProtocol",
-        key: str
-    ) -> None:
-        """Raises KeyError with information about the available keys."""
-        raise KeyError(
-            f"Item '{key}' is not defined on {self.meta.class_name}. "
-            f"Available items: {self.keys()}"
-        )
+Returns the number of direct inners.
 
-    # ----------------------------------------
-    # Methods - GETITEM / GET / SETITEM
-    # ----------------------------------------
+**Parameters:**
+* *(none)*
 
-    def __getitem__(
-        self: "MappingProtocol",
-        key: str
-    ):
-        """Returns the value of an inner by key, or raises via __missing__."""
-        if key not in self._inners_name_set:
-            self.__missing__(key)
-        return getattr(self, key)
+**Returns:**
+* `int`
 
-    def get(
-        self: "MappingProtocol",
-        key: str,
-        default: Any = None
-    ):
-        """Safely returns the value of an inner, or default if the key doesn't exist."""
-        if key not in self._inners_name_set:
-            return default
-        return getattr(self, key)
+**Example usage:**
+```python
+len(person)  # 2
+```
 
-    def __setitem__(
-        self: "MappingProtocol",
-        key: str,
-        value: Any
-    ):
-        """Sets the value of an inner by key, if it exists."""
+**Under the hood:**
+```python
+def __len__(self) -> int:
+    return len(self._inners_name_tuple)
+```
 
-        # 1. Check that we are not on an immutable object
-        if not self.__is_mutable__:
-            raise TypeError(
-                f"Immutable composite '{self.meta.class_name}' "
-                f"does not allow changing values via __setitem__."
-            )
+[▲ Back to top](#-table-of-contents)
 
-        # 2. Check that the key exists
-        if key not in self._inners_name_set:
-            self.__missing__(key)
+---
 
-        # 3. Request the value change
-        # (May be blocked on a composite without decomposition - an
-        # exception is raised in that case)
-        setattr(self, key, value)
+### `__contains__`
 
+Checks whether the composite contains an inner with the given key.
 
-_DESIGN_NOTES = """
-# Mapping
+**Parameters:**
+* `key` (*str*): the key to check.
 
-## Purpose
-Gives a composite instance `dict`-style item access: `obj[key]`,
-`obj[key] = value`, `key in obj`, `obj.get(key, default)`, `len(obj)`.
-Built on top of the same frozen key set `CollectionBase` already prepared.
+**Returns:**
+* `bool`
 
-## Compatibility
-- `_composite_only = True` — items only exist on composites (inners).
+**Example usage:**
+```python
+"first_name" in person  # True
+```
 
-## Logic
-- `__len__` / `__contains__` are direct lookups against
-  `_inners_name_tuple` / `_inners_name_set` — no extra work.
-- `__getitem__` / `get()` both check key existence first; `__getitem__`
-  delegates the "not found" case to `__missing__` (which raises a
-  `KeyError` listing the available keys), while `get()` just returns the
-  given `default` instead of raising.
-- `__setitem__` is guarded by mutability: on an immutable composite it
-  raises `TypeError` before even checking the key. On a mutable composite
-  it validates the key, then delegates to `setattr`, which means the
-  normal reactivity/validation pipeline for setting a value still runs —
-  this mixin adds syntax, not a parallel write path.
+**Under the hood:**
+```python
+def __contains__(self, key: str) -> bool:
+    return key in self._inners_name_set
+```
 
-## Notes
-- `__missing__` is the single place that decides what "key not found"
-  looks like — overriding just that method changes the error message
-  everywhere without touching `__getitem__` itself.
-- A composite without decomposition logic can still reject a `setattr`
-  further down the pipeline — `__setitem__` only handles the
-  mutability/key-existence checks that are its own responsibility.
-- Pairs naturally with `Iterable`; together they form `Collection`.
-"""
+[▲ Back to top](#-table-of-contents)
+
+---
+
+### `__missing__`
+
+Raises `KeyError` with a message listing the available keys. Called by `__getitem__`
+when a key is not found.
+
+**Parameters:**
+* `key` (*str*): the missing key.
+
+**Returns:**
+* `None` (always raises)
+
+**Example usage:**
+```python
+person["nickname"]  # KeyError: 'nickname' not defined. Available: [...]
+```
+
+**Under the hood:**
+```python
+def __missing__(self, key: str) -> None:
+    raise KeyError(
+        f"Item '{key}' is not defined on {self.meta.class_name}. "
+        f"Available items: {self.keys()}"
+    )
+```
+
+[▲ Back to top](#-table-of-contents)
+
+---
+
+### `__getitem__`
+
+Returns the value of an inner by key, or raises via `__missing__`.
+
+**Parameters:**
+* `key` (*str*): the inner's name.
+
+**Returns:**
+* the inner's current value.
+
+**Example usage:**
+```python
+person["first_name"]  # "Alice"
+```
+
+**Under the hood:**
+```python
+def __getitem__(self, key: str):
+    if key not in self._inners_name_set:
+        self.__missing__(key)
+    return getattr(self, key)
+```
+
+[▲ Back to top](#-table-of-contents)
+
+---
+
+### `get`
+
+Safely returns the value of an inner, or a default if the key doesn't exist.
+
+**Parameters:**
+* `key` (*str*): the inner's name.
+* `default` (*Any*, default `None`): the fallback value.
+
+**Returns:**
+* the inner's value, or `default`.
+
+**Example usage:**
+```python
+person.get("nickname", "N/A")  # "N/A"
+```
+
+**Under the hood:**
+```python
+def get(self, key: str, default=None):
+    if key not in self._inners_name_set:
+        return default
+    return getattr(self, key)
+```
+
+[▲ Back to top](#-table-of-contents)
+
+---
+
+### `__setitem__`
+
+Sets the value of an inner by key, if the instance is mutable and the key exists.
+
+**Parameters:**
+* `key` (*str*): the inner's name.
+* `value` (*Any*): the new value.
+
+**Returns:**
+* `None`
+
+**Example usage:**
+```python
+person["first_name"] = "Bob"
+```
+
+**Under the hood:**
+```python
+def __setitem__(self, key: str, value) -> None:
+    if not self.__is_mutable__:
+        raise TypeError("Immutable composite does not allow __setitem__.")
+    if key not in self._inners_name_set:
+        self.__missing__(key)
+    setattr(self, key, value)
+```
+
+[▲ Back to top](#-table-of-contents)
+
+---
+
+[⬅️ Back to Mixins Overview](../../../README_MIXINS_OVERVIEW.md)

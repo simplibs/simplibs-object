@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING, NoReturn
 from datetime import datetime
 # Outers
-from .......exceptions import SimpleLogicError
+from .......exceptions import SimpleRuntimeError
 # Annotations
 if TYPE_CHECKING:
     from ......._core.protocols.mixins.state import HistoryProtocol
@@ -16,7 +16,7 @@ def raise_unvalide_snopshot_reference(
     nor a datetime object.
     """
 
-    raise SimpleLogicError(
+    raise SimpleRuntimeError(
         error_name="HISTORY SNAPSHOT REFERENCE ERROR",
         label="snapshot reference",
         expected="Either an integer index or a datetime timestamp.",

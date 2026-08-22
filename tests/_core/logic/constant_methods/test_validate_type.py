@@ -1,48 +1,45 @@
-from typing import Any, NoReturn, TYPE_CHECKING
-# Inners
-from .validations import raise_type_error
-# Annotations
-if TYPE_CHECKING:
-    from ...protocols.classes import SimpleConstantProtocol
-
-
-def validate_type(
-    cls: "SimpleConstantProtocol",
-    value: Any,
-    *,
-    return_bool: bool = False,
-) -> bool | NoReturn:
-    """Performs deterministic type validation based on class metadata."""
-
-    # 1. Happy path — value matches expected type
-    if isinstance(value, cls.meta.value_type):
-        return True
-
-    # 2. Boolean mode — return False instead of raising
-    if return_bool:
-        return False
-
-    # 3. Raise detailed type mismatch error
-    raise_type_error(cls, value)
-
-
-
-_DESIGN_NOTES = """
-# validate_type
-
-## Purpose
-Performs strict, deterministic type validation for constant definitions based on
-the type declared in metadata (`meta.value_type`). This function is the first
-step in the validation pipeline (`validate_type` → `validate` → `normalize`).
-
-## Behavior
-1. Accepts the value if it is an instance of the expected type.
-2. Returns `False` when `return_bool=True`.
-3. Raises a structured `SimpleLogicError` via `raise_type_error` otherwise.
-
-## Notes
-- This function is intentionally minimal; all diagnostic detail is delegated to
-  `raise_type_error`.
-- The public-facing docstring belongs to the *class method* (`SimpleConstant.validate_type`),
-  not to this internal helper.
 """
+Tests for `_core/logic/constant_methods/validate_type.py`.
+
+Verifies type-level checking and error raising against configured metadata types.
+"""
+import pytest
+from simplibs.object.exceptions import SimpleRuntimeError
+
+
+class TestValidateTypeHappyPath:
+
+    def test_returns_true_when_value_matches_type(self, IntConst) -> None:
+        """Verifies matching type returns True."""
+        assert IntConst.validate_type(5) is True
+
+    def test_returns_true_for_default_value(self, IntConst) -> None:
+        """Verifies default value matches declared type."""
+        assert IntConst.validate_type(IntConst.meta.default) is True
+
+
+class TestValidateTypeMismatch:
+
+    def test_raises_simple_logic_error_by_default(self, IntConst) -> None:
+        """Verifies type mismatch raises SimpleRuntimeError."""
+        with pytest.raises(SimpleRuntimeError):
+            IntConst.validate_type("not-an-int")
+
+    def test_return_bool_true_returns_false_instead_of_raising(self, IntConst) -> None:
+        """Verifies type mismatch returns False when return_bool=True."""
+        assert IntConst.validate_type("not-an-int", return_bool=True) is False
+
+    def test_return_bool_true_does_not_raise(self, IntConst) -> None:
+        """Verifies boolean mode never raises an exception on type mismatch."""
+        try:
+            result = IntConst.validate_type(3.14, return_bool=True)
+        except SimpleRuntimeError:
+            pytest.fail("validate_type(return_bool=True) should not raise an exception.")
+        assert result is False
+
+
+class TestValidateTypeEdgeCases:
+
+    def test_bool_is_not_valid_int_edge_case_not_asserted(self, IntConst) -> None:
+        """Documents Python standard type hierarchy where bool is a subclass of int."""
+        assert IntConst.validate_type(True) is True

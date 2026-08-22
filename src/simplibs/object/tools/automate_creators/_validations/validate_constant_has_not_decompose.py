@@ -1,14 +1,14 @@
 from typing import Any, NoReturn
 from simplibs.sentinels import UNSET
 # Outers
-from ....exceptions import SimpleLogicError
+from ....exceptions import SimpleRuntimeError
 
 
 def validate_constant_has_not_decompose(class_name: str, decompose: Any) -> None | NoReturn:
     """Validates that a constant leaf class definition does not provide a decomposition handler."""
 
     if decompose is not UNSET:
-        raise SimpleLogicError(
+        raise SimpleRuntimeError(
             error_name="CONSTANT DECOMPOSE CONFLICT ERROR",
             label="constant_decompose_conflict",
             expected="decompose=UNSET when creating a SimpleConstant class",

@@ -46,16 +46,13 @@ class CollectionBase(SimpleMixin):
         immutable for the entire lifetime of the instance.
         """
 
-        # 1. Initialize parents
-        super().init_mixins()
-
-        # 2. Tuple holding name_snake in exact order
+        # 1. Tuple holding name_snake in exact order
         self._inners_name_tuple: "NamesTuple" = tuple(
             inner.meta.name_snake
             for inner in self.meta.inners
         )
 
-        # 3. Set for fast presence comparison
+        # 2. Set for fast presence comparison
         self._inners_name_set: "NamesSet" = set(self._inners_name_tuple)
 
     # ----------------------------------------

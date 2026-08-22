@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, Any
 # Outers
-from ..base_class import SimpleMixin
+from ...base_class import SimpleMixin
 # Annotations
 if TYPE_CHECKING:
     from ...._core.protocols.instance import SimpleInstanceLike
@@ -37,7 +37,7 @@ class MetaShortcuts(SimpleMixin):
     @property
     def value_type(
         self: "SimpleInstanceLike"
-    ) -> ValidTypes:
+    ) -> "ValidTypes":
         """The Python type of the value the object holds."""
         return self.meta.value_type
 

@@ -1,57 +1,58 @@
-from typing import TYPE_CHECKING, Any
-# Outers
-from ......exceptions import SimpleMetadataError
-# Inners
-from ._exception_info_for_inners import _exception_info_for_inners
-# Annotations
-if TYPE_CHECKING:
-    from .....protocols.classes import SimpleClassLike
+import pytest
+from unittest.mock import Mock
+
+from simplibs.exception.testing import assert_exception_function
+from simplibs.object._core.metadata.init_processors.inners.validations.validate_inners_is_tuple import (
+    validate_inners_is_tuple,
+)
+from simplibs.object.exceptions import SimpleDefinitionError
 
 
-def validate_inners_is_tuple(
-    inners: Any,
-    owner_class: "SimpleClassLike",
-) -> None:
-    """Validates that '_inners' is a tuple."""
+def test_validate_inners_is_tuple_pass() -> None:
+    """Test that tuple instance passes validation."""
 
-    # 1. Check type
-    if isinstance(inners, tuple):
-        return
+    dummy_owner = Mock(__name__="OwnerClass")
 
-    # 2. Diagnostic info
-    class_name, error_name, context, acceptable = _exception_info_for_inners(owner_class)
+    validate_inners_is_tuple((), dummy_owner)
+    validate_inners_is_tuple(("ElementA", "ElementB"), dummy_owner)
 
-    # 3. Raise error
-    raise SimpleMetadataError(
-        error_name=error_name,
+
+@pytest.mark.parametrize(
+    "invalid_inners",
+    [
+        ["ElementA"],
+        {"ElementA"},
+        "ElementA",
+        123,
+    ],
+)
+def test_validate_inners_is_tuple_raises_error(subtests, invalid_inners: object) -> None:
+    """Test that non-tuple values raise SimpleDefinitionError."""
+
+    dummy_owner = Mock(__name__="OwnerClass")
+
+    assert_exception_function(
+        subtests,
+        validate_inners_is_tuple,
+
+        invalid_params=(invalid_inners, dummy_owner),
+        exception_type=SimpleDefinitionError,
+
+        error_name="INVALID INNERS DEFINITION",
         label="_inners_not_tuple",
         expected="Tuple of SimpleConstant / SimpleObject subclasses",
-        value=inners,
-        problem=f"Class '{class_name}' defines '_inners' using an invalid type.",
-        context=context,
+        value=invalid_inners,
+        problem="Class 'OwnerClass' defines '_inners' using an invalid type.",
+        context="OwnerClass._inners validation",
         how_to_fix=(
             "Define '_inners' as a tuple.",
             "Example: _inners = (ElementA, ElementB)",
             "Single element requires a trailing comma: (ElementA,)",
-        ) + acceptable,
+            "Acceptable definition:",
+            "class OwnerClass(SimpleObject):",
+            "    _inners = (FirstElement, SecondElement)",
+        ),
         exception=TypeError,
+
+        verbose=False,
     )
-
-
-
-_DESIGN_NOTES = """
-# validate_inners_is_tuple
-
-## Purpose
-Ensures that `_inners` is declared as a tuple. Tuples provide immutability and
-preserve positional order, which is required for `_logic` signature generation.
-
-## Behavior
-1. Checks whether `_inners` is a tuple.
-2. If invalid, retrieves shared diagnostic info.
-3. Raises a structured `SimpleMetadataError`.
-
-## Notes
-This validator prevents accidental use of lists, sets, or missing trailing commas
-in single-element tuple declarations.
-"""

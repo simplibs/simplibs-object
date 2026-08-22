@@ -1,6 +1,6 @@
 from typing import NoReturn, Any
 # Outers
-from .......exceptions import SimpleLogicError
+from .......exceptions import SimpleRuntimeError
 
 
 def raise_stepper_invalid_instance(
@@ -12,7 +12,7 @@ def raise_stepper_invalid_instance(
     the SimpleInstanceType protocol required by the Stepper.
     """
 
-    raise SimpleLogicError(
+    raise SimpleRuntimeError(
         error_name="STEPPER INSTANCE ERROR",
         label="instance",
         value=instance,
@@ -113,5 +113,5 @@ Simple’s structured error system.
 - This is a pure `raise_...` function: it performs no branching logic.
 - It is internal and not part of the public API.
 - All invalid Stepper instance attachments must use this function.
-- The error type is `SimpleLogicError` with `TypeError` as the underlying exception.
+- The error type is `SimpleRuntimeError` with `TypeError` as the underlying exception.
 """

@@ -1,34 +1,45 @@
-from typing import TYPE_CHECKING, NoReturn
-# Outers
-from ......exceptions import SimpleMixinError
-# Annotations
-if TYPE_CHECKING:
-    from ......_core.protocols.mixins.core_mixins import InfrastructureProtocol
+from simplibs.object.exceptions import SimpleRuntimeError
+from simplibs.exception.testing.assert_exception_function import assert_exception_function
+from simplibs.object.mixins._common_logic.immutability.with_constants.vaidations.validate_inner_tuple_is_tuple import (
+    validate_inner_tuple_is_tuple,
+)
 
 
-def validate_inner_tuple_is_tuple(
-    instance: "InfrastructureProtocol",
-    inner_tuple: object,
-) -> None:
-    """
-    Validates that the provided inner_tuple is actually a tuple.
-    """
+def test_validate_inner_tuple_is_tuple_success() -> None:
+    """Tests that a tuple passes validation without error."""
 
-    if isinstance(inner_tuple, tuple):
-        return
+    class MyClass:
+        pass
 
-    raise SimpleMixinError(
+    dummy_instance = MyClass()
+    validate_inner_tuple_is_tuple(dummy_instance, ("attr", 123))
+
+
+def test_validate_inner_tuple_is_tuple_raises_error(subtests) -> None:
+    """Tests that non-tuple items raise SimpleRuntimeError."""
+
+    class MyClass:
+        pass
+
+    dummy_instance = MyClass()
+    invalid_item = ["attr", 123]  # List instead of tuple
+
+    assert_exception_function(
+        subtests,
+        validate_inner_tuple_is_tuple,
+        invalid_params=(dummy_instance, invalid_item),
+        exception_type=SimpleRuntimeError,
         error_name="IMMUTABILITY BATCH UPDATE ERROR",
         label="change item",
+        value="list",
         expected="Each change must be a tuple: (name, value).",
-        value=type(inner_tuple).__name__,
         problem=(
             "Invalid structure for change item. ",
-            "Batch immutable update requires each item to be a tuple."
+            "Batch immutable update requires each item to be a tuple.",
         ),
         context=(
-            f"Batch update attempted on instance '{type(instance).__name__}'. ",
-            "The provided item is not a tuple."
+            "Batch update attempted on instance 'MyClass'. ",
+            "The provided item is not a tuple.",
         ),
         how_to_fix=(
             "Ensure each change is provided as a tuple: (name, value).",
@@ -36,64 +47,5 @@ def validate_inner_tuple_is_tuple(
             "Do not use lists, dicts, or other container types.",
         ),
         exception=TypeError,
+        verbose=False,
     )
-
-
-_DESIGN_NOTES = """
-# validate_inner_tuple_is_tuple
-
-## Purpose
-Ensures that each item inside a batch update (`with_constants`, `with_any`) is
-actually a tuple.  
-Batch updates rely on tuple-based structures for deterministic ordering,
-structural validation, and predictable unpacking.
-
-If an item is not a tuple, the update cannot be interpreted safely.
-
-## Architectural reasoning
-The immutability pipeline expects:
-
-- `(name, value)` for single updates,
-- `((name, value), (name, value), ...)` for batch updates.
-
-Using tuples guarantees:
-
-- stable ordering,
-- simple structural validation,
-- predictable unpacking,
-- no accidental key/value inversion (as with dicts),
-- no ambiguity (as with lists).
-
-If the item is not a tuple:
-
-- the pipeline cannot determine the intended structure,
-- composite/constant routing becomes impossible,
-- debugging becomes significantly harder.
-
-Therefore, the function fails early with a clear diagnostic error.
-
-## Pipeline position
-This validation is part of step **4.3.1** in `with_constants`:
-
-1. Check if `inner_tuple` is a tuple.  
-2. If not → raise this error immediately.  
-3. No further validation is performed on this item.
-
-This ensures that only structurally valid items enter deeper validation layers.
-
-## Diagnostic value
-The error message provides:
-
-- the invalid type,
-- the expected structure,
-- the context of the batch update,
-- actionable steps to fix the issue.
-
-This makes the error friendly, actionable, and easy to understand.
-
-## Notes
-- This is a pure validation function: it performs no additional logic.
-- It is used by both `with_constants` and `with_any`.
-- All batch update items must pass this check before further validation.
-
-"""

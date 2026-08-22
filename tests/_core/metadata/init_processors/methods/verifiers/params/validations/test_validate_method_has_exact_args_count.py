@@ -1,59 +1,43 @@
-# Outers
-from ........exceptions import SimpleMetadataError
+from simplibs.object.exceptions.SimpleDefinitionError import SimpleDefinitionError
+from simplibs.exception.testing.assert_exception_function import assert_exception_function
+from simplibs.object._core.metadata.init_processors.methods.verifiers.params.validations.validate_method_has_exact_args_count import (
+    validate_method_has_exact_args_count,
+)
 
 
-def validate_method_has_exact_args_count(
-    expected_args_count: int,
-    actual_args_count: int,
-    exception_info: tuple[str, str, str],
-    expected_structure: tuple[str, ...],
-) -> None:
-    """Validates that the positional argument count matches expectations."""
+def test_validate_method_has_exact_args_count_pass() -> None:
+    """Tests that matching argument counts pass validation."""
 
-    if actual_args_count != expected_args_count:
-        class_name, method_name, context = exception_info
-
-        raise SimpleMetadataError(
-            error_name="METHOD SIGNATURE ERROR",
-            label="_args_count",
-            value=actual_args_count,
-            expected=str(expected_args_count),
-            problem="Incorrect number of positional arguments.",
-            context=context,
-            how_to_fix=(
-                "Ensure all required positional parameters are declared after 'cls'.",
-                "Verify that the classmethod signature matches the expected framework definition.",
-            ) + expected_structure,
-            exception=TypeError,
-        )
+    validate_method_has_exact_args_count(
+        expected_args_count=3,
+        actual_args_count=3,
+        exception_info=("MyClass", "my_method", "Context"),
+        expected_structure=("Blueprint",),
+    )
 
 
+def test_validate_method_has_exact_args_count_raises_error(subtests) -> None:
+    """Tests that mismatching argument counts raise SimpleDefinitionError."""
 
-_DESIGN_NOTES = """
-# validate_method_has_exact_args_count
+    exception_info = ("MyClass", "my_method", "TestContext")
+    expected_structure = ("Expected structure line 1",)
 
-## Purpose
-Ensures that the number of positional arguments in the method signature matches
-the expected count derived from the metadata pipeline.
-
-## Why tuple inputs
-The validator receives:
-- `exception_info` — (class_name, method_name, context)
-- `expected_structure` — code blueprint
-
-This keeps the function consistent with all other method‑validation helpers.
-
-## Behavior
-The function compares:
-- `actual_args_count` (from bytecode `co_argcount`)
-- `expected_args_count` (from metadata)
-
-If they differ, a structured `SimpleMetadataError` is raised with a clear
-explanation and a copy‑paste ready blueprint.
-
-## Notes
-This validator is part of the parameter‑verification chain:
-- `validate_method_param_match_expected`
-- `validate_method_has_exact_args_count`
-- `validate_method_not_use_param_placeholders`
-"""
+    assert_exception_function(
+        subtests,
+        validate_method_has_exact_args_count,
+        invalid_params=(3, 1, exception_info, expected_structure),
+        exception_type=SimpleDefinitionError,
+        error_name="METHOD SIGNATURE ERROR",
+        label="_args_count",
+        value=1,
+        expected="3",
+        problem="Incorrect number of positional arguments.",
+        context="TestContext",
+        how_to_fix=(
+            "Ensure all required positional parameters are declared after 'cls'.",
+            "Verify that the classmethod signature matches the expected framework definition.",
+            "Expected structure line 1",
+        ),
+        exception=TypeError,
+        verbose=False,
+    )

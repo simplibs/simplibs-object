@@ -1,6 +1,6 @@
 from typing import Any, NoReturn, TYPE_CHECKING
 # Outers
-from .....exceptions import SimpleLogicError
+from .....exceptions import SimpleRuntimeError
 # Annotations
 if TYPE_CHECKING:
     from ....protocols.classes import SimpleConstantProtocol
@@ -15,7 +15,7 @@ def raise_type_error(
     expected_types = cls.meta.value_type_name
     class_name = cls.__name__
 
-    raise SimpleLogicError(
+    raise SimpleRuntimeError(
         error_name="TYPE ERROR",
         label="value",
         value=value,
@@ -48,7 +48,7 @@ why the value cannot be accepted.
 ## Behavior
 - Retrieves the expected type name from metadata.
 - Reports the mismatch between the provided value and the required type.
-- Raises a structured `SimpleLogicError` with clear diagnostics and guidance.
+- Raises a structured `SimpleRuntimeError` with clear diagnostics and guidance.
 
 ## Notes
 - This validation is part of the constant-level API (`validate_type`, `validate`,

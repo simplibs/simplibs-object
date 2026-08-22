@@ -1,193 +1,183 @@
-from typing import TYPE_CHECKING, Any
+"""
+Tests for `History` mixin.
+"""
+import pytest
 from datetime import datetime
-# Outers
-from ..core_mixins import Serialization
-# Inners
-from ._history_utils.core import set_history_limit, record_state, find_snapshot
-from ._history_utils.transfer import export_history_to_dict, import_history_from_dict
-from ._history_utils.navigations import (
-    history_undo,
-    history_redo,
-    go_to_last_history,
-    go_to_history_on_timestamp,
-    go_to_history_on_index
-)
-# Annotations
-if TYPE_CHECKING:
-    from ..._core.protocols.mixins.state import HistoryProtocol
-    from ..._core.protocols.alias_typings import HistoryEntry, HistoryDict, SnapshotDiffTuple
+from simplibs.object.mixins.others.state import History
+from simplibs.object.mixins.core_mixins import Serialization
+from simplibs.object.testing import assert_simple_mixin
 
 
-class History(Serialization):
-    """
-    Ukládá kompletní snapshoty stavu instance a umožňuje jejich obnovu.
-    Snapshot je čisté tuple hodnot ve stejném pořadí jako _nodes_tuple.
-    """
+class TestHistoryStructure:
 
-    # ----------------------------------------
-    # Základní rozhraní
-    # ----------------------------------------
+    def test_mutable_only_flag(self):
+        assert History._mutable_only is True
 
-    # Definice určení
-    _mutable_only = True
+    def test_inherits_from_serialization(self):
+        assert issubclass(History, Serialization)
 
-    # Definice slotů
-    __slots__ = (
-        "_history",
-        "_history_index",
-        "_history_limit",
-        "_history_count"
-    )
-
-    # ----------------------------------------
-    # Hook pro inicializaci
-    # ----------------------------------------
-
-    # noinspection PyAttributeOutsideInit
-    def init_mixins(
-        self: "HistoryProtocol"
-    ) -> None:
-        """
-        Metoda, předávající svojí logiku do inicializačního procesu instance.
-        """
-
-        # 1. Inicializace předků
-        super().init_mixins()
-
-        # 2. Vytvoření vnitřních prvků
-        self._history: list["HistoryEntry"] = []
-        self._history_limit: int | None  = None
-        self._history_index: int = 0
-        self._history_count: int = 0
-
-        # 3. Vytvření prvního záznamu
-        self.record_state()
-
-    # ----------------------------------------
-    # Inicializační metoda
-    # ----------------------------------------
-
-    def record_state(
-        self: "HistoryProtocol"
-    ) -> "HistoryEntry":
-        """Vytvoří snapshot aktuálního stavu a uloží ho do historie."""
-        return record_state(self)
-
-    # ----------------------------------------
-    # Property - getters
-    # ----------------------------------------
-
-    @property
-    def history(
-        self: "HistoryProtocol"
-    ) -> tuple["HistoryEntry", ...]:
-        """Vrátí historii jako tuple"""
-        return tuple(self._history)
-
-    @property
-    def history_index(
-        self: "HistoryProtocol"
-    ) -> int | None:
-        """Vrátí index poslední historie"""
-        return self._history_index
-
-    @property
-    def history_limit(
-        self: "HistoryProtocol"
-    ) -> int | None:
-        """Vrátí hodnotu limitu velikosti historie"""
-        return self._history_limit
-
-    # ----------------------------------------
-    # Property - setters
-    # ----------------------------------------
-
-    @history_limit.setter
-    def history_limit(
-        self: "HistoryProtocol",
-        value: int
-    ) -> None:
-        """Nastaví hodnotu limitu velikosti historie"""
-        set_history_limit(self, value)
-
-    # ----------------------------------------
-    # Methods - UNDO / REDO
-    # ----------------------------------------
-
-    def undo(
-        self: "HistoryProtocol"
-    ) -> bool:
-        """Metodea pro přechod na předchozí záznam (pokud existuje)."""
-        return history_undo(self)
-
-    def redo(
-        self: "HistoryProtocol"
-    ) -> bool:
-        """Metodea pro přechod na následující záznam (pokud existuje)."""
-        return history_redo(self)
-
-    # ----------------------------------------
-    # Methods - GOTO
-    # ----------------------------------------
-
-    def go_to_last(
-        self: "HistoryProtocol"
-    ) -> None:
-        """Metodea pro přechod na poslední záznam historie."""
-        go_to_last_history(self)
-
-    def go_to_index(
-        self: "HistoryProtocol",
-        index: int
-    ) -> None:
-        """Metoda pro přechod na konkrétní index"""
-        go_to_history_on_index(self, index)
-
-    def go_to_timestamp(
-        self: "HistoryProtocol",
-        timestamp: datetime
-    ) -> None:
-        """Metoda pro přechod na konkrétní timestamp"""
-        go_to_history_on_timestamp(self, timestamp)
-
-    # ----------------------------------------
-    # Methods - EXPORT / IMPORT
-    # ----------------------------------------
-
-    def export_history_to_dict(
-        self: "HistoryProtocol"
-    ) -> "HistoryDict":
-        """Exportuje historii do slovníku"""
-        return export_history_to_dict(self)
-
-    def import_history_from_dict(
-        self: "HistoryProtocol",
-        history_dict: "HistoryDict"
-    ) -> None:
-        """Importuje historii ze slovníku"""
-        import_history_from_dict(self, history_dict)
-
-    # ----------------------------------------
-    # Methods - REMOVE / DIFF
-    # ----------------------------------------
-
-    def remove_history_limit(
-        self: "HistoryProtocol"
-    ) -> None:
-        """Odebere limit velikosti historie"""
-        # noinspection PyAttributeOutsideInit
-        self._history_limit = None
-
-    def diff(
-        self: "HistoryProtocol",
-        snap1: int | datetime,
-        snap2: int | datetime,
-        *,
-        constants_only: bool = False
-    ) -> "SnapshotDiffTuple":
-        """Porovná dva snapshoty — vrátí tuple změněných (path, old_value, new_value)."""
-        return self._compare_snapshots(
-            find_snapshot(self, snap1),
-            find_snapshot(self, snap2),
-            constants_only=constants_only
+    def test_assert_simple_mixin_shallow(self, subtests, Outer):
+        assert_simple_mixin(
+            subtests,
+            History,
+            test_class=Outer,
+            slots_names=(
+                "_history",
+                "_history_index",
+                "_history_limit",
+                "_history_count",
+            ),
+            attribute_names=("history", "history_index", "history_limit"),
+            method_names=(
+                "record_state",
+                "undo",
+                "redo",
+                "go_to_last",
+                "go_to_index",
+                "go_to_timestamp",
+                "export_history_to_dict",
+                "import_history_from_dict",
+                "remove_history_limit",
+                "diff",
+            ),
         )
+
+
+class TestHistoryInitialization:
+
+    def test_starts_with_one_entry(self, Outer):
+        instance = Outer(mixins=(History,), mutable=True)
+        assert len(instance.history) == 1
+
+    def test_history_limit_starts_none(self, Outer):
+        instance = Outer(mixins=(History,), mutable=True)
+        assert instance.history_limit is None
+
+    def test_history_index_starts_at_zero(self, Outer):
+        instance = Outer(mixins=(History,), mutable=True)
+        assert instance.history_index == 0
+
+
+class TestHistoryRecordAndUndoRedo:
+
+    def test_record_state_adds_entry(self, Outer):
+        instance = Outer(mixins=(History,), mutable=True)
+        instance.value = 500
+        instance.record_state()
+        assert len(instance.history) == 2
+
+    def test_undo_restores_previous_value(self, Outer):
+        instance = Outer(mixins=(History,), mutable=True)
+        original_value = instance.value
+        instance.value = 500
+        instance.record_state()
+
+        assert instance.undo() is True
+        assert instance.value == original_value
+
+    def test_redo_after_undo_restores_value(self, Outer):
+        instance = Outer(mixins=(History,), mutable=True)
+        instance.value = 500
+        instance.record_state()
+        instance.undo()
+
+        assert instance.redo() is True
+        assert instance.value == 500
+
+    def test_undo_at_start_returns_false(self, Outer):
+        instance = Outer(mixins=(History,), mutable=True)
+        assert instance.undo() is False
+
+    def test_redo_at_end_returns_false(self, Outer):
+        instance = Outer(mixins=(History,), mutable=True)
+        assert instance.redo() is False
+
+
+class TestHistoryGoTo:
+
+    def test_go_to_index(self, Outer):
+        instance = Outer(mixins=(History,), mutable=True)
+        original_value = instance.value
+        instance.value = 500
+        instance.record_state()
+
+        instance.go_to_index(0)
+
+        assert instance.value == original_value
+
+    def test_go_to_last(self, Outer):
+        instance = Outer(mixins=(History,), mutable=True)
+        instance.value = 500
+        instance.record_state()
+        instance.go_to_index(0)
+
+        instance.go_to_last()
+
+        assert instance.value == 500
+
+    def test_go_to_timestamp(self, Outer):
+        instance = Outer(mixins=(History,), mutable=True)
+        first_timestamp = instance.history[0][0]
+        instance.value = 500
+        instance.record_state()
+
+        instance.go_to_timestamp(first_timestamp)
+
+        assert instance.history_index == 0
+
+
+class TestHistoryLimit:
+
+    def test_history_limit_setter(self, Outer):
+        instance = Outer(mixins=(History,), mutable=True)
+        instance.history_limit = 3
+        assert instance.history_limit == 3
+
+    def test_remove_history_limit(self, Outer):
+        instance = Outer(mixins=(History,), mutable=True)
+        instance.history_limit = 3
+        instance.remove_history_limit()
+        assert instance.history_limit is None
+
+
+class TestHistoryExportImport:
+
+    def test_export_returns_dict(self, Outer):
+        instance = Outer(mixins=(History,), mutable=True)
+        result = instance.export_history_to_dict()
+        assert isinstance(result, dict)
+
+    def test_import_round_trip(self, Outer):
+        instance = Outer(mixins=(History,), mutable=True)
+        instance.value = 500
+        instance.record_state()
+        exported = instance.export_history_to_dict()
+
+        other = Outer(mixins=(History,), mutable=True)
+        other.import_history_from_dict(exported)
+
+        assert other.value == 500
+
+
+class TestHistoryDiff:
+
+    def test_diff_between_indices(self, Outer):
+        instance = Outer(mixins=(History,), mutable=True)
+        instance.value = 500
+        instance.record_state()
+
+        result = instance.diff(0, 1)
+
+        assert len(result) > 0
+
+    def test_diff_identical_indices_empty(self, Outer):
+        instance = Outer(mixins=(History,), mutable=True)
+        result = instance.diff(0, 0)
+        assert result == ()
+
+
+class TestHistoryCompatibility:
+
+    def test_rejects_immutable_instance(self, Outer):
+        with pytest.raises(Exception):
+            Outer(mixins=(History,), mutable=False)

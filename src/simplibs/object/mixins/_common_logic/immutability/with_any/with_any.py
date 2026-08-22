@@ -13,7 +13,7 @@ from .utils import (
 from .vaidations import (
     raise_with_any_changes_is_not_tuple,
     raise_with_any_child_composite_mismatch,
-    raise_with_any_contained_constant_mismatch
+    raise_with_any_contained_constant_mismatch,
 )
 # Annotations
 if TYPE_CHECKING:
@@ -100,15 +100,16 @@ def with_any(
         )
 
         # 12.2 Validate contained constants
-        for name, _ in contained:
+        for name in contained:
             if instance_snapshot_dict[name] != changes_dict[name]:
                 raise_with_any_contained_constant_mismatch(
                     self, name, changes_dict[name], instance_snapshot_dict[name]
                 )
 
         # 12.3 Apply unique constants
-        new_changes = [(name, changes_dict[name]) for name, _ in unique]
-        instance = with_constants(instance, tuple(new_changes))
+        if unique:
+            new_changes = [(name, changes_dict[name]) for name in unique]
+            instance = with_constants(instance, tuple(new_changes))
 
     # 13. Return instance or value (mutable mode)
     return instance if not self.__is_mutable__ else instance.value
@@ -183,8 +184,8 @@ Ensures composite updates are structurally consistent.
 ### 12. Process constants
 Uses [split_constants_paths](ca://s?q=Explain_split_constants_paths) to classify:
 
-- contained constants → validated  
-- unique constants → applied  
+- contained constants → validated against composite decomposition  
+- unique constants → applied via `with_constants`  
 
 Then applies unique constants via [with_constants](ca://s?q=Explain_with_constants).
 

@@ -27,6 +27,7 @@ def assert_immutable_behavior(
     subintro = "test_immutable_behavior::"
 
     # 1. Create immutable instance
+    instance = None
     with maybe_subtest(
         subtests,
         name=f"{intro}{subintro}create_immutable_instance",
@@ -38,6 +39,10 @@ def assert_immutable_behavior(
             pytest.fail(f"Failed to create immutable instance for '{test_class.__name__}': {exc}")
 
         assert instance is not None
+
+    # 1.1 Guard clause: Halt execution if immutable instance creation failed
+    if instance is None:
+        return
 
     # 2. Capture original identity and value state
     with maybe_subtest(
@@ -98,7 +103,8 @@ It ensures that the property setter strictly guards internal state, throwing exc
 mutation attempts while guaranteeing full preservation of object identity and value consistency.
 
 ## Execution Pipeline Steps
-1. **Immutable Instantiation:** Instantiates `test_class(mutable=False)` inside a protected context.
+1. **Immutable Instantiation & Guard Gate:** Instantiates `test_class(mutable=False)` inside a protected context. 
+   Halts execution early via a guard clause if instance creation fails to prevent uninitialized attribute access.
 2. **State Snapshot:** Captures the initial Python object ID (`id(instance)`) and value state (`instance.value`).
 3. **Setter Interception Gate:** Attempts `instance.value = new_value`. Asserts that an exception is raised, 
    failing fast via `pytest.fail` if the assignment succeeds.

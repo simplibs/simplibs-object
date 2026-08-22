@@ -38,7 +38,7 @@ step in the validation pipeline (`validate_type` → `validate` → `normalize`)
 ## Behavior
 1. Accepts the value if it is an instance of the expected type.
 2. Returns `False` when `return_bool=True`.
-3. Raises a structured `SimpleLogicError` via `raise_type_error` otherwise.
+3. Raises a structured `SimpleRuntimeError` via `raise_type_error` otherwise.
 
 ## Notes
 - This function is intentionally minimal; all diagnostic detail is delegated to

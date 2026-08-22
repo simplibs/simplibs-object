@@ -1,7 +1,7 @@
 _DESIGN_NOTES = """
-# _core_logic Package Overview
+# _core Package Overview
 
-The `_core_logic` package contains the internal building blocks that power the
+The `_core` package contains the internal building blocks that power the
 SimpleObject system. Each sub-package focuses on a specific part of the object
 infrastructure: constants, metadata, composite logic, and property generation.
 

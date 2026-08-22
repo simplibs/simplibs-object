@@ -1,92 +1,71 @@
-from typing import Any, TYPE_CHECKING
+"""
+Tests for `testing/asserts/mixins/assert_mixin_instance_creation.py`.
+"""
 import pytest
-from simplibs.exception.testing import maybe_subtest
-# Outers
-from ....mixins.base_class import SimpleMixin
-from ....SimpleConstant import SimpleConstant
-# Annotations
-if TYPE_CHECKING:
-    from ...._core.protocols import SimpleClassType, SimpleMixinType
+from simplibs.object.testing.asserts.mixins.assert_mixin_instance_creation import (
+    assert_mixin_instance_creation,
+)
 
 
-def assert_mixin_instance_creation(
-    subtests: Any,
-    mixin_class: "SimpleMixinType",
-    test_class: "SimpleClassType",
-    *,
-    verbose: bool = True,
-    intro: str = "",
-) -> Any:
-    """
-    Attempts to create an instance of `test_class` with the given mixin.
+class TestAssertMixinInstanceCreationHappyPath:
 
-    Validates:
-        - test_class is a valid SimpleObject/SimpleConstant class
-        - mixin_class is compatible (SimpleMixin subclass)
-        - instance creation succeeds
-        - mixin is present in the MRO of the resulting instance
+    def test_returns_instance_with_injected_mixin_members(self, IntConst, subtests):
+        from simplibs.object.testing.containers.TestMixin import TestMixin
 
-    Returns:
-        The created instance with the mixin applied.
-    """
+        instance = assert_mixin_instance_creation(subtests, TestMixin, IntConst)
 
-    subintro = "assert_mixin_instance_creation::"
+        assert instance is not None
+        assert instance.test_property == "test_value"
 
-    # 1) Validate test_class inheritance
-    with maybe_subtest(
-        subtests,
-        name=f"{intro}{subintro}validate_test_class",
-        verbose=verbose,
-    ):
-        test_class: type
-        if not issubclass(test_class, SimpleConstant):
-            pytest.fail(
-                f"Test class '{test_class.__name__}' must inherit from "
-                f"SimpleConstant or SimpleObject."
+    def test_creates_mutable_instance_by_default(self, IntConst, subtests):
+        from simplibs.object.testing.containers.TestMixin import TestMixin
+
+        instance = assert_mixin_instance_creation(subtests, TestMixin, IntConst)
+
+        assert instance is not None
+        assert instance._is_mutable is True
+
+    def test_creates_immutable_instance_when_mutable_is_false(self, IntConst, subtests):
+        from simplibs.object.testing.containers.TestMixin import TestMixin
+
+        instance = assert_mixin_instance_creation(
+            subtests,
+            TestMixin,
+            IntConst,
+            mutable=False,
+        )
+
+        assert instance is not None
+        assert instance._is_mutable is False
+
+
+class TestAssertMixinInstanceCreationInvalidTestClass:
+
+    def test_fails_when_test_class_does_not_inherit_simple_constant(self, subtests):
+        from simplibs.object.testing.containers.TestMixin import TestMixin
+
+        class NotSimple:
+            pass
+
+        with pytest.raises(pytest.fail.Exception, match="must inherit from SimpleConstant"):
+            assert_mixin_instance_creation(
+                subtests,
+                TestMixin,
+                NotSimple,  # type: ignore[arg-type]
+                verbose=False,
             )
 
-    # 2) Validate mixin identity (must be SimpleMixin subclass)
-    with maybe_subtest(
-        subtests,
-        name=f"{intro}{subintro}validate_mixin_class",
-        verbose=verbose,
-    ):
-        mixin_class: type
-        if not issubclass(mixin_class, SimpleMixin):
-            pytest.fail(
-                f"Mixin '{mixin_class.__name__}' does not inherit from SimpleMixin."
-            )
 
-    # 3) Attempt to create instance with mixin
-    with maybe_subtest(
-        subtests,
-        name=f"{intro}{subintro}create_instance",
-        verbose=verbose,
-    ):
-        try:
-            instance = test_class(mixins=(mixin_class,))
-        except Exception as exc:
-            pytest.fail(
-                f"Failed to create instance of '{test_class.__name__}' "
-                f"with mixin '{mixin_class.__name__}': {exc}"
-            )
+class TestAssertMixinInstanceCreationInvalidMixinClass:
 
-        if instance is None:
-            pytest.fail(
-                f"Instance creation returned None for class '{test_class.__name__}' "
-                f"with mixin '{mixin_class.__name__}'."
-            )
+    def test_fails_when_mixin_does_not_inherit_simple_mixin(self, IntConst, subtests):
+        class NotAMixin:
+            pass
 
-    # 4) Verify mixin is present in MRO
-    with maybe_subtest(
-        subtests,
-        name=f"{intro}{subintro}mixin_in_mro",
-        verbose=verbose,
-    ):
-        if mixin_class not in instance.__class__.__mro__:
-            pytest.fail(
-                f"Mixin '{mixin_class.__name__}' is not present in the MRO of the "
-                f"created instance. Instance class MRO: {instance.__class__.__mro__}"
+        with pytest.raises(pytest.fail.Exception, match="does not inherit from SimpleMixin"):
+            assert_mixin_instance_creation(
+                subtests,
+                NotAMixin,  # type: ignore[arg-type]
+                IntConst,
+                verbose=False,
             )
-
-    return instance

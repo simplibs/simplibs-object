@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, NoReturn
 # Outers
-from .......exceptions import SimpleLogicError
+from .......exceptions import SimpleRuntimeError
 # Annotations
 if TYPE_CHECKING:
     from ......._core.protocols.mixins.state import HistoryProtocol
@@ -14,7 +14,7 @@ def raise_unvalide_timestamp(
     Raises an error when the provided timestamp reference is not a valid datetime.
     """
 
-    raise SimpleLogicError(
+    raise SimpleRuntimeError(
         error_name="HISTORY TIMESTAMP ERROR",
         label="timestamp",
         expected="A valid datetime object.",

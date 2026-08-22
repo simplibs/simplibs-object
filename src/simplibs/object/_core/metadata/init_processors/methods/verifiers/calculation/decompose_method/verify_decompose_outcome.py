@@ -19,7 +19,8 @@ def verify_decompose_outcome(
     """Verifies structural correctness of the tuple returned by '_decompose'."""
 
     # 1. Extract inner metadata
-    inners = owner_class.meta.inners
+    # noinspection PyProtectedMember
+    inners = owner_class._inners
 
     # 2. Validate tuple length
     if len(calculate_default) != len(inners):

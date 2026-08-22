@@ -1,92 +1,94 @@
-from typing import TYPE_CHECKING
-# Outers
-from ....logic.property_builders import create_value_property
-# Inners
-from .helpers import (
-    create_composite_init,
-    create_recalculate_self,
-    create_recalculate_inners,
-    create_properties_for_inners,
-)
-# Annotations
-if TYPE_CHECKING:
-    from ....protocols.metadata import SimpleMetadataLike
-    from ....protocols.instance.core_classes import CompositeInstanceProtocol
-
-
-def make_composite_class(
-    meta: "SimpleMetadataLike",
-    *,
-    mutable: bool = True,
-) -> "CompositeInstanceProtocol":
-    """Builds a composite instance class for the given metadata."""
-
-    # 1. Class name
-    base_class_name = (
-        f"{meta.class_name}CompositeMutableBase"
-        if mutable
-        else f"{meta.class_name}CompositeImmutableBase"
-    )
-
-    # 2. Base class / MRO
-    base_class = meta.atom_class_mutable if mutable else meta.atom_class_immutable
-    class_parents = (base_class,)
-
-    # 3. Core namespace
-    class_dict = {
-        "__doc__": f"Composite structural instance object tracking {meta.class_name}",
-        "__slots__": tuple(inner.meta.name_private for inner in meta.inners),
-        "__init__": create_composite_init(meta, base_class_name, mutable=mutable),
-        "value": create_value_property(meta, is_constant=False, mutable=mutable),
-    }
-
-    # 4. Properties for inners
-    class_dict |= create_properties_for_inners(meta, mutable=mutable)
-
-    # 5. Reactive hooks (mutable only)
-    if mutable:
-        class_dict["_recalculate_self"] = create_recalculate_self(meta, base_class_name)
-        class_dict["_recalculate_inners"] = create_recalculate_inners(meta, base_class_name)
-
-    # 6. Materialize type
-    # noinspection PyTypeChecker
-    composite_class = type(base_class_name, class_parents, class_dict)
-
-    # 7. Cleanup declarative attributes
-    for name in ("inners", "_logic", "_decompose"):
-        if name in composite_class.__dict__:
-            delattr(composite_class, name)
-
-    composite_class: "CompositeInstanceProtocol"
-    return composite_class
-
-
-_DESIGN_NOTES = """
-# make_composite_class
-
-## Purpose
-Compiles a concrete composite instance class from metadata.  
-Builds the runtime type that represents a composition node, with slots, properties,
-initialization, and reactive hooks.
-
-## Behavior
-1. Derives a unique class name for mutable/immutable variants.
-2. Chooses the correct atom base class and sets it as the sole parent.
-3. Builds the class namespace:
-   - `__slots__` from `inner.meta.name_private`
-   - `__init__` from `create_composite_init`
-   - `value` from `create_value_property`
-4. Merges properties for all immediate inners via `create_properties_for_inners`.
-5. For mutable variants, injects `_recalculate_self` and `_recalculate_inners`.
-6. Creates the type using `type(name, bases, dict)`.
-7. Removes declarative attributes (`inners`, `_logic`, `_decompose`) from the
-   runtime class namespace.
-
-## Notes
-- Using `type(...)` keeps compilation safe and explicit, without `exec`.
-- Explicit `__slots__` and atom base inheritance produce a compact, predictable
-  memory layout without per-instance `__dict__`.
-- Reactive hooks exist only on mutable composites; immutable ones are structurally
-  frozen after initialization.
-- Namespace cleanup prevents leaking schema internals into the public runtime API.
 """
+Tests for `_core/metadata/instance_builders/composite_class/make_composite_class.py`.
+"""
+import pytest
+from simplibs.object._core.metadata.instance_builders.composite_class.make_composite_class import (
+    make_composite_class,
+)
+
+
+def _instantiate(cls):
+    instance = object.__new__(cls)
+    instance.__init__()
+    return instance
+
+
+class TestMakeCompositeClassMutable:
+
+    def test_creates_functional_mutable_composite(self, NonDecomposablePairObject):
+        composite_class = make_composite_class(
+            NonDecomposablePairObject.meta, mutable=True
+        )
+        instance = _instantiate(composite_class)
+
+        assert instance.value == NonDecomposablePairObject.meta.default
+        assert instance.first == NonDecomposablePairObject.meta.inners[0].meta.default
+        assert instance.second == NonDecomposablePairObject.meta.inners[1].meta.default
+
+    def test_mutable_composite_has_reactive_hooks(self, NonDecomposablePairObject):
+        composite_class = make_composite_class(
+            NonDecomposablePairObject.meta, mutable=True
+        )
+        assert "_recalculate_self" in composite_class.__dict__
+        assert "_recalculate_inners" in composite_class.__dict__
+
+    def test_changing_inner_recalculates_composite_value(
+        self, NonDecomposablePairObject
+    ):
+        composite_class = make_composite_class(
+            NonDecomposablePairObject.meta, mutable=True
+        )
+        instance = _instantiate(composite_class)
+
+        instance.first = 10
+        assert (
+            instance.value == 10 + NonDecomposablePairObject.meta.inners[1].meta.default
+        )
+
+
+class TestMakeCompositeClassImmutable:
+
+    def test_creates_functional_immutable_composite(self, NonDecomposablePairObject):
+        composite_class = make_composite_class(
+            NonDecomposablePairObject.meta, mutable=False
+        )
+        instance = _instantiate(composite_class)
+        assert instance.value == NonDecomposablePairObject.meta.default
+
+    def test_immutable_composite_has_no_reactive_hooks(self, NonDecomposablePairObject):
+        composite_class = make_composite_class(
+            NonDecomposablePairObject.meta, mutable=False
+        )
+        assert "_recalculate_self" not in composite_class.__dict__
+        assert "_recalculate_inners" not in composite_class.__dict__
+
+    def test_immutable_composite_inner_value_is_read_only(
+        self, NonDecomposablePairObject
+    ):
+        composite_class = make_composite_class(
+            NonDecomposablePairObject.meta, mutable=False
+        )
+        instance = _instantiate(composite_class)
+        with pytest.raises(AttributeError):
+            instance.first = 5
+
+
+class TestMakeCompositeClassSlots:
+
+    def test_slots_match_inner_private_names(self, NonDecomposablePairObject):
+        composite_class = make_composite_class(
+            NonDecomposablePairObject.meta, mutable=True
+        )
+        assert composite_class.__slots__ == tuple(
+            inner.meta.name_private for inner in NonDecomposablePairObject.meta.inners
+        )
+
+
+class TestMakeCompositeClassCleanup:
+
+    def test_declarative_attributes_are_removed(self, NonDecomposablePairObject):
+        composite_class = make_composite_class(
+            NonDecomposablePairObject.meta, mutable=True
+        )
+        for name in ("inners", "_logic", "_decompose"):
+            assert name not in composite_class.__dict__

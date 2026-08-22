@@ -1,61 +1,60 @@
-from typing import TYPE_CHECKING
-# Outers
-from ......exceptions import SimpleMetadataError
-# Inners
-from ._exception_info_for_inners import _exception_info_for_inners
-# Annotations
-if TYPE_CHECKING:
-    from .....protocols.classes import SimpleClassLike
+import pytest
+from unittest.mock import Mock
+
+from simplibs.object.SimpleConstant import SimpleConstant
+from simplibs.object.SimpleObject import SimpleObject
+from simplibs.object._core.metadata.init_processors.inners.validations.validate_inner_is_simple_subclass import (
+    validate_inner_is_simple_subclass,
+)
+from simplibs.object.exceptions.SimpleDefinitionError import SimpleDefinitionError
+from simplibs.exception.testing.assert_exception_function import assert_exception_function
 
 
-def validate_inner_is_simple_subclass(
-    inner: "SimpleClassLike",
-    owner_class: "SimpleClassLike",
-) -> None:
-    """Validates that an inner element inherits from SimpleConstant."""
+def test_validate_inner_is_simple_subclass_pass() -> None:
+    """Test that subclasses of SimpleConstant or SimpleObject pass validation."""
 
-    # Lazy import to avoid circular dependencies
-    from .......SimpleConstant import SimpleConstant
+    dummy_owner = Mock(__name__="OwnerClass")
 
-    # 1. Check subclass relationship
-    inner: type
-    if issubclass(inner, SimpleConstant):
-        return
+    class MyConstant(SimpleConstant):
+        _type = int
+        _default = 0
 
-    # 2. Diagnostic info
-    class_name, error_name, context, acceptable = _exception_info_for_inners(owner_class)
+    class MyConstant2(SimpleConstant):
+        _type = str
+        _default = ""
 
-    # 3. Raise error
-    raise SimpleMetadataError(
-        error_name=error_name,
+    # Testujeme přímo předání podtřídy do validační funkce
+    validate_inner_is_simple_subclass(MyConstant, dummy_owner)
+    validate_inner_is_simple_subclass(MyConstant2, dummy_owner)
+
+
+def test_validate_inner_is_simple_subclass_raises_error(subtests) -> None:
+    """Test that non-framework classes raise SimpleDefinitionError."""
+
+    dummy_owner = Mock(__name__="OwnerClass")
+
+    class PlainClass:
+        pass
+
+    assert_exception_function(
+        subtests,
+        validate_inner_is_simple_subclass,
+        invalid_params=(PlainClass, dummy_owner),
+        exception_type=SimpleDefinitionError,
+        error_name="INVALID INNERS DEFINITION",
         label="inner_not_simple_subclass",
         expected="Subclass of SimpleConstant or SimpleObject",
-        value=inner,
-        problem=f"Inner element '{inner}' does not inherit from SimpleConstant.",
-        context=context,
+        value=PlainClass,
+        problem=f"Inner element '{PlainClass}' does not inherit from SimpleConstant.",
+        context="OwnerClass._inners validation",
         how_to_fix=(
             "Ensure the class inherits from SimpleConstant or SimpleObject.",
             "Verify the inheritance tree of the failing class.",
             "Check that you imported the correct class definition.",
-        ) + acceptable,
+            "Acceptable definition:",
+            "class OwnerClass(SimpleObject):",
+            "    _inners = (FirstElement, SecondElement)",
+        ),
         exception=TypeError,
+        verbose=False,
     )
-
-
-
-_DESIGN_NOTES = """
-# validate_inner_is_simple_subclass
-
-## Purpose
-Ensures that each inner element inherits from the framework’s base classes
-(SimpleConstant or SimpleObject).
-
-## Behavior
-1. Checks `issubclass(inner, SimpleConstant)`.
-2. If invalid, retrieves shared diagnostic info.
-3. Raises a structured `SimpleMetadataError`.
-
-## Notes
-This validator assumes the inner element has already passed `validate_inner_is_class`.
-It focuses exclusively on inheritance correctness.
-"""

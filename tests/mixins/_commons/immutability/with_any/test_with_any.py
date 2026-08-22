@@ -1,237 +1,84 @@
-from typing import Any, TYPE_CHECKING
-# Outers
-from ..with_composite import with_composite
-from ..with_constants import with_constants
-from ..with_constant.utils import create_new_instance, create_snapshot_dict
-# Inners
-from .utils import (
-    get_top_composite_paths,
-    split_constants_paths,
-    process_single_change,
-    split_changes,
-)
-from .vaidations import (
-    raise_with_any_changes_is_not_tuple,
-    raise_with_any_child_composite_mismatch,
-    raise_with_any_contained_constant_mismatch
-)
-# Annotations
-if TYPE_CHECKING:
-    from ....._core.protocols.alias_typings import ChangeTuple, ChangesTuple
-    from ....._core.protocols.mixins.core_mixins import (
-        InfrastructureProtocol,
-        InfrastructuredComponent,
-    )
-
-
-def with_any(
-    self: "InfrastructureProtocol",
-    changes: "ChangeTuple | ChangesTuple | None" = None,
-) -> "InfrastructuredComponent | Any":
-    """
-    Integration requirement:
-    This function is designed for the core pipeline framework. The object
-    provided in `self` MUST inherit from:
-      1. Snapshot (provides _restore_snapshot)
-      2. NodesDicts (provides metadata and node access)
-    Without these mixins, the pipeline will raise AttributeError.
-    """
-
-    # 1. Handle case with no changes
-    if not changes:
-        instance = create_new_instance(self, self._build_snapshot())
-        return instance if not self.__is_mutable__ else instance.value
-
-    # 2. Validate type of changes
-    if not isinstance(changes, tuple):
-        raise_with_any_changes_is_not_tuple(self, changes)
-
-    # 3. Handle single change
-    if not isinstance(changes[0], tuple):
-        changes: tuple[str, Any]
-        instance = process_single_change(self, changes)
-        return instance if not self.__is_mutable__ else instance.value
-
-    # 4. Split changes into constants and composites
-    changes: tuple[tuple[str, Any], ...]
-    constants, composite = split_changes(self, changes)
-
-    # 5. If all changes are constants → delegate
-    if not composite:
-        instance = with_constants(self, changes)
-        return instance if not self.__is_mutable__ else instance.value
-
-    # 6. Build dictionary of provided values
-    changes_dict = {key: value for key, value in changes}
-
-    # 7. Determine top-level and child composite paths
-    top_composite, child_composite = get_top_composite_paths(
-        composite,
-        self._nodes_path_dict,
-    )
-
-    # 8. Create base instance
-    instance = create_new_instance(self, self._build_snapshot())
-
-    # 9. Apply root composites
-    for name in top_composite:
-        instance = with_composite(instance, name, changes_dict[name])
-
-    # 10. Snapshot after root composites
-    # noinspection PyProtectedMember
-    instance_snapshot_dict = create_snapshot_dict(instance._nodes_tuple)
-
-    # 11. Validate child composites
-    if child_composite:
-        for name, value in composite:
-            if instance_snapshot_dict[name] != value:
-                raise_with_any_child_composite_mismatch(
-                    self, name, value, instance_snapshot_dict[name]
-                )
-
-    # 12. Process constants
-    if constants:
-
-        # 12.1 Split into contained and unique constants
-        contained, unique = split_constants_paths(
-            constants,
-            top_composite,
-            self._nodes_path_dict,
-        )
-
-        # 12.2 Validate contained constants
-        for name, _ in contained:
-            if instance_snapshot_dict[name] != changes_dict[name]:
-                raise_with_any_contained_constant_mismatch(
-                    self, name, changes_dict[name], instance_snapshot_dict[name]
-                )
-
-        # 12.3 Apply unique constants
-        new_changes = [(name, changes_dict[name]) for name, _ in unique]
-        instance = with_constants(instance, tuple(new_changes))
-
-    # 13. Return instance or value (mutable mode)
-    return instance if not self.__is_mutable__ else instance.value
-
-
-_DESIGN_NOTES = """
-# with_any
-
-## Purpose
-Provides a unified entry point for **any type of update** — constants, composites,
-or mixed updates.  
-This is the highest-level immutability function and orchestrates all update
-pipelines:
-
-- [with_constant](ca://s?q=Explain_with_constant)  
-- [with_constants](ca://s?q=Explain_with_constants)  
-- [with_composite](ca://s?q=Explain_with_composite)  
-- and all helper functions in the `with_any` subsystem.
-
-It ensures that updates are applied in the correct structural order and that
-the resulting instance is fully consistent.
-
-## Architectural role
-This function is used by:
-
-- user-facing APIs (`__call__`, update methods)  
-- serialization pipelines  
-- patch operations  
-- debugging and diffing tools  
-
-It is the **central dispatcher** for immutability updates.
-
-## How it works
-The function performs thirteen deterministic phases:
-
-### 1. Handle no changes
-Returns a fresh instance (immutable mode) or its value (mutable mode).
-
-### 2. Validate input type
-Ensures the update is a tuple.
-
-### 3. Handle single change
-Delegates to [process_single_change](ca://s?q=Explain_process_single_change).
-
-### 4. Split changes
-Uses [split_changes](ca://s?q=Explain_split_changes) to classify constants and composites.
-
-### 5. If only constants → delegate
-Uses [with_constants](ca://s?q=Explain_with_constants).
-
-### 6. Build dictionary of provided values
-Used for composite and constant validation.
-
-### 7. Determine composite hierarchy
-Uses [get_top_composite_paths](ca://s?q=Explain_get_top_composite_paths) to find:
-
-- root composites → applied first  
-- child composites → validated later  
-
-### 8. Create base instance
-Fresh instance ensures immutability.
-
-### 9. Apply root composites
-Uses [with_composite](ca://s?q=Explain_with_composite).
-
-### 10. Build snapshot after composite updates
-Used for validation.
-
-### 11. Validate child composites
-Ensures composite updates are structurally consistent.
-
-### 12. Process constants
-Uses [split_constants_paths](ca://s?q=Explain_split_constants_paths) to classify:
-
-- contained constants → validated  
-- unique constants → applied  
-
-Then applies unique constants via [with_constants](ca://s?q=Explain_with_constants).
-
-### 13. Return instance or value
-Supports mutable mode (`__is_mutable__`).
-
-## Why this function exists
-Mixed updates require:
-
-- correct ordering (composites → constants),  
-- structural validation,  
-- dependency-aware recalculation,  
-- minimal recomputation,  
-- deterministic immutability behavior.
-
-`with_any` encapsulates all of this in a single, predictable pipeline.
-
-## Deterministic behavior
-The update is deterministic because:
-
-- composite hierarchy is computed structurally,  
-- constants are validated against composite results,  
-- snapshot dictionaries use canonical `name_snake` keys,  
-- instance creation is clean and side-effect-free,  
-- helper functions are pure and stable.
-
-## Integration requirements
-The function assumes the instance implements:
-
-- [Snapshot](ca://s?q=Explain_Snapshot_mixin) — provides `_restore_snapshot`  
-- [NodesDicts](ca://s?q=Explain_NodesDicts_mixin) — provides node metadata  
-
-Without these mixins, the pipeline cannot reconstruct the instance.
-
-## Stability guarantee
-Any change to this function would affect:
-
-- immutability behavior,  
-- composite recalculation order,  
-- serialization consistency,  
-- debugging tools,  
-- patch operations.
-
-Therefore, `with_any` is treated as a **core invariant** of the immutability subsystem.
-
-## Notes
-- This function is intentionally minimal and side-effect-free.  
-- It is not part of the public API; it is used internally by mixins.  
-- All structural logic is delegated to helper utilities.
 """
+Tests for `with_any(self, changes)`.
+"""
+import pytest
+from simplibs.object.mixins._common_logic.immutability.with_any import with_any
+
+
+class TestWithAnyNoChanges:
+
+    def test_none_returns_new_instance_for_immutable(self, immutable_outer_instance):
+        result = with_any(immutable_outer_instance, None)
+        assert result is not immutable_outer_instance
+        assert result.value == immutable_outer_instance.value
+
+    def test_empty_default_returns_new_instance(self, immutable_outer_instance):
+        result = with_any(immutable_outer_instance)
+        assert result.value == immutable_outer_instance.value
+
+    def test_mutable_mode_returns_value_not_instance(self, mutable_outer_instance):
+        result = with_any(mutable_outer_instance, None)
+        assert result == mutable_outer_instance.value
+        assert not hasattr(result, "_nodes_tuple")
+
+
+class TestWithAnySingleChange:
+
+    def test_single_constant_change(self, immutable_outer_instance):
+        result = with_any(immutable_outer_instance, ("third", 42))
+        assert result._nodes_dict["third"][0].value == 42
+
+    def test_single_composite_change(self, immutable_outer_instance):
+        result = with_any(immutable_outer_instance, ("pair", 15))
+        assert result._nodes_dict["pair"][0].value == 15
+
+
+class TestWithAnyAllConstants:
+
+    def test_multiple_constants_delegates_to_with_constants(self, immutable_outer_instance):
+        result = with_any(
+            immutable_outer_instance,
+            (("first", 1), ("second", 2), ("third", 3)),
+        )
+        assert result._nodes_dict["first"][0].value == 1
+        assert result._nodes_dict["second"][0].value == 2
+        assert result._nodes_dict["third"][0].value == 3
+
+
+class TestWithAnyMixedCompositeAndConstants:
+
+    def test_composite_plus_unrelated_constant(self, immutable_outer_instance):
+        result = with_any(
+            immutable_outer_instance,
+            (("pair", 20), ("third", 30)),
+        )
+        assert result._nodes_dict["pair"][0].value == 20
+        assert result._nodes_dict["third"][0].value == 30
+        assert result.value == 50
+
+    def test_composite_plus_matching_contained_constant_succeeds(self, immutable_outer_instance):
+        result = with_any(
+            immutable_outer_instance,
+            (("pair", 20), ("first", 20)),
+        )
+        assert result._nodes_dict["pair"][0].value == 20
+        assert result._nodes_dict["first"][0].value == 20
+
+    def test_composite_plus_conflicting_contained_constant_raises(self, immutable_outer_instance):
+        changes = (("pair", 20), ("first", 999))
+        with pytest.raises(Exception):
+            with_any(
+                immutable_outer_instance,
+                changes,
+            )
+
+
+class TestWithAnyValidation:
+
+    def test_changes_wrong_type_raises(self, immutable_outer_instance):
+        with pytest.raises(Exception):
+            with_any(immutable_outer_instance, ["not", "a", "tuple"])
+
+    def test_unknown_name_in_single_change_raises(self, immutable_outer_instance):
+        with pytest.raises(Exception):
+            with_any(immutable_outer_instance, ("nonexistent", 1))

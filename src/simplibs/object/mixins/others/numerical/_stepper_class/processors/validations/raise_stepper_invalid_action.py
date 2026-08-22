@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, NoReturn, Any
 # Outers
-from .......exceptions import SimpleLogicError
+from .......exceptions import SimpleRuntimeError
 # Annotations
 if TYPE_CHECKING:
     from ......._core.protocols.mixins.numerical.stepper import StepperProtocol
@@ -14,7 +14,7 @@ def raise_stepper_invalid_action(
     Raises a structured error when the provided limit action is not callable.
     """
 
-    raise SimpleLogicError(
+    raise SimpleRuntimeError(
         error_name="STEPPER LIMIT ACTION ERROR",
         label="limit action",
         value=action_value,
@@ -114,5 +114,5 @@ Simple’s structured error system.
 - This is a pure `raise_...` function: it performs no branching logic.
 - It is internal and not part of the public API.
 - All invalid limit actions must use this function.
-- The error type is `SimpleLogicError` with `TypeError` as the underlying exception.
+- The error type is `SimpleRuntimeError` with `TypeError` as the underlying exception.
 """

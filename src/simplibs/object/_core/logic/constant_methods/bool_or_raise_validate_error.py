@@ -1,5 +1,6 @@
 from typing import Any, TYPE_CHECKING
-from simplibs.exception import SimpleException
+# Outers
+from ....exceptions import SimpleRuntimeError
 # Annotations
 if TYPE_CHECKING:
     from ...protocols.classes import SimpleConstantProtocol
@@ -19,7 +20,7 @@ def bool_or_raise_validate_error(
         return False
 
     # 2. Raise a structured validation error
-    raise SimpleException(
+    raise SimpleRuntimeError(
         error_name="VALIDATION ERROR",
         label="input_value",
         value=value,
@@ -53,7 +54,7 @@ exceptions.
      validation pipeline.
 
 2. **Exception Mode**
-   - When `return_bool=False`, the function raises a structured `SimpleException`
+   - When `return_bool=False`, the function raises a structured `SimpleRuntimeError`
      containing:
      - the problematic value,
      - a user-provided description of the issue (`problem`),

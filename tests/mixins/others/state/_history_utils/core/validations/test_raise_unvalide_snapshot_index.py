@@ -1,67 +1,41 @@
-from typing import TYPE_CHECKING, NoReturn
-# Outers
-from ......exceptions import SimpleMixinError
-# Annotations
-if TYPE_CHECKING:
-    from ......_core.protocols.mixins.state import HistoryProtocol
+from unittest.mock import Mock
+from simplibs.object.exceptions import SimpleRuntimeError
+from simplibs.exception.testing.assert_exception_function import assert_exception_function
+from simplibs.object.mixins.others.state._history_utils.core.validations.raise_unvalide_snapshot_index import (
+    raise_unvalide_snapshot_index,
+)
 
 
-def raise_unvalide_snapshot_index(
-    instance: "HistoryProtocol",
-    ref: int,
-) -> NoReturn:
-    """
-    Raises an error when a snapshot index is outside the valid range.
-    """
-    # noinspection PyProtectedMember
-    history_count = instance._history_count
+def test_raise_unvalide_snapshot_index(subtests) -> None:
+    """Tests that raise_unvalide_snapshot_index raises SimpleRuntimeError."""
 
-    raise SimpleMixinError(
+    dummy_instance = Mock()
+    type(dummy_instance).__name__ = "MyHistoryClass"
+    dummy_instance._history_count = 3
+    invalid_index = 5
+
+    assert_exception_function(
+        subtests,
+        raise_unvalide_snapshot_index,
+        invalid_params=(dummy_instance, invalid_index),
+        exception_type=SimpleRuntimeError,
         error_name="HISTORY SNAPSHOT INDEX ERROR",
         label="snapshot index",
-        expected=f"Integer in range 0 <= index < {history_count}",
-        value=ref,
+        expected="Integer in range 0 <= index < 3",
+        value=invalid_index,
         problem=(
             "Invalid snapshot index provided.",
-            f"Index {ref} is outside the valid range of recorded history."
+            "Index 5 is outside the valid range of recorded history.",
         ),
         context=(
-            f"History lookup attempted on instance '{type(instance).__name__}'.",
-            f"Total number of snapshots: {history_count}"
+            "History lookup attempted on instance 'MyHistoryClass'.",
+            "Total number of snapshots: 3",
         ),
         how_to_fix=(
             "Ensure the index refers to an existing snapshot.",
             "Use `history_index` or inspect `history` to determine valid indices.",
-            "Snapshot indices start at 0 and increase sequentially."
+            "Snapshot indices start at 0 and increase sequentially.",
         ),
         exception=IndexError,
+        verbose=False,
     )
-
-
-_DESIGN_NOTES = """
-# raise_unvalide_snapshot_index
-
-## Purpose
-Raises a structured error when the user provides a snapshot index that does not
-exist in the history list.
-
-Snapshot indices must satisfy:
-`0 <= index < history_count`.
-
-## Why this validation exists
-History navigation relies on deterministic indexing.  
-Invalid indices would lead to undefined behavior or incorrect snapshot access.
-
-Failing early ensures:
-- predictable navigation,
-- safe snapshot restoration,
-- clear diagnostics for debugging.
-
-## Execution context
-Used inside `find_snapshot` when the reference is an integer.  
-It is the first validation step before returning the snapshot.
-
-## Notes
-- Pure raise function, no conditional logic.
-- Used exclusively by the History mixin.
-"""

@@ -18,8 +18,9 @@ class ClassGetItem(SimpleMixin):
     Logic:
     - If a parent class already implements __class_getitem__, that
       implementation is used.
-    - If it doesn't exist (the common case for plain classes), the class
-      itself is returned.
+    - If it doesn't exist (the common case for plain classes), or if
+      the MRO traversal raises TypeError on dynamically generated classes,
+      the class itself is returned.
     """
 
     # ----------------------------------------
@@ -47,17 +48,16 @@ class ClassGetItem(SimpleMixin):
         which is the standard fallback Python uses for simple generic
         subscript syntax.
         """
+        try:
+            # Look up method on the parent via standard super() inside classmethod
+            super_method = getattr(super(), "__class_getitem__", None)
+            if super_method is not None:
+                return super_method(item)
+        except (TypeError, AttributeError):
+            # Fallback for dynamic class hierarchies or missing parent implementations
+            pass
 
-        # 1. Look up the method on the parent class
-        super_cls = super(ClassGetItem, cls)
-        method = getattr(super_cls, "__class_getitem__", None)
-
-        # 2. Return the method's result, or the class as a fallback
-        return (
-            method(item)
-            if method is not None
-            else cls
-        )
+        return cls
 
 
 _DESIGN_NOTES = """
@@ -77,12 +77,23 @@ change what the class does at runtime.
 - No compatibility flags — purely additive, has no interaction with
   value, mutability, or composite/atom distinctions.
 
-## Logic
-- Looks up `__class_getitem__` on the parent class via `super()`.
-- If the parent defines one (e.g. because it *does* inherit from
-  `Generic`), that implementation wins — this mixin steps out of the way.
-- If not, it falls back to returning the class itself unchanged, which is
-  the same fallback CPython uses internally for plain classes.
+## Architecture & Logic
+- **`super()` resolution in `@classmethod`:** 
+  The implementation relies on zero-argument `super().__class_getitem__` inside 
+  a defensive `try...except (TypeError, AttributeError)` block.
+- **Why avoid explicit `super(ClassGetItem, cls)`:**
+  In dynamic metaclass architectures, `cls` is an instance class created 
+  at runtime whose Method Resolution Order (MRO) may not explicitly expose 
+  `ClassGetItem` as a direct parent or subtype in the exact manner CPython's 
+  type checker expects at runtime. Explicit 2-argument `super(Type, obj)` enforces 
+  `isinstance(obj, Type)` or `issubclass(obj, Type)`, which raises 
+  `TypeError: super(type, obj): obj must be an instance or subtype of type` 
+  when called on dynamically synthesized leaf classes.
+- **Fallback Mechanism:**
+  If a parent class defines `__class_getitem__` (e.g., inheriting from `Generic` 
+  or another specialized container), that parent method takes precedence. If no 
+  parent defines it, or if dynamic MRO introspection raises a `TypeError`, 
+  the mixin safely catches the exception and falls back to returning `cls` unchanged.
 
 ## Notes
 - No `TYPE_CHECKING` import block, unlike most other mixins in this

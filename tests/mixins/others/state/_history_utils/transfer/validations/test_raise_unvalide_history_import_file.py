@@ -1,31 +1,35 @@
-from typing import TYPE_CHECKING, NoReturn
-# Outers
-from ......exceptions import SimpleMixinError
-# Annotations
-if TYPE_CHECKING:
-    from ......_core.protocols.mixins.state import HistoryProtocol
+from unittest.mock import Mock
+from simplibs.object.exceptions import SimpleRuntimeError
+from simplibs.exception.testing.assert_exception_function import assert_exception_function
+from simplibs.object.mixins.others.state._history_utils.transfer.validations.raise_unvalide_history_import_file import (
+    raise_unvalide_history_import_file,
+)
 
 
-def raise_unvalide_history_import_file(
-    instance: "HistoryProtocol",
-    value: object,
-) -> NoReturn:
-    """
-    Raises an error when the provided history import container is not a dictionary.
-    """
+def test_raise_unvalide_history_import_file(subtests) -> None:
+    """Tests that raise_unvalide_history_import_file raises SimpleRuntimeError."""
 
-    raise SimpleMixinError(
+    dummy_instance = Mock()
+    type(dummy_instance).__name__ = "MyClass"
+
+    invalid_value = ["not", "a", "dict"]
+
+    assert_exception_function(
+        subtests,
+        raise_unvalide_history_import_file,
+        invalid_params=(dummy_instance, invalid_value),
+        exception_type=SimpleRuntimeError,
         error_name="HISTORY IMPORT FORMAT ERROR",
         label="history import container",
         expected="A dictionary containing OWNER_CLASS and HISTORY fields.",
-        value=type(value).__name__,
+        value="list",
         problem=(
             "Invalid history import format.",
             "History import requires a dictionary structure."
         ),
         context=(
-            f"History import attempted on instance '{type(instance).__name__}'.",
-            f"Provided value type: {type(value).__name__}"
+            "History import attempted on instance 'MyClass'.",
+            "Provided value type: list"
         ),
         how_to_fix=(
             "Ensure the input is a dictionary.",
@@ -33,34 +37,5 @@ def raise_unvalide_history_import_file(
             "Do not pass lists, tuples, strings, or other unsupported types."
         ),
         exception=TypeError,
+        verbose=False,
     )
-
-
-_DESIGN_NOTES = """
-# raise_unvalide_history_import_file
-
-## Purpose
-Raises a structured error when the user attempts to import history from a value
-that is not a dictionary.
-
-## Why this validation exists
-History import requires a strict dictionary format containing:
-- OWNER_CLASS,
-- HISTORY,
-- optional metadata fields.
-
-Passing anything else (list, tuple, string, None, etc.) would make the import
-ambiguous or impossible.
-
-Failing early ensures:
-- predictable import behavior,
-- safe restoration,
-- clear diagnostics.
-
-## Execution context
-Used inside `import_history_from_dict` as the first validation step.
-
-## Notes
-- Pure raise function, no conditional logic.
-- Used exclusively by the History mixin.
-"""

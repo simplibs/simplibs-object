@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, NoReturn
 # Outers
-from ....exceptions import SimpleLogicError
+from ....exceptions import SimpleRuntimeError
 # Annotations
 if TYPE_CHECKING:
     from ...._core.protocols.instance import SimpleInstanceLike
@@ -16,7 +16,7 @@ def raise_random_data_filler_exhausted(
     value_type_name = getattr(getattr(instance, "meta", None), "value_type", None)
     type_repr = getattr(value_type_name, "__name__", str(value_type_name))
 
-    raise SimpleLogicError(
+    raise SimpleRuntimeError(
         error_name="RANDOM DATA FILLER EXHAUSTED ERROR",
         label="retries",
         expected=f"A valid random value generated within {retries} retry attempt(s).",
@@ -43,7 +43,7 @@ _DESIGN_NOTES = """
 # raise_random_data_filler_exhausted
 
 ## Purpose
-Raises a structured `SimpleLogicError` when random value generation exhausts all configured retry attempts 
+Raises a structured `SimpleRuntimeError` when random value generation exhausts all configured retry attempts 
 without producing a value that passes instance validation.
 
 ## Why this validation exists

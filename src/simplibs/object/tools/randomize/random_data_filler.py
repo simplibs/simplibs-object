@@ -67,10 +67,10 @@ def random_data_filler(
     # 2. Immutable Instance Bypass Check
     # ------------------------------------------------------------
     instance: "SimpleInstanceLike"
-    if skip_immutable and (
-        not instance.__is_mutable__
-        or instance._locked
-    ):
+    is_immutable = not getattr(instance, "__is_mutable__", True)
+    is_locked = getattr(instance, "_locked", False)
+
+    if skip_immutable and (is_immutable or is_locked):
         return instance
 
     # ------------------------------------------------------------
@@ -88,20 +88,21 @@ def random_data_filler(
     # ------------------------------------------------------------
     # 4. Recursive Composite Children Traversal
     # ------------------------------------------------------------
-    for inner in instance.meta.inners:
+    if hasattr(instance.meta, "inners"):
+        for inner in instance.meta.inners:
 
-        # 4.1 Extract private inner instance reference
-        inner_instance = getattr(instance, inner.meta.name_private)
+            # 4.1 Extract private inner instance reference
+            inner_instance = getattr(instance, inner.meta.name_private)
 
-        # 4.2 Recurse down to child node
-        random_data_filler(
-            inner_instance,
-            retries=retries,
-            registry=registry,
-            skip_unregistered=skip_unregistered,
-            skip_immutable=skip_immutable,
-            validate=False,
-        )
+            # 4.2 Recurse down to child node
+            random_data_filler(
+                inner_instance,
+                retries=retries,
+                registry=registry,
+                skip_unregistered=skip_unregistered,
+                skip_immutable=skip_immutable,
+                validate=False,
+            )
 
     # ------------------------------------------------------------
     # 5. Return Mutated Root Instance

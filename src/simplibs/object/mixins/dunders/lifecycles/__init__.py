@@ -1,6 +1,6 @@
 from .Copyable import Copyable
 from .PickleState import PickleState
-from .PickleReduce import PicleReduce
+from .PickleReduce import PickleReduce
 from .main import Lifecycle
 
 
@@ -18,12 +18,12 @@ same underlying snapshot/serialization foundation.
 | :----------------- | :---- | :--------------------------------------------------------------------- |
 | `Copyable`         | Mixin | `__copy__` / `__deepcopy__` via snapshot.                              |
 | `PickleState`      | Mixin | `__getstate__` / `__setstate__` via `to_dict()` / `from_dict()`.       |
-| `PicleReduce`      | Mixin | `__reduce__` — top-level pickle protocol hook, built on `PickleState`. |
-| `Lifecycle`        | Mixin | Combines `Copyable` + `PicleReduce` (see `.main`).                     |
+| `PickleReduce`      | Mixin | `__reduce__` — top-level pickle protocol hook, built on `PickleState`. |
+| `Lifecycle`        | Mixin | Combines `Copyable` + `PickleReduce` (see `.main`).                     |
 
 ## Notes
-- `PicleReduce` keeps its original spelling (missing a "k") to match the
+- `PickleReduce` keeps its original spelling (missing a "k") to match the
   existing codebase — not a translation artifact.
-- Dependency order: `PickleState` → `PicleReduce`; `Copyable` and
-  `PicleReduce` are combined into `Lifecycle`.
+- Dependency order: `PickleState` → `PickleReduce`; `Copyable` and
+  `PickleReduce` are combined into `Lifecycle`.
 """

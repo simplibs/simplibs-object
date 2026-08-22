@@ -30,6 +30,6 @@ mixins (`Volume`, `Equalizer`) and any user-level stepping operations.
 ## Notes
 - These methods form the core public API of the Stepper.
 - All structural logic is delegated to processor utilities and validation helpers.
-- Limit actions and structured errors follow the SimpleLogicError diagnostic format.
+- Limit actions and structured errors follow the SimpleRuntimeError diagnostic format.
 - These methods guarantee deterministic, safe numeric transitions.
 """

@@ -1,96 +1,77 @@
-from typing import TYPE_CHECKING
-# Outers
-from ...base_class import SimpleMixin
-# Annotations
-if TYPE_CHECKING:
-    from ...._core.protocols.mixins.dunders.representation import ValueDisplayProtocol
+# 🧱 `ValueDisplay` — Value-Like Printing
 
+`ValueDisplay` overrides `__repr__` and `__str__` so an atomic instance presents
+itself as the raw value it wraps — `print(price)` shows `19.99`, not a generic object
+representation. Opt-in, intended for "value object" types like `Decimal`, `UUID`,
+`PhoneNumber`.
+
+```python
+from ...base_class import SimpleMixin
 
 class ValueDisplay(SimpleMixin):
-    """
-    Overrides __repr__ and __str__ so the object presents itself as the
-    raw value it wraps.
+    ...
+```
 
-    Changes how the object is displayed so it represents its value.
-    Intended only for atomic (constant-only) types that should behave as
-    "value-like" objects (e.g. Decimal, UUID, PhoneNumber...).
+`_constant_only = True`.
 
-    ValueDisplay is a common mixin, but it is not a standard one — it is
-    a specialized, opt-in, constant-only mixin, meant to be used only
-    when you want the object to behave like a "value object" (e.g.
-    Decimal, UUID, Path, Enum, ...).
-    """
+---
 
-    # ----------------------------------------
-    # Basic interface
-    # ----------------------------------------
+## 🧭 Table of Contents
 
-    # Compatibility declaration
-    _constant_only = True
+* [`__repr__`](#__repr__)
+* [`__str__`](#__str__)
 
-    # Slot definition
-    __slots__ = ()
+---
 
-    # ----------------------------------------
-    # Methods - REPR / STR
-    # ----------------------------------------
+### `__repr__`
 
-    def __repr__(
-        self: "ValueDisplayProtocol"
-    ) -> str:
-        """
-        Technical representation of the object in the format:
-            ClassName(value_repr)
-        Used for debugging and logging.
-        """
-        return f"{self.meta.class_name}({self.value!r})"
+Returns `ClassName(value_repr)` — keeps the class identity visible while showing the
+wrapped value's own `repr()`.
 
-    def __str__(
-        self: "ValueDisplayProtocol"
-    ) -> str:
-        """
-        User-facing representation of the object.
-        Returns the plain value converted to a string.
-        """
-        return str(self.value)
+**Parameters:**
+* *(none)*
 
+**Returns:**
+* `str`
 
-_DESIGN_NOTES = """
-# ValueDisplay
+**Example usage:**
+```python
+repr(price)  # "Price(19.99)"
+```
 
-## Purpose
-Makes an atomic instance *look and print* like the raw value it wraps,
-instead of like a generic object. With this mixin, `print(price)` shows
-`19.99`, not something like `<SimpleConstant object at 0x...>`.
+**Under the hood:**
+```python
+def __repr__(self) -> str:
+    return f"{self.meta.class_name}({self.value!r})"
+```
 
-> For newcomers: `__repr__` is the "developer-facing" representation
-> (what you see in a debugger, a REPL, or inside a list/dict print),
-> while `__str__` is the "user-facing" one (what `print()` and `str()`
-> use). This mixin gives each a distinct but related shape.
+[▲ Back to top](#-table-of-contents)
 
-## Compatibility
-- `_constant_only = True` — this is a deliberate opt-in restriction, not
-  a technical limitation. Value-like display only makes sense for atoms
-  that model a single "value" (`Decimal`, `UUID`, `PhoneNumber`,
-  `Path`-like types) — not for composites, which are made of multiple
-  named parts and are better served by a structural, field-by-field
-  representation (see `InstanceBase`'s default `__repr__`/`__str__`,
-  which this mixin deliberately does *not* touch on composites).
+---
 
-## Logic
-- `__repr__` returns `ClassName(value_repr)` — keeps the class identity
-  visible (so `PhoneNumber('+420...')` still tells you what it is) while
-  showing the wrapped value using its own `repr()`.
-- `__str__` returns just `str(self.value)` — drops the class name
-  entirely, so the object reads exactly like its underlying value in
-  print statements, f-strings, and string concatenation.
+### `__str__`
 
-## Notes
-- Opt-in by design: most Simple instances should *not* use this mixin,
-  since hiding the class identity from `str()` can be misleading for
-  types where "which class this is" matters more than "what the raw
-  value looks like."
-- Pairs naturally with `ValueFormatting`, which adds `format()`/
-  `__format__`/`__bytes__`/`__bool__` without touching `__repr__`/
-  `__str__` — the two mixins split representation concerns cleanly.
-"""
+Returns just `str(self.value)` — drops the class name entirely.
+
+**Parameters:**
+* *(none)*
+
+**Returns:**
+* `str`
+
+**Example usage:**
+```python
+print(price)  # "19.99"
+```
+
+**Under the hood:**
+```python
+def __str__(self) -> str:
+    return str(self.value)
+```
+
+[▲ Back to top](#-table-of-contents)
+
+---
+
+[⬅️ Back to Mixins Overview](../../../README_MIXINS_OVERVIEW.md)

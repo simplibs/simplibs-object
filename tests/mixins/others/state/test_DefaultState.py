@@ -1,76 +1,89 @@
-from typing import TYPE_CHECKING
-# Outers
-from ..core_mixins import Snapshot
-from .._commons.immutability import create_new_instance
-# Annotations
-if TYPE_CHECKING:
-    from ..._core.protocols.mixins.state import DefaultStateProtocol
-    from ..._core.protocols.alias_typings import SnapshotTuple
+"""
+Tests for `DefaultState` mixin.
+"""
+import pytest
+from simplibs.object.mixins.others.state import DefaultState
+from simplibs.object.mixins.core_mixins import Snapshot
+from simplibs.object.testing import assert_simple_mixin
 
 
+class TestDefaultStateStructure:
 
-# noinspection PyProtectedMember
-class DefaultState(Snapshot):
-    """
-    Mixin, který instanci poskytne:
-    - uložený výchozí stav (_default_state)
-    - metody clone_instance(), reset_to_default_values(), create_new_default_instance()
-    """
+    def test_mutable_only_flag(self):
+        assert DefaultState._mutable_only is True
 
-    # ----------------------------------------
-    # Základní rozhraní
-    # ----------------------------------------
+    def test_inherits_from_snapshot(self):
+        assert issubclass(DefaultState, Snapshot)
 
-    # Definice určení
-    _mutable_only = True
-
-    # Definice slotů
-    __slots__ = ("_default_state_snapshot",)
-
-    # ----------------------------------------
-    # Hook pro inicializaci
-    # ----------------------------------------
-
-    # noinspection PyAttributeOutsideInit
-    def init_mixins(
-        self: "DefaultStateProtocol"
-    ) -> None:
-        """
-        Metoda, předávající svojí logiku do inicializačního procesu instance.
-        """
-
-        # 1. Inicializace předků
-        super().init_mixins()
-
-        # 2. Vytvoření snapshotu defaultního stavu
-        self._default_state_snapshot: "SnapshotTuple" = self._build_snapshot()
-
-    # ----------------------------------------
-    # Metods - CLONE / RESET / NEW
-    # ----------------------------------------
-
-    def clone_instance(
-        self: "DefaultStateProtocol"
-    ) -> "DefaultStateProtocol":
-        """Vytvoří novou instanci se stejným stavem jako tato instance."""
-        new_instance = self.create_new_default_instance()
-        new_instance._restore_snapshot(self._build_snapshot())
-        return new_instance
-
-    def reset_to_default_values(
-        self: "DefaultStateProtocol"
-    ) -> None:
-        """Resetuje instanci do výchozího stavu (_default_state)."""
-        self._restore_snapshot(self._default_state_snapshot)
-
-    # noinspection PyTypeChecker
-    def create_new_default_instance(
-        self: "DefaultStateProtocol"
-    ) -> "DefaultStateProtocol":
-        """
-        Vrátí novou instanci stejného typu se stejným výchozím stavem,
-        jaký měla tato instance při svém vzniku.
-        """
-        return create_new_instance(self, self._default_state_snapshot)
+    def test_assert_simple_mixin_shallow(self, subtests, Outer):
+        assert_simple_mixin(
+            subtests,
+            DefaultState,
+            test_class=Outer,
+            slots_names=("_default_state_snapshot",),
+            method_names=(
+                "clone_instance",
+                "reset_to_default_values",
+                "create_new_default_instance",
+            ),
+        )
 
 
+class TestDefaultStateSnapshotCapture:
+
+    def test_default_state_captured_at_init(self, Outer):
+        instance = Outer(mixins=(DefaultState,), mutable=True)
+        assert instance._default_state_snapshot == instance._build_snapshot()
+
+
+class TestDefaultStateResetToDefaultValues:
+
+    def test_reset_restores_initial_state(self, Outer):
+        instance = Outer(mixins=(DefaultState,), mutable=True)
+        original_snapshot = instance._build_snapshot()
+        instance.value = 999
+
+        instance.reset_to_default_values()
+
+        assert instance._build_snapshot() == original_snapshot
+
+
+class TestDefaultStateCreateNewDefaultInstance:
+
+    def test_returns_new_instance_matching_original_default(self, Outer):
+        instance = Outer(mixins=(DefaultState,), mutable=True)
+        default_snapshot = instance._default_state_snapshot
+        instance.value = 999
+
+        new_instance = instance.create_new_default_instance()
+
+        assert new_instance is not instance
+        assert new_instance._build_snapshot() == default_snapshot
+
+
+class TestDefaultStateCloneInstance:
+
+    def test_clone_matches_current_state_not_default(self, Outer):
+        instance = Outer(mixins=(DefaultState,), mutable=True)
+        instance.value = 777
+
+        clone = instance.clone_instance()
+
+        assert clone is not instance
+        assert clone._build_snapshot() == instance._build_snapshot()
+
+    def test_clone_differs_from_default_after_changes(self, Outer):
+        instance = Outer(mixins=(DefaultState,), mutable=True)
+        default_snapshot = instance._default_state_snapshot
+        instance.value = 777
+
+        clone = instance.clone_instance()
+
+        assert clone._build_snapshot() != default_snapshot
+
+
+class TestDefaultStateCompatibility:
+
+    def test_rejects_immutable_instance(self, Outer):
+        with pytest.raises(Exception):
+            Outer(mixins=(DefaultState,), mutable=False)

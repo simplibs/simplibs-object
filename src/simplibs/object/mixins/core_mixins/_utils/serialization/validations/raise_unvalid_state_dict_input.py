@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, NoReturn
 # Outers
-from .......exceptions import SimpleLogicError
+from ......exceptions import SimpleRuntimeError
 
 # Annotations
 if TYPE_CHECKING:
@@ -15,7 +15,7 @@ def raise_unvalid_state_dict_input(
     Raises an error when the provided state dictionary is not a valid dict.
     """
 
-    raise SimpleLogicError(
+    raise SimpleRuntimeError(
         error_name="STATE DICT INPUT ERROR",
         label="state dictionary",
         expected="A dictionary mapping node paths to values.",

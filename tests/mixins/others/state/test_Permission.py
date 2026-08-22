@@ -1,54 +1,61 @@
-from typing import TYPE_CHECKING
-# Outers
-from ..base_class import SimpleMixin
-# Annotations
-if TYPE_CHECKING:
-    from ..._core.protocols.mixins.state import PermissionProtocol
+"""
+Tests for `Permission` mixin.
+"""
+import pytest
+from simplibs.object.mixins.others.state import Permission
+from simplibs.object.testing import assert_simple_mixin
 
 
-class Permission(SimpleMixin):
-    """
-    Read-only režim — zamykání proti změnám.
+class TestPermissionStructure:
 
-    Příklad:
-        obj.lock()
-        obj.value = 10  # → ValueError
-    """
+    def test_mutable_only_flag(self):
+        assert Permission._mutable_only is True
 
-    # ----------------------------------------
-    # Základní rozhraní
-    # ----------------------------------------
+    def test_slots_empty(self):
+        assert Permission.__slots__ == ()
 
-    # Definice určení
-    _mutable_only = True
+    def test_assert_simple_mixin_shallow(self, subtests, Outer):
+        assert_simple_mixin(
+            subtests,
+            Permission,
+            test_class=Outer,
+            attribute_names=("is_locked",),
+            method_names=("lock", "unlock"),
+        )
 
-    # Definice slotů
-    __slots__ = ()
 
-    # ----------------------------------------
-    # Property - getters
-    # ----------------------------------------
+class TestPermissionBehavior:
 
-    @property
-    def is_locked(
-        self: "PermissionProtocol"
-    ) -> bool:
-        """Vrací bool zda je zámek aktivní"""
-        return self._locked
+    def test_starts_unlocked(self, Outer):
+        instance = Outer(mixins=(Permission,), mutable=True)
+        assert instance.is_locked is False
 
-    # ----------------------------------------
-    # Methods - LOCK / UNLOCK
-    # ----------------------------------------
+    def test_lock_sets_is_locked_true(self, Outer):
+        instance = Outer(mixins=(Permission,), mutable=True)
+        instance.lock()
+        assert instance.is_locked is True
 
-    def lock(
-        self: "PermissionProtocol"
-    ) -> None:
-        """Zamyká zámek"""
-        object.__setattr__(self, "_locked", True)
+    def test_unlock_sets_is_locked_false(self, Outer):
+        instance = Outer(mixins=(Permission,), mutable=True)
+        instance.lock()
+        instance.unlock()
+        assert instance.is_locked is False
 
-    def unlock(
-        self: "PermissionProtocol"
-    ) -> None:
-        """Odemyká zámek"""
-        object.__setattr__(self, "_locked", False)
+    def test_lock_blocks_value_write(self, Outer):
+        instance = Outer(mixins=(Permission,), mutable=True)
+        instance.lock()
+        with pytest.raises(Exception):
+            instance.value = 999
 
+    def test_unlock_restores_write_access(self, Outer):
+        instance = Outer(mixins=(Permission,), mutable=True)
+        instance.lock()
+        instance.unlock()
+        instance.value = instance.value
+
+
+class TestPermissionCompatibility:
+
+    def test_rejects_immutable_instance(self, Outer):
+        with pytest.raises(Exception):
+            Outer(mixins=(Permission,), mutable=False)

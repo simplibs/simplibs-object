@@ -1,75 +1,40 @@
-from typing import Any, TYPE_CHECKING
-from simplibs.exception import SimpleException
-# Annotations
-if TYPE_CHECKING:
-    from ...protocols.classes import SimpleConstantProtocol
-
-
-def bool_or_raise_validate_error(
-    cls: "SimpleConstantProtocol",
-    value: Any,
-    problem: str,
-    *,
-    return_bool: bool = False,
-) -> bool:
-    """Internal implementation of the shared validation helper."""
-
-    # 1. Boolean mode — return False instead of raising
-    if return_bool:
-        return False
-
-    # 2. Raise a structured validation error
-    raise SimpleException(
-        error_name="VALIDATION ERROR",
-        label="input_value",
-        value=value,
-        expected=f"Valid configuration for '{cls.__name__}'",
-        problem=problem,
-        how_to_fix=(
-            f"Ensure that the data provided to '{cls.__name__}' meets the validation criteria.",
-            f"The expected base type or format is '{cls.meta.value_type_name}'.",
-        ),
-        context=f"Triggered inside custom validation of '{cls.__name__}'.",
-        exception=ValueError,
-    )
-
-
-_DESIGN_NOTES = """
-# bool_or_raise_validate_error
-
-## Purpose
-Provides a convenience helper for developers implementing custom validation
-logic in the `_validate` method of constant classes. It allows users to write
-simple, readable validation rules without manually constructing structured
-exceptions.
-
----
-
-## Behavior
-1. **Boolean Mode**
-   - When `return_bool=True`, the function returns `False` instead of raising an
-     error.
-   - This supports the boolean-style validation pattern used throughout the
-     validation pipeline.
-
-2. **Exception Mode**
-   - When `return_bool=False`, the function raises a structured `SimpleException`
-     containing:
-     - the problematic value,
-     - a user-provided description of the issue (`problem`),
-     - expected type information,
-     - contextual information about where the error occurred.
-
----
-
-## Usage
-This helper is intended to be used exclusively inside user-defined `_validate`
-methods, for example:
-
-```python
-@classmethod
-def _validate(cls, value, *, return_bool=False):
-    if value < 0:
-        return cls.bool_or_raise_validate_error(value, "Value must be non-negative.", return_bool=return_bool)
-    return True
 """
+Tests for `_core/logic/constant_methods/bool_or_raise_validate_error.py`.
+
+Verifies validation error handling across exception raising and boolean return modes.
+"""
+import pytest
+from simplibs.exception import SimpleException
+
+
+class TestBoolOrRaiseValidateErrorRaiseMode:
+
+    def test_raises_simple_exception_by_default(self, IntConst) -> None:
+        """Verifies default behavior raises a SimpleException on validation failure."""
+        with pytest.raises(SimpleException):
+            IntConst.bool_or_raise_validate_error(5, problem="something is wrong")
+
+    def test_raised_exception_wraps_value_error(self, IntConst) -> None:
+        """Verifies the raised SimpleException contains standard exception payload."""
+        with pytest.raises(SimpleException) as excinfo:
+            IntConst.bool_or_raise_validate_error(5, problem="something is wrong")
+        assert excinfo.value is not None
+
+
+class TestBoolOrRaiseValidateErrorBoolMode:
+
+    def test_return_bool_true_returns_false(self, IntConst) -> None:
+        """Verifies return_bool=True suppresses exception and returns False on error."""
+        result = IntConst.bool_or_raise_validate_error(
+            5, problem="something is wrong", return_bool=True
+        )
+        assert result is False
+
+    def test_return_bool_true_never_raises(self, IntConst) -> None:
+        """Verifies return_bool=True guarantees no exceptions are propagated."""
+        try:
+            IntConst.bool_or_raise_validate_error(
+                "anything", problem="whatever", return_bool=True
+            )
+        except SimpleException:
+            pytest.fail("In bool mode, the function must not raise an exception.")

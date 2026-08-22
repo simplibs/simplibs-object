@@ -1,24 +1,31 @@
-# create_simple_object_bulk_from_table.py
 from typing import Any
-from ...data_classes.bulk_dict import BulkCase
-from ..create_simple_object_bulk_from_bulk_calse_class import create_simple_object_bulk_from_bulk_calse_class
+from simplibs.sentinels import UNSET
+# Outers
+from ..BulkCase import BulkCase
+# Inners
+from .create_simple_object_bulk_from_bulk_case_class import create_simple_object_bulk_from_bulk_case_class
+from ._validations import (
+    raise_bulk_input_not_sequence,
+    raise_bulk_table_row_not_sequence,
+)
 
 
 def create_simple_object_bulk_from_table(table: list[list[Any]]):
-    """
-    Vytvoří bulk z matice / 2D tabulky.
-    Podporuje neúplné řádky s využitím bezpečného načítání sloupce.
-    """
+    """Creates a bulk collection of Simple objects from a 2D matrix / table."""
     if not isinstance(table, (list, tuple)):
-        raise TypeError("Vstup musí být 2D list nebo tuple.")
+        raise_bulk_input_not_sequence(
+            value=table,
+            runner_name="create_simple_object_bulk_from_table",
+            expected_items_description="2D table rows (lists/tuples)",
+        )
 
     bulk = []
-    for row in table:
+    for index, row in enumerate(table):
         if not isinstance(row, (list, tuple)):
-            raise TypeError("Každý řádek tabulky musí být list nebo tuple.")
+            raise_bulk_table_row_not_sequence(row, index)
 
-        # Bezpečný odchyt hodnot podle indexu
-        def _get(idx: int, default: Any = None) -> Any:
+        # Změna výchozí hodnoty z None na UNSET
+        def _get(idx: int, default: Any = UNSET) -> Any:
             return row[idx] if len(row) > idx else default
 
         bulk.append(
@@ -33,4 +40,4 @@ def create_simple_object_bulk_from_table(table: list[list[Any]]):
             )
         )
 
-    return create_simple_object_bulk_from_bulk_calse_class(tuple(bulk))
+    return create_simple_object_bulk_from_bulk_case_class(tuple(bulk))

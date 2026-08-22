@@ -29,6 +29,8 @@ def make_atom_class(
 
     # 3. Build class dictionary
     class_dict = {
+        "_is_mutable": mutable,
+        "__metadata__": meta,
         "__doc__": f"Atomic instance for {meta.class_name}",
         "__slots__": ("_value", "_owner", "_locked"),
         "__init__": create_atom_init(meta, base_class_name),
@@ -74,11 +76,13 @@ Generates either a mutable or immutable variant based on the `mutable` flag.
 
 ### 2. Inheritance
 Each atomic instance inherits:
-- `InstanceBase` (identity, slots, metadata access)
+- `InstanceBase` (identity, `_is_instance_class` flag, slots, metadata access)
 - `meta.owner_class` (domain-specific behaviors)
 
 ### 3. Class dictionary
 Defines:
+- `_is_mutable` flag indicating mutability topology
+- `__metadata__ = meta` mapping to ensure direct access to blueprint metadata
 - slots (`_value`, `_owner`, `_locked`)
 - constructor (`__init__`)
 - value property
@@ -92,6 +96,10 @@ Removes metadata blueprint attributes so instances cannot access schema-level
 definitions.
 
 ## Notes
-This function is part of the public instance-building API and is used by both
-constant metadata and composition metadata.
+- Inheriting `_is_instance_class` from `InstanceBase` prevents the metaclass from generating secondary metadata
+  for compiled runtime classes (avoiding synthetic names like `*AtomMutableBase`).
+- Direct assignment of `__metadata__` guarantees that `instance.meta` always resolves to
+  the declarative blueprint specification.
+- This function is part of the public instance-building API and is used by both
+  constant metadata and composition metadata.
 """

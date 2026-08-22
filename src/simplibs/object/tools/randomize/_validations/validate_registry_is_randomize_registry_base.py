@@ -1,7 +1,7 @@
 from typing import Any
 from simplibs.randomize import RegistryBase
 # Outers
-from ....exceptions import SimpleLogicError
+from ....exceptions import SimpleRuntimeError
 
 
 def validate_registry_is_randomize_registry_base(
@@ -13,13 +13,13 @@ def validate_registry_is_randomize_registry_base(
         registry: Candidate registry instance to validate.
 
     Raises:
-        SimpleLogicError: If registry is not None and not a RegistryBase subclass instance.
+        SimpleRuntimeError: If registry is not None and not a RegistryBase subclass instance.
     """
 
     if registry is None or isinstance(registry, RegistryBase):
         return
 
-    raise SimpleLogicError(
+    raise SimpleRuntimeError(
         error_name="INVALID RANDOMIZE REGISTRY ERROR",
         label="registry",
         expected="None or an instance inheriting from RegistryBase (e.g. LocalRegistry).",

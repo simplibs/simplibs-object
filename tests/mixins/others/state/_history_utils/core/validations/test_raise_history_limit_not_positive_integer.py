@@ -1,65 +1,40 @@
-from typing import TYPE_CHECKING, NoReturn
-# Outers
-from ......exceptions import SimpleMixinError
-# Annotations
-if TYPE_CHECKING:
-    from ......_core.protocols.mixins.state import HistoryProtocol
+from unittest.mock import Mock
+from simplibs.object.exceptions import SimpleRuntimeError
+from simplibs.exception.testing.assert_exception_function import assert_exception_function
+from simplibs.object.mixins.others.state._history_utils.core.validations.raise_history_limit_not_positive_integer import (
+    raise_history_limit_not_positive_integer,
+)
 
 
-def raise_history_limit_not_positive_integer(
-    instance: "HistoryProtocol",
-    value: object,
-) -> NoReturn:
-    """
-    Raises an error when the provided history limit is not a positive integer.
-    """
+def test_raise_history_limit_not_positive_integer(subtests) -> None:
+    """Tests that raise_history_limit_not_positive_integer raises SimpleRuntimeError."""
 
-    raise SimpleMixinError(
+    dummy_instance = Mock()
+    type(dummy_instance).__name__ = "MyHistoryClass"
+    invalid_limit = -5
+
+    assert_exception_function(
+        subtests,
+        raise_history_limit_not_positive_integer,
+        invalid_params=(dummy_instance, invalid_limit),
+        exception_type=SimpleRuntimeError,
         error_name="HISTORY LIMIT ERROR",
         label="history limit",
         expected="A positive integer (value >= 1).",
-        value=value,
+        value=invalid_limit,
         problem=(
             "Invalid history limit provided.",
-            "History limit must be a positive integer greater than or equal to 1."
+            "History limit must be a positive integer greater than or equal to 1.",
         ),
         context=(
-            f"History limit assignment attempted on instance '{type(instance).__name__}'.",
-            f"Provided value type: {type(value).__name__}"
+            "History limit assignment attempted on instance 'MyHistoryClass'.",
+            "Provided value type: int",
         ),
         how_to_fix=(
             "Ensure the limit is an integer.",
             "Ensure the limit is at least 1.",
-            "Example valid values: 1, 5, 10, 100."
+            "Example valid values: 1, 5, 10, 100.",
         ),
         exception=ValueError,
+        verbose=False,
     )
-
-
-_DESIGN_NOTES = """
-# raise_history_limit_not_positive_integer
-
-## Purpose
-Raises a structured error when the user attempts to set a history limit that is
-not a positive integer.
-
-Valid values must satisfy:
-`isinstance(value, int) and value >= 1`.
-
-## Why this validation exists
-History limit controls memory usage and navigation behavior.  
-Invalid values could break history truncation logic or produce inconsistent
-state.
-
-Failing early ensures:
-- predictable history behavior,
-- safe truncation,
-- clear diagnostics.
-
-## Execution context
-Used inside `set_history_limit` before applying the new limit.
-
-## Notes
-- Pure raise function, no conditional logic.
-- Used exclusively by the History mixin.
-"""

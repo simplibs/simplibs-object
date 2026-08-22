@@ -17,6 +17,7 @@ def assert_simple_mixin(
     mixin_class: "SimpleMixinType",
     *,
     test_class: "SimpleClassType",
+    mutable: bool = True,
     slots_names: tuple[str, ...] | UnsetType = UNSET,
     slots_values: tuple[tuple[str, Any], ...] | tuple[str, Any] | UnsetType = UNSET,
     attribute_names: tuple[str, ...] | UnsetType = UNSET,
@@ -34,6 +35,7 @@ def assert_simple_mixin(
         subtests: The native pytest subtests fixture manager instance.
         mixin_class: Target mixin class blueprint under test.
         test_class: Base blueprint class used to instantiate and bind the mixin.
+        mutable: Defines whether the underlying instance should be created in mutable mode (default True).
         slots_names: Optional tuple of expected slot string identifiers to check for presence.
         slots_values: Optional tuple of single or multiple ``(slot_name, expected_value)`` pairs.
         attribute_names: Optional tuple of expected attribute identifiers to check for presence.
@@ -62,9 +64,13 @@ def assert_simple_mixin(
         subtests,
         mixin_class,
         test_class,
+        mutable=mutable,
         verbose=verbose,
         intro=intro,
     )
+
+    if instance is None:
+        return None
 
     # ------------------------------------------------------------
     # 2. PARAMETER TESTS (Structural & Member Verification)

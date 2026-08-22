@@ -29,5 +29,5 @@ all stepping methods (`step_up`, `step_down`, `set_value`).
 - These utilities are internal and not part of the public API.
 - They are used exclusively by the stepper's stepping and value‑assignment methods.
 - All structural logic is delegated to the stepper's validation subsystem.
-- Errors raised here follow the SimpleLogicError diagnostic format.
+- Errors raised here follow the SimpleRuntimeError diagnostic format.
 """

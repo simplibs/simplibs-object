@@ -1,14 +1,35 @@
-from typing import Any, NoReturn
-# Outers
-from ......exceptions import SimpleLogicError
+import pytest
+from typing import Any
+
+from simplibs.exception.testing import (
+    assert_exception_function,
+)
+from simplibs.object._core.logic.property_builders.value_helpers.validations.raise_locked_value_error import (
+    raise_locked_value_error,
+)
+from simplibs.object.exceptions import SimpleRuntimeError
 
 
-def raise_locked_value_error(
-    value: Any,
-    class_name: str,
-) -> NoReturn:
+@pytest.mark.parametrize(
+    "class_name, value",
+    [
+        ("UserConfig", 42),
+        ("SnapshotObject", "new_string_value"),
+        ("CompositeInstance", [1, 2, 3]),
+    ],
+)
+def test_raise_locked_value_error(
+    subtests, class_name: str, value: Any
+) -> None:
+    """Test that attempting to modify a locked instance raises SimpleRuntimeError."""
 
-    raise SimpleLogicError(
+    assert_exception_function(
+        subtests,
+        raise_locked_value_error,
+
+        invalid_params=(value, class_name),
+        exception_type=SimpleRuntimeError,
+
         error_name="VALUE LOCKED",
         label="value_is_locked",
         expected="Unlocked instance",
@@ -22,82 +43,10 @@ def raise_locked_value_error(
             "Unlock the instance before modifying its value.",
             "If the instance uses the Permission mixin, call:",
             "    obj.unlock()",
-            "",
             "If the instance exposes '_locked' directly, set:",
             "    obj._locked = False",
         ),
         exception=AttributeError,
+
+        verbose=False,
     )
-
-
-_DESIGN_NOTES = """
-# Locked Value Error — SimpleLogicError
-
-## Purpose
-This error is raised when a user attempts to modify the value of a Simple
-instance that is currently locked. Locking is a user‑controlled mechanism that
-prevents further mutation of the instance’s value. It is implemented through the
-`Permission` mixin or by directly manipulating the `_locked` attribute.
-
-The error is part of the public-facing logic layer and therefore uses
-`SimpleLogicError`.
-
----
-
-## Why This Error Exists
-Simple instances normally allow value mutation (unless immutable). However,
-developers may choose to temporarily or permanently lock an instance to prevent
-accidental changes. This is especially useful in:
-
-- configuration objects,
-- computed composite values,
-- runtime snapshots,
-- safety-critical workflows.
-
-The `_locked` flag is intentionally simple: a single boolean checked in every
-value setter. This avoids complex mixin logic and ensures that locking works
-uniformly across atomic and composite instances.
-
----
-
-## How Locking Works
-Locking is typically controlled via the `Permission` mixin:
-
-```python
-obj.lock()
-obj.value = 10  # → raises SimpleLogicError
-```
-
-The mixin exposes:
-
-- `is_locked` — read-only property,
-- `lock()` — sets `_locked = True`,
-- `unlock()` — sets `_locked = False`.
-
-Alternatively, advanced users may manipulate `_locked` directly.
-
----
-
-## When It Occurs
-The error is raised whenever:
-
-1. The instance’s `_locked` flag is `True`.
-2. A value setter (root or inner) is invoked.
-3. The setter detects the locked state and aborts the mutation.
-
-This applies to:
-
-- atomic instances,
-- composite instances,
-- inner value setters,
-- root value setters.
-
----
-
-## Notes
-- The error uses `SimpleLogicError` because it is a **runtime data manipulation**
-  problem, not a metadata or instantiation issue.
-- The setter includes the fix instructions directly in the error message.
-- The `_locked` flag defaults to `False` for all instances.
-- The check is intentionally lightweight and always present, even when unused.
-"""

@@ -1,6 +1,6 @@
 from typing import Any, NoReturn
 # Outers
-from .....exceptions import SimpleLogicError
+from .....exceptions import SimpleRuntimeError
 
 
 def raise_inner_is_not_simple_constant_subclass(
@@ -10,7 +10,7 @@ def raise_inner_is_not_simple_constant_subclass(
 
     inner_repr = getattr(inner, "__name__", repr(inner))
 
-    raise SimpleLogicError(
+    raise SimpleRuntimeError(
         error_name="INVALID INNER COMPONENT CLASS ERROR",
         label="inner_is_not_simple_constant",
         expected="A class deriving from SimpleConstant / SimpleObject base",
@@ -40,5 +40,5 @@ Ensures every child entry within `inners` is a valid class blueprint inheriting 
 
 ## Behavior
 1. Checks that `inner` is a `type` and a subclass of `SimpleConstant`.
-2. Raises `SimpleLogicError` if invalid classes or instances are detected.
+2. Raises `SimpleRuntimeError` if invalid classes or instances are detected.
 """

@@ -1,78 +1,68 @@
-from typing import TYPE_CHECKING
-# Outers
-from ......exceptions import SimpleMetadataError
-# Inners
-from ._exception_info_for_inners import _exception_info_for_inners
-from ._get_collision_path import _get_collision_path
-# Annotations
-if TYPE_CHECKING:
-    from .....protocols.classes import SimpleClassLike
+import pytest
+from unittest.mock import Mock
+
+from simplibs.exception.testing import assert_exception_function
+from simplibs.object._core.metadata.init_processors.inners.validations.validate_collision_within_inners import (
+    validate_collision_within_inners,
+)
+from simplibs.object.exceptions import SimpleDefinitionError
 
 
-def validate_collision_within_inners(
-    collision_name: str,
-    owner_snake_name: str,
-    raw_inners: tuple["SimpleClassLike", ...],
-    current_inner: "SimpleClassLike",
-    owner_class: "SimpleClassLike",
-) -> None:
-    """Validates sibling name collisions inside _inners."""
+def test_validate_collision_within_inners_pass_no_collision() -> None:
+    """Test that empty collision name or owner match is ignored."""
 
-    # 1. Check collision (ignore owner-class collisions)
-    if not collision_name or collision_name == owner_snake_name:
-        return
+    dummy_owner = Mock(__name__="ParentClass")
 
-    # 2. Diagnostic info
-    class_name, error_name, context, acceptable = _exception_info_for_inners(owner_class)
+    # Empty string collision_name
+    validate_collision_within_inners("", "parent_class", (), Mock(), dummy_owner)
+    # Collision with owner's snake name is handled elsewhere
+    validate_collision_within_inners("parent_class", "parent_class", (), Mock(), dummy_owner)
 
-    # 3. Find first culprit (the one that registered the name earlier)
-    first_path = None
-    for previous_inner in raw_inners:
-        if collision_name in previous_inner.meta.node_names_set:
-            first_path = _get_collision_path(previous_inner, collision_name)
-            break
 
-    first_full = f"{class_name} -> {first_path}"
+def test_validate_collision_within_inners_raises_error(subtests) -> None:
+    """Test raising SimpleDefinitionError on sibling name collisions."""
 
-    # 4. Find second culprit (the current conflicting component)
-    second_path = _get_collision_path(current_inner, collision_name)
-    second_full = f"{class_name} -> {second_path}"
+    dummy_owner = Mock(__name__="ParentClass")
 
-    # 5. Raise error
-    raise SimpleMetadataError(
-        error_name=error_name,
+    # First inner registering the collision name
+    first_inner = Mock(__name__="InnerA")
+    first_inner.meta.name_snake = "conflict_name"
+    first_inner.meta.node_names_set = {"conflict_name"}
+    first_inner._inners = ()
+
+    # Second inner causing collision
+    second_inner = Mock(__name__="InnerB")
+    second_inner.meta.name_snake = "conflict_name"
+    second_inner.meta.node_names_set = {"conflict_name"}
+    second_inner._inners = ()
+
+    raw_inners = (first_inner,)
+
+    assert_exception_function(
+        subtests,
+        validate_collision_within_inners,
+
+        invalid_params=("conflict_name", "parent_class", raw_inners, second_inner, dummy_owner),
+        exception_type=SimpleDefinitionError,
+
+        error_name="INVALID INNERS DEFINITION",
         label="inner_name_collision",
         expected="Unique name_snake across all inner components",
-        value=collision_name,
+        value="conflict_name",
         problem="Two inner components share the same identifier.",
-        context=context,
+        context="ParentClass._inners validation",
         how_to_fix=(
-            f"Conflicting identifier: '{collision_name}'.",
-            f"Existing definition: {first_full}.",
-            f"Duplicate declaration: {second_full}.",
-            f"Rename one of the conflicting components inside '{class_name}'.",
+            "Conflicting identifier: 'conflict_name'.",
+            "Existing definition: ParentClass -> InnerA.",
+            "Duplicate declaration: ParentClass -> InnerB.",
+            "Rename one of the conflicting components inside 'ParentClass'.",
             "Ensure you did not accidentally register the same class twice.",
             "name_snake must be globally unique within the composition tree.",
-        ) + acceptable,
+            "Acceptable definition:",
+            "class ParentClass(SimpleObject):",
+            "    _inners = (FirstElement, SecondElement)",
+        ),
         exception=NameError,
+
+        verbose=False,
     )
-
-
-_DESIGN_NOTES = """
-# validate_collision_within_inners
-
-## Purpose
-Detects naming collisions between sibling inner components.  
-This validator is triggered only after owner-class collisions have been ruled out.
-
-## Behavior
-1. Checks whether the collision is a sibling-level conflict.
-2. Locates the first component that registered the name.
-3. Locates the second component causing the duplicate.
-4. Builds breadcrumb paths using `_get_collision_path`.
-5. Raises a structured `SimpleMetadataError`.
-
-## Notes
-This validator is a strict enforcement barrier.  
-If reached, a naming conflict is guaranteed and compilation must stop.
-"""

@@ -1,20 +1,39 @@
-from typing import TYPE_CHECKING, NoReturn
-# Outers
-from .....exceptions import SimpleLogicError
-# Annotations
-if TYPE_CHECKING:
-    from ....protocols.classes import SimpleConstantProtocol
+import pytest
+from unittest.mock import Mock
+
+from simplibs.exception.testing import (
+    assert_exception_function,
+)
+from simplibs.object._core.logic.constant_methods.validations.raise_missing_value_error import (
+    raise_missing_value_error,
+)
+from simplibs.object.exceptions import SimpleRuntimeError
 
 
-def raise_missing_value_error(
-    cls: "SimpleConstantProtocol",
-) -> NoReturn:
-    """Raises an error when None is provided where a valid value is required."""
+@pytest.mark.parametrize(
+    "class_name, expected_type",
+    [
+        ("MyConstant", "int"),
+        ("CustomObject", "str | int"),
+    ],
+)
+def test_raise_missing_value_error(
+    subtests, class_name: str, expected_type: str
+) -> None:
+    """Test that providing None raises SimpleRuntimeError with correct ecosystem details."""
 
-    class_name = cls.__name__
-    expected_type = cls.meta.value_type_name
+    # Dummy mock class matching SimpleConstantProtocol structure
+    dummy_cls = Mock()
+    dummy_cls.__name__ = class_name
+    dummy_cls.meta.value_type_name = expected_type
 
-    raise SimpleLogicError(
+    assert_exception_function(
+        subtests,
+        raise_missing_value_error,
+
+        invalid_params=(dummy_cls,),
+        exception_type=SimpleRuntimeError,
+
         error_name="MISSING VALUE ERROR",
         label="value",
         value=None,
@@ -30,42 +49,6 @@ def raise_missing_value_error(
             "when None is provided, call the method with 'process_none=True'.",
         ),
         exception=ValueError,
+
+        verbose=False,
     )
-
-
-_DESIGN_NOTES = """
-# raise_missing_value_error
-
-## Purpose
-Signals that a `None` value was provided where a valid, non-null value is
-required. This error is user-facing and explains why `None` cannot be accepted
-during normalization.
-
----
-
-## Why `None` is forbidden
-The SimpleObject ecosystem does not allow `None` as a valid runtime value:
-
-- Composite objects compute their value from inner elements.
-- If any inner element were `None`, the composite value could not be computed.
-- Metadata prevents `None` from being used as a declared default.
-- `normalize` enforces this rule at runtime for user-provided values.
-
-The only exception is when `process_none=True`, which instructs the system to
-replace `None` with the class’s default value.
-
----
-
-## Behavior
-- Always raises a structured `SimpleLogicError`.
-- Explains that the class requires a concrete value.
-- Provides guidance on how to use `process_none=True` when appropriate.
-
----
-
-## Notes
-- This function is used exclusively by `normalize`.
-- The public-facing documentation belongs to `SimpleConstant.normalize`, not to
-  this internal helper.
-- The error message is intentionally concise and user-oriented.
-"""

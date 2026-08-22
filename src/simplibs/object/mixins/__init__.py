@@ -10,7 +10,7 @@ from .dunders.collections import CollectionBase, Iterable, Mapping, Collection
 from .dunders.comparison import Equality, Ordering
 from .dunders.generics import ClassGetItem
 from .dunders.interfaces import Call, ContextManager
-from .dunders.lifecycles import Copyable, PickleState, PicleReduce, Lifecycle
+from .dunders.lifecycles import Copyable, PickleState, PickleReduce, Lifecycle
 from .dunders.numeric import Arithmetic, Bitwise, Conversion, Inplace, Unary
 from .dunders.representation import ValueDisplay, ValueFormatting
 
@@ -43,7 +43,7 @@ __all__ = [
     # dunders.lifecycles
     "Copyable",
     "PickleState",
-    "PicleReduce",
+    "PickleReduce",
     "Lifecycle",
     # dunders.numeric
     "Arithmetic",

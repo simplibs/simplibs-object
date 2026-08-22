@@ -1,6 +1,6 @@
 from typing import Any, NoReturn, TYPE_CHECKING
 # Outers
-from .....exceptions import SimpleLogicError
+from .....exceptions import SimpleRuntimeError
 # Inners
 from ._extract_clean_code_lines import _extract_clean_code_lines
 # Annotations
@@ -24,7 +24,7 @@ def raise_validation_error(
         validate_source_list = ["    <source code not available>"]
 
     # 2. Raise structured validation failure error
-    raise SimpleLogicError(
+    raise SimpleRuntimeError(
         error_name="VALIDATION ERROR",
         label="value",
         value=value,
@@ -58,7 +58,7 @@ value failed the validation rules defined by the developer.
 ## Behavior
 - Extracts the body of the `_validate` method using `extract_clean_code_lines`.
 - Displays the validation logic directly in the error message.
-- Raises a structured `SimpleLogicError` indicating that the value did not meet
+- Raises a structured `SimpleRuntimeError` indicating that the value did not meet
   the validation criteria.
 
 ## Why this exists

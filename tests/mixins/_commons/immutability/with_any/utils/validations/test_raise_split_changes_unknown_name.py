@@ -1,36 +1,37 @@
-from typing import TYPE_CHECKING, NoReturn
-# Outers
-from .......exceptions import SimpleMixinError
-# Annotations
-if TYPE_CHECKING:
-    from ......._core.protocols.mixins.core_mixins import InfrastructureProtocol
+from types import SimpleNamespace
+from simplibs.object.exceptions import SimpleRuntimeError
+from simplibs.exception.testing.assert_exception_function import assert_exception_function
+from simplibs.object.mixins._common_logic.immutability.with_any.utils.validations.raise_split_changes_unknown_name import (
+    raise_split_changes_unknown_name,
+)
 
 
-def raise_split_changes_unknown_name(
-    instance: "InfrastructureProtocol",
-    name: str,
-) -> NoReturn:
-    """
-    Raises an error when a provided update name does not match any constant
-    or composite node during the split_changes classification phase.
-    """
+def test_raise_split_changes_unknown_name(subtests) -> None:
+    """Tests that raise_split_changes_unknown_name raises SimpleRuntimeError with KeyError."""
 
-    # noinspection PyProtectedMember
-    raise SimpleMixinError(
+    class MyClass:
+        _constant_names_set = {"const_a"}
+        meta = SimpleNamespace(node_names_set={"comp_b"})
+
+    dummy_instance = MyClass()
+
+    assert_exception_function(
+        subtests,
+        raise_split_changes_unknown_name,
+        invalid_params=(dummy_instance, "unknown_key"),
+        exception_type=SimpleRuntimeError,
         error_name="IMMUTABILITY UNKNOWN UPDATE NAME (split_changes)",
         label="update name",
-        expected=(
-            "A valid constant or composite name defined in the instance metadata."
-        ),
-        value=repr(name),
+        value="'unknown_key'",
+        expected="A valid constant or composite name defined in the instance metadata.",
         problem=(
             "The provided update name does not match any known constant or composite node.",
-            f"Name '{name}' is not part of the instance structure."
+            "Name 'unknown_key' is not part of the instance structure.",
         ),
         context=(
-            f"Classification attempted on instance '{type(instance).__name__}'.",
-            f"Allowed constants: {instance._constant_names_tuple}",
-            f"Allowed composites: {tuple(instance.meta.node_names_set)}",
+            "Classification attempted on instance 'MyClass'.",
+            "Allowed constants: {'const_a'}",
+            "Allowed composites: ('comp_b',)",
         ),
         how_to_fix=(
             "Ensure the update name corresponds to an existing constant or composite node.",
@@ -38,70 +39,5 @@ def raise_split_changes_unknown_name(
             "Verify that the name is spelled correctly.",
         ),
         exception=KeyError,
+        verbose=False,
     )
-
-
-_DESIGN_NOTES = """
-# raise_split_changes_unknown_name
-
-## Purpose
-Raises a structured error when `split_changes` encounters an update name that
-does not correspond to any constant or composite node defined in the instance
-metadata.
-
-This validation ensures that mixed updates passed to `with_any` contain only
-valid structural keys.
-
-## Why this validation exists
-`split_changes` is the first structural step of the mixed‑update pipeline.
-Its job is to classify incoming `(name, value)` pairs into:
-
-- constant updates  
-- composite updates  
-
-If a name does not belong to either category, the update cannot be processed
-safely. Accepting unknown names would lead to:
-
-- inconsistent immutability behavior,  
-- silent corruption of update order,  
-- unpredictable routing in downstream functions.
-
-Failing early guarantees structural correctness.
-
-## Execution context
-Used exclusively inside `split_changes` after tuple validation and before
-classification.  
-Unlike `process_single_change`, this function does **not** receive the value,
-because `split_changes` only performs structural classification.
-
-## What it validates
-- The update name must be present in `_constant_names_tuple`, **or**
-- The update name must be present in `meta.node_names_set`.
-
-If neither condition is met, the name is invalid.
-
-## Diagnostic value
-The error message provides:
-- the invalid name,
-- the list of allowed constant names,
-- the list of allowed composite names,
-- the instance type where the classification failed.
-
-This makes debugging mis‑typed or missing update names trivial.
-
-## Stability guarantee
-This validation is part of the immutability subsystem’s structural invariants.
-Any change affects:
-
-- routing logic in `with_any`,
-- composite recalculation order,
-- correctness of immutable updates.
-
-Therefore, the function is intentionally minimal and deterministic.
-
-## Notes
-- Pure raise function, no conditional logic.
-- Used only by `split_changes`.
-- Complements `raise_with_any_unknown_name`, which is used by
-  `process_single_change` and includes value diagnostics.
-"""

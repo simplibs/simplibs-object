@@ -1,6 +1,6 @@
 from typing import Any
 # Outers
-from ....exceptions import SimpleLogicError
+from ....exceptions import SimpleRuntimeError
 
 
 def validate_retries_is_int(
@@ -12,13 +12,13 @@ def validate_retries_is_int(
         retries: Candidate retries argument to validate.
 
     Raises:
-        SimpleLogicError: If retries is not an integer or is a boolean.
+        SimpleRuntimeError: If retries is not an integer or is a boolean.
     """
 
     if isinstance(retries, int) and not isinstance(retries, bool):
         return
 
-    raise SimpleLogicError(
+    raise SimpleRuntimeError(
         error_name="INVALID RETRIES TYPE ERROR",
         label="retries",
         expected="An integer instance representing attempt count.",

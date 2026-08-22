@@ -1,21 +1,37 @@
-from typing import NoReturn, TYPE_CHECKING
-# Outers
-from .....exceptions import SimpleLogicError
-# Annotations
-if TYPE_CHECKING:
-    from ....protocols.classes import SimpleObjectProtocol
+import pytest
+from unittest.mock import Mock
+
+from simplibs.exception.testing import (
+    assert_exception_function,
+)
+from simplibs.object._core.logic.object_methods.validations.raise_too_many_positional_args_error import (
+    raise_too_many_positional_args_error,
+)
+from simplibs.object.exceptions import SimpleRuntimeError
 
 
-def raise_too_many_positional_args_error(
-    cls: "SimpleObjectProtocol",
-    given_count: int,
-    allowed_count: int,
-) -> NoReturn:
-    """Raises an error when too many positional arguments are passed to calculate_value."""
+@pytest.mark.parametrize(
+    "class_name, given_count, allowed_count",
+    [
+        ("MyComposite", 4, 2),
+        ("PointObject", 3, 2),
+    ],
+)
+def test_raise_too_many_positional_args_error(
+    subtests, class_name: str, given_count: int, allowed_count: int
+) -> None:
+    """Test that passing more positional args than inner elements raises SimpleRuntimeError."""
 
-    class_name = cls.__name__
+    dummy_cls = Mock()
+    dummy_cls.__name__ = class_name
 
-    raise SimpleLogicError(
+    assert_exception_function(
+        subtests,
+        raise_too_many_positional_args_error,
+
+        invalid_params=(dummy_cls, given_count, allowed_count),
+        exception_type=SimpleRuntimeError,
+
         error_name="INVALID PARAMETERS",
         label="args",
         value=f"{given_count} positional arguments",
@@ -35,47 +51,6 @@ def raise_too_many_positional_args_error(
             "in the order defined by the class.",
         ),
         exception=ValueError,
+
+        verbose=False,
     )
-
-
-_DESIGN_NOTES = """
-# raise_too_many_positional_args_error
-
-## Purpose
-Signals that the user passed more positional arguments to `calculate_value` than
-the number of inner elements defined in the composite class. This error is
-user-facing and helps developers understand how to correctly supply parameters
-to composite objects.
-
----
-
-## Behavior
-- Compares the number of provided positional arguments with the number of
-  declared inner elements.
-- Raises a structured `SimpleLogicError` when the count exceeds the allowed
-  limit.
-- Explains the mismatch and provides actionable guidance.
-
----
-
-## Why this error exists
-Composite objects define their structure through `_inners`.  
-Each inner corresponds to one parameter of `_logic`.
-
-Passing more positional arguments than inner elements indicates a misuse of the
-API — either:
-
-- the user misunderstood the order of parameters, or  
-- they intended to use keyword arguments instead.
-
-This error ensures the system remains predictable and prevents silent failures.
-
----
-
-## Notes
-- This function will be used inside `process_calculate_value_params`.
-- The public-facing documentation belongs to `SimpleObject.calculate_value`,
-  not to this internal helper.
-- The error uses `ValueError` as the underlying exception type for consistency
-  with Python’s parameter handling semantics.
-"""

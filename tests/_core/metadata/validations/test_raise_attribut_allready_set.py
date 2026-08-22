@@ -1,31 +1,33 @@
-from typing import Any, NoReturn, TYPE_CHECKING
-# Outers
-from ....exceptions import SimpleMetadataError
-# Annotations
-if TYPE_CHECKING:
-    from ...protocols.metadata import SimpleMetaProtocol
+from simplibs.object.exceptions.SimpleDefinitionError import SimpleDefinitionError
+from simplibs.exception.testing.assert_exception_function import assert_exception_function
+from simplibs.object._core.metadata.validations.raise_attribut_allready_set import (
+    raise_attribut_allready_set,
+)
 
 
-def raise_attribut_allready_set(
-    cls: "SimpleMetaProtocol",
-    attr_name: str,
-    new_value: Any,
-) -> NoReturn:
-    """Raises an error when a class-level attribute is overwritten after initialization."""
+def test_raise_attribut_allready_set(subtests, sample_object_classes) -> None:
+    """Tests that raise_attribut_allready_set raises SimpleDefinitionError."""
 
-    current_value = getattr(cls, attr_name)
-    class_name = cls.__name__
+    _, MyTestObject = sample_object_classes
 
-    raise SimpleMetadataError(
+    attr_name = "_type"
+    new_value = float
+    current_value = getattr(MyTestObject, attr_name)
+
+    assert_exception_function(
+        subtests,
+        raise_attribut_allready_set,
+        invalid_params=(MyTestObject, attr_name, new_value),
+        exception_type=SimpleDefinitionError,
         error_name="CLASS ATTRIBUTE IMMUTABILITY ERROR",
         label="attribute_already_defined",
-        expected="Write-once class-level attributes",
         value=new_value,
+        expected="Write-once class-level attributes",
         problem=(
-            f"Attribute '{attr_name}' on class '{class_name}' is already initialized "
+            f"Attribute '{attr_name}' on class 'MyTestObject' is already initialized "
             f"and locked with value: {current_value!r}."
         ),
-        context=f"Attempted to overwrite attribute '{attr_name}' on definition class '{class_name}'.",
+        context=f"Attempted to overwrite attribute '{attr_name}' on definition class 'MyTestObject'.",
         how_to_fix=(
             "Class-level blueprint attributes in the Simple system follow a strict 'Write-Once' policy.",
             "Do not modify structural or configuration attributes after they have been initialized.",
@@ -33,25 +35,5 @@ def raise_attribut_allready_set(
             "Review the execution path to identify why a second write was attempted.",
         ),
         exception=AttributeError,
+        verbose=False,
     )
-
-
-_DESIGN_NOTES = """
-# raise_attribut_allready_set
-
-## Purpose
-Protects declarative blueprint classes from accidental mutation of structural
-attributes. Simple metadata fields are write-once and must remain immutable
-after initialization to preserve structural integrity.
-
-## Behavior
-1. Retrieves the current value of the attribute.
-2. Raises `SimpleMetadataError` if a second write is attempted.
-3. Provides clear diagnostics and remediation steps.
-
-## Notes
-- This function is called exclusively from `SimpleMeta.__setattr__`.
-- Prevents corruption of blueprint definitions for constants and composite objects.
-- Encourages developers to use instance-level attributes for dynamic behavior.
-
-"""

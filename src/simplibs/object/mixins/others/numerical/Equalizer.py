@@ -81,10 +81,7 @@ class Equalizer(NodesTuple):
         process.
         """
 
-        # 1. Initialize parents
-        super().init_mixins()
-
-        # 2. Dict of steppers for every element
+        # 1. Dict of steppers for every element
         self._steppers: "SteppersMap" = {
             instance.meta.name_snake: Stepper(instance)
             for instance, _ in self._nodes_tuple

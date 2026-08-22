@@ -1,14 +1,14 @@
 from typing import Any, NoReturn
 from simplibs.sentinels import UNSET
 # Outers
-from ....exceptions import SimpleLogicError
+from ....exceptions import SimpleRuntimeError
 
 
 def validate_constant_has_not_logic(class_name: str, logic: Any) -> None | NoReturn:
     """Validates that a constant leaf class definition does not provide a logic calculation rule."""
 
     if logic is not UNSET:
-        raise SimpleLogicError(
+        raise SimpleRuntimeError(
             error_name="CONSTANT LOGIC CONFLICT ERROR",
             label="constant_logic_conflict",
             expected="logic=UNSET when creating a SimpleConstant class",

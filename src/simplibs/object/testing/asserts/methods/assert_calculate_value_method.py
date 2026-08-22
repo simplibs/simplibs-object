@@ -1,7 +1,7 @@
 from typing import Any, TYPE_CHECKING
 import pytest
+from simplibs.sentinels import UNSET
 from simplibs.exception.testing import maybe_subtest
-
 # Annotations
 if TYPE_CHECKING:
     from ...._core.protocols import SimpleClassLike
@@ -30,17 +30,30 @@ def assert_calculate_value_method(
     """
     subintro = "test_calculate_value::"
 
+    params: dict[str, Any] = {}
+
     # 1. Prepare parameter map from inner defaults
     with maybe_subtest(
         subtests,
         name=f"{intro}{subintro}prepare_parameters",
         verbose=verbose,
     ):
+        inners = getattr(getattr(test_class, "meta", None), "inners", ())
         params = {
             inner.meta.name_snake: inner.meta.default
-            for inner in test_class.meta.inners
+            for inner in inners
         }
-        assert params, f"Composite class '{test_class.__name__}' must define at least one inner component."
+        if not params:
+            pytest.fail(
+                f"Composite class '{getattr(test_class, '__name__', str(test_class))}' "
+                f"must define at least one inner component."
+            )
+
+    # 1.1 Guard clause: Halt execution if no inner parameters could be prepared
+    if not params:
+        return
+
+    calculated: Any = UNSET
 
     # 2. Compute composite value (runtime test of underlying _logic)
     with maybe_subtest(
@@ -51,7 +64,14 @@ def assert_calculate_value_method(
         try:
             calculated = test_class.calculate_value(**params)
         except Exception as exc:
-            pytest.fail(f"calculate_value raised an unexpected exception on '{test_class.__name__}': {exc}")
+            pytest.fail(
+                f"calculate_value raised an unexpected exception on "
+                f"'{getattr(test_class, '__name__', str(test_class))}': {exc}"
+            )
+
+    # 2.1 Guard clause: Halt execution if calculate_value failed or did not resolve
+    if calculated is UNSET:
+        return
 
     # 3. Compare computed value with class default
     with maybe_subtest(
@@ -59,10 +79,12 @@ def assert_calculate_value_method(
         name=f"{intro}{subintro}compare_with_default",
         verbose=verbose,
     ):
-        assert calculated == test_class.meta.default, (
-            f"Calculated value '{calculated!r}' does not match class default "
-            f"'{test_class.meta.default!r}' for '{test_class.__name__}'."
-        )
+        expected_default = getattr(getattr(test_class, "meta", None), "default", None)
+        if calculated != expected_default:
+            pytest.fail(
+                f"Calculated value '{calculated!r}' does not match class default "
+                f"'{expected_default!r}' for '{getattr(test_class, '__name__', str(test_class))}'."
+            )
 
 
 _DESIGN_NOTES = """
@@ -74,11 +96,13 @@ at the class blueprint level. It verifies that the underlying custom logic routi
 correctly transforms a dictionary of inner node default values into the declared composite class default.
 
 ## Execution Pipeline Steps
-1. **Inner Defaults Extraction:** Constructs a parameter map (`params`) pairing each inner component's 
-   snake_case name (`inner.meta.name_snake`) with its default value (`inner.meta.default`). Asserts 
-   that `test_class` is a valid composite with non-empty inner metadata.
-2. **Logic Execution Gate:** Executes `test_class.calculate_value(**params)` inside a protected context, 
-   verifying that `_logic` executes smoothly without throwing unexpected errors.
+1. **Inner Defaults Extraction & Guard Gate:** Constructs a parameter map (`params`) pairing each inner 
+   component's snake_case name (`inner.meta.name_snake`) with its default value (`inner.meta.default`). 
+   Asserts that `test_class` defines at least one inner component and halts execution early via a guard clause 
+   if no parameters could be resolved.
+2. **Logic Execution & Guard Gate:** Executes `test_class.calculate_value(**params)` inside a protected 
+   context, verifying that `_logic` executes smoothly without unexpected exceptions. If calculation fails, 
+   an early guard clause prevents comparison assertions against uncomputed state.
 3. **Class Default Consistency Check:** Asserts that the calculated output equals `test_class.meta.default`, 
    ensuring strict alignment between class metadata declarations and actual runtime logic execution.
 

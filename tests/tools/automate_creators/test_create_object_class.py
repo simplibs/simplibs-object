@@ -1,55 +1,119 @@
-from typing import Any, Callable, TYPE_CHECKING
-from simplibs.sentinels import UNSET, UnsetType
-# Outers
-from ..SimpleObject import SimpleObject
-# Inners
-from ._process_helpers.process_validate import process_validate
-from ._process_helpers.load_parameters_from_inners import load_parameters_from_inners
-from ._process_helpers.process_logic import process_logic
-from ._process_helpers.calculate_default import calculate_default
-from ._process_helpers.process_decompose import process_decompose
-# Annotations
-if TYPE_CHECKING:
-    from .._core.protocols import SimpleClassType
+"""
+Tests for `tools/automate_creators/create_object_class.py`.
+"""
+import pytest
+from simplibs.object import SimpleConstant, SimpleObject
+from simplibs.object.tools.automate_creators.create_object_class import (
+    create_object_class,
+)
+from simplibs.sentinels import UNSET
 
 
-def create_object_class(
-    class_name: str,
-    inners: tuple["SimpleClassType", ...],
-    logic: Callable,
-    value_type: type | UnsetType = UNSET,
-    validate: Callable | UnsetType = UNSET,
-    decompose: Callable | UnsetType = UNSET,
-):
+def _int_const(name, default=0):
+    return type(name, (SimpleConstant,), {"_type": int, "_default": default})
 
-    # 1. Zpracování logic
-    _params = load_parameters_from_inners(inners)
-    _logic = process_logic(logic, _params.keys())
 
-    # 2. Infer type if not provided
-    if value_type is UNSET:
-        _default_value = calculate_default(logic, _params.values())
-        value_type = type(_default_value)
+class TestCreateObjectClassHappyPath:
 
-    # 3. Prepare namespace
-    namespace = {
-        "_inners": inners,
-        "_type": value_type,
-        "_logic": _logic
-    }
+    def test_creates_working_composite_class(self):
+        First = _int_const("First", default=2)
+        Second = _int_const("Second", default=3)
 
-    # 4. Wrap validate if provided
-    if validate is not UNSET:
-        _validate = process_validate(validate)
-        # noinspection PyTypeChecker
-        namespace["_validate"] = classmethod(_validate)
+        def logic(cls, first, second):
+            return first + second
 
-    # 5. Wrap decompose if needed
-    if decompose is not UNSET:
-        _decompose = process_decompose(decompose)
-        namespace["_decompose"] = classmethod(_decompose)
+        Pair = create_object_class("Pair", inners=(First, Second), logic=logic)
 
-    # 6. Create class dynamically
-    new_class = type(class_name, (SimpleObject,), namespace)
+        assert issubclass(Pair, SimpleObject)
+        assert Pair.meta.default == 5
+        assert Pair.meta.value_type is int
 
-    return new_class
+    def test_explicit_value_type_skips_default_inference(self):
+        First = _int_const("First", default=2)
+
+        def logic(cls, first):
+            return first
+
+        Single = create_object_class(
+            "Single", inners=(First,), logic=logic, value_type=int
+        )
+        assert Single.meta.value_type is int
+
+
+class TestCreateObjectClassLogicHandling:
+
+    def test_lambda_logic_without_explicit_value_type_works(self):
+        First = _int_const("First", default=2)
+        Second = _int_const("Second", default=3)
+
+        cls = create_object_class(
+            class_name="LambdaComposite",
+            inners=(First, Second),
+            logic=lambda first, second: first + second,
+        )
+
+        assert cls._type is int
+
+    def test_named_function_logic_without_explicit_value_type_works(self):
+        First = _int_const("First", default=2)
+        Second = _int_const("Second", default=3)
+
+        def logic(cls, first, second):
+            return first + second
+
+        Pair = create_object_class("Pair", inners=(First, Second), logic=logic)
+        assert Pair.meta.default == 5
+
+
+class TestCreateObjectClassValidateAndDecompose:
+
+    def test_lambda_validate_is_attached(self):
+        First = _int_const("First", default=2)
+
+        def logic(cls, first):
+            return first
+
+        Single = create_object_class(
+            "Single",
+            inners=(First,),
+            logic=logic,
+            value_type=int,
+            validate=lambda value: value >= 0,
+        )
+        assert Single.is_valid(5) is True
+        assert Single.is_valid(-5) is False
+
+    def test_lambda_decompose_is_attached_and_normalized(self):
+        First = _int_const("First", default=2)
+        Second = _int_const("Second", default=0)
+
+        def logic(cls, first, second):
+            return first + second
+
+        Pair = create_object_class(
+            "Pair",
+            inners=(First, Second),
+            logic=logic,
+            value_type=int,
+            decompose=lambda value: (value, 0),
+        )
+        assert Pair.decompose_value(5) == (5, 0)
+
+
+class TestCreateObjectClassValidation:
+
+    def test_invalid_class_name_raises(self):
+        First = _int_const("First")
+
+        with pytest.raises(Exception):
+            create_object_class("", inners=(First,), logic=lambda first: first)
+
+    def test_missing_logic_raises(self):
+        First = _int_const("First")
+
+        with pytest.raises(Exception):
+            create_object_class("Widget", inners=(First,), logic=UNSET)
+
+    def test_missing_inners_raises(self):
+        with pytest.raises(Exception):
+            create_object_class("Widget", inners=UNSET, logic=lambda first: first)

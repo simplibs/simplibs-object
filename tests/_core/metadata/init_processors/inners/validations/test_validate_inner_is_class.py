@@ -1,58 +1,60 @@
-from typing import TYPE_CHECKING
-# Outers
-from ......exceptions import SimpleMetadataError
-# Inners
-from ._exception_info_for_inners import _exception_info_for_inners
-# Annotations
-if TYPE_CHECKING:
-    from .....protocols.classes import SimpleClassLike
+import pytest
+from unittest.mock import Mock
+
+from simplibs.exception.testing import assert_exception_function
+from simplibs.object._core.metadata.init_processors.inners.validations.validate_inner_is_class import (
+    validate_inner_is_class,
+)
+from simplibs.object.exceptions import SimpleDefinitionError
 
 
-def validate_inner_is_class(
-    inner: "SimpleClassLike",
-    inners: tuple["SimpleClassLike", ...],
-    owner_class: "SimpleClassLike",
-) -> None:
-    """Validates that an inner element is a class."""
+def test_validate_inner_is_class_pass() -> None:
+    """Test that a valid class passes validation."""
 
-    # 1. Check type
-    if isinstance(inner, type):
-        return
+    dummy_owner = Mock(__name__="OwnerClass")
 
-    # 2. Diagnostic info
-    class_name, error_name, context, acceptable = _exception_info_for_inners(owner_class)
+    class InnerClass:
+        pass
 
-    # 3. Raise error
-    raise SimpleMetadataError(
-        error_name=error_name,
+    validate_inner_is_class(InnerClass, (InnerClass,), dummy_owner)
+
+
+@pytest.mark.parametrize(
+    "invalid_inner",
+    [
+        "not_a_class",
+        42,
+        object(),
+    ],
+)
+def test_validate_inner_is_class_raises_error(subtests, invalid_inner: object) -> None:
+    """Test that non-class inner elements raise SimpleDefinitionError."""
+
+    dummy_owner = Mock(__name__="OwnerClass")
+    inners = (invalid_inner,)
+
+    assert_exception_function(
+        subtests,
+        validate_inner_is_class,
+
+        invalid_params=(invalid_inner, inners, dummy_owner),
+        exception_type=SimpleDefinitionError,
+
+        error_name="INVALID INNERS DEFINITION",
         label="inner_not_class",
         expected="Class inheriting from SimpleConstant or SimpleObject",
-        value=inner,
-        problem=f"Inner element '{inner}' inside '{inners}' is not a class.",
-        context=context,
+        value=invalid_inner,
+        problem=f"Inner element '{invalid_inner}' inside '{inners}' is not a class.",
+        context="OwnerClass._inners validation",
         how_to_fix=(
             "Use class references, not instances.",
             "Example: MyElement, not MyElement().",
             "Ensure the item is not a string or primitive value.",
-        ) + acceptable,
+            "Acceptable definition:",
+            "class OwnerClass(SimpleObject):",
+            "    _inners = (FirstElement, SecondElement)",
+        ),
         exception=TypeError,
+
+        verbose=False,
     )
-
-
-
-_DESIGN_NOTES = """
-# validate_inner_is_class
-
-## Purpose
-Ensures that each element in `_inners` is a class, not an instance or primitive.
-
-## Behavior
-1. Checks whether the inner element is a `type`.
-2. If invalid, retrieves shared diagnostic info.
-3. Raises a structured `SimpleMetadataError`.
-
-## Notes
-This validator prevents accidental instantiation in `_inners`, such as writing
-`MyElement()` instead of `MyElement`.
-
-"""

@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, NoReturn
 # Outers
-from .......exceptions import SimpleLogicError
+from .......exceptions import SimpleRuntimeError
 # Annotations
 if TYPE_CHECKING:
     from ......._core.protocols.mixins.state import HistoryProtocol
@@ -16,7 +16,7 @@ def raise_unvalide_snapshot_index(
     # noinspection PyProtectedMember
     history_count = instance._history_count
 
-    raise SimpleLogicError(
+    raise SimpleRuntimeError(
         error_name="HISTORY SNAPSHOT INDEX ERROR",
         label="snapshot index",
         expected=f"Integer in range 0 <= index < {history_count}",

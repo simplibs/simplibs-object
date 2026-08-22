@@ -1,63 +1,68 @@
-from typing import Any, TYPE_CHECKING
-# Inners
-from .ImmutableMethods import ImmutableMethods
-# Annotations
-if TYPE_CHECKING:
-    from ..._core.protocols.mixins.immutable import ImmutableMethodsWithInnersProtocol
-    from ..._core.protocols.instance import SimpleInstanceLike
+"""
+Tests for `ImmutableWithInners` mixin.
+"""
+import pytest
+from simplibs.object.mixins.others.immutable import ImmutableMethods, ImmutableWithInners
 
 
-class ImmutableWithInners(ImmutableMethods):
-    """
-    Přidává základní třídě kromě základních metod i metody ke všem inners.
+class TestImmutableWithInnersStructure:
 
-    Garantuje přítomnost dynamicky generovaných imutabilních metod (setterů)
-    pro jednotlivé vnitřní prvky (např. `obj.with_uzel(value)`).
-    Všechny tyto metody produkují novou transformovanou instanci (Self).
-    """
+    def test_immutable_only_flag(self):
+        assert ImmutableWithInners._immutable_only is True
 
-    # ----------------------------------------
-    # Základní rozhraní
-    # ----------------------------------------
+    def test_composite_only_flag(self):
+        assert ImmutableWithInners._composite_only is True
 
-    # Definice určení
-    _immutable_only = True
-    _composite_only = True
+    def test_inherits_from_immutable_methods(self):
+        assert issubclass(ImmutableWithInners, ImmutableMethods)
 
-    # Definice slotů
-    __slots__ = ()
+    def test_slots_empty(self):
+        assert ImmutableWithInners.__slots__ == ()
 
-    # ----------------------------------------
-    # Hook pro úpravu instanční třídy
-    # ----------------------------------------
+    def test_shallow_structure_manual(self, Outer):
+        instance = Outer(mixins=(ImmutableWithInners,), mutable=False)
+        assert isinstance(instance, ImmutableWithInners)
+        assert isinstance(instance, ImmutableMethods)
+        assert ImmutableWithInners in instance.__mixins__
 
-    @staticmethod
-    def __extend_instance_class__(
-        instance_cls: "SimpleInstanceLike"
-    ) -> "SimpleInstanceLike":
-        """
-        Interní metoda pro připojení prvků k třídě, před inicializačním procesem.
-        """
 
-        # 1. Procházení uzlů
-        for name in instance_cls.meta.node_names_set:
+class TestImmutableWithInnersDynamicMethods:
 
-            # 2. Definice metody
-            # (Všechny používají metodu pro kompozice protože ta konstanty předává na with_constant)
-            def method(self: "ImmutableMethodsWithInnersProtocol", value: Any, _name: str=name):
-                return self.with_composite(_name, value)
+    def test_with_methods_generated_for_all_nodes(self, Outer):
+        instance = Outer(mixins=(ImmutableWithInners,), mutable=False)
+        for name in Outer.meta.node_names_set:
+            assert hasattr(instance, f"with_{name}")
+            assert callable(getattr(instance, f"with_{name}"))
 
-            # 3. Nastavení inerních prvků
-            method_name = f"with_{name}"
-            method.__name__ = method_name
-            method.__doc__ = (
-                f"Immutable setter pro hodnotu `{name}`.\n"
-                f"Vrací novou immutable instanci se změněnou hodnotou `{name}`."
-            )
+    def test_with_method_for_constant_returns_new_instance(self, Outer):
+        instance = Outer(mixins=(ImmutableWithInners,), mutable=False)
+        result = instance.with_third(88)
+        assert result is not instance
+        assert result._nodes_dict["third"][0].value == 88
 
-            # 4. Vytvoření atributu metody
-            setattr(instance_cls, method_name, method)
+    def test_with_method_for_composite_returns_new_instance(self, Outer):
+        instance = Outer(mixins=(ImmutableWithInners,), mutable=False)
+        result = instance.with_pair(15)
+        assert result._nodes_dict["pair"][0].value == 15
 
-        # 5. Navrácení upravené třídy
-        return instance_cls
+    def test_each_generated_method_closes_over_own_name(self, Outer):
+        instance = Outer(mixins=(ImmutableWithInners,), mutable=False)
+        result_first = instance.with_first(500)
+        result_third = instance.with_third(500)
 
+        assert result_first._nodes_dict["first"][0].value == 500
+        assert result_first._nodes_dict["third"][0].value != 500
+
+        assert result_third._nodes_dict["third"][0].value == 500
+        assert result_third._nodes_dict["first"][0].value != 500
+
+
+class TestImmutableWithInnersCompatibility:
+
+    def test_rejects_mutable_instance(self, Outer):
+        with pytest.raises(Exception):
+            Outer(mixins=(ImmutableWithInners,), mutable=True)
+
+    def test_rejects_atom_instance(self, IntLeaf):
+        with pytest.raises(Exception):
+            IntLeaf(mixins=(ImmutableWithInners,), as_atom=True, mutable=False)

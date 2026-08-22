@@ -8,19 +8,22 @@ if TYPE_CHECKING:
 class InstanceBase:
     """Base class for all atomic and composite instances."""
 
-    # 1. Memory-optimized layout with weakref support
+    # 1. Metaclass bypass flag
+    _is_instance_class: bool = True
+
+    # 2. Memory-optimized layout with weakref support
     __slots__ = ("__weakref__",)
 
-    # 2. Mixin initialization anchor
+    # 3. Mixin initialization anchor
     def init_mixins(self: "InstanceBaseProtocol") -> None:
         pass
 
-    # 3. Fast metadata access
+    # 4. Fast metadata access
     @property
     def meta(self: "InstanceBaseProtocol") -> "SimpleMetadataLike":
         return self.__class__.__metadata__
 
-    # 4. Technical diagnostic representation
+    # 5. Technical diagnostic representation
     def __repr__(self: "InstanceBaseProtocol") -> str:
         class_name = self.meta.class_name
         blueprint = f"blueprint='{self.meta.blueprint_path}'"
@@ -28,7 +31,7 @@ class InstanceBase:
         hex_id = f"id={hex(id(self))}"
         return f"<{class_name} {blueprint} {state} {hex_id}>"
 
-    # 5. Clean user-facing representation
+    # 6. Clean user-facing representation
     def __str__(self: "InstanceBaseProtocol") -> str:
         return self.meta.class_name
 
@@ -45,20 +48,25 @@ Provides the foundational runtime identity for all instance types:
 
 ## Behavior
 
-### 1. Memory layout
+### 1. Metaclass bypass
+Defines `_is_instance_class = True` directly on the base class to prevent
+`SimpleMeta.__new__` from treating runtime instance types and hierarchies
+as new declarative blueprints.
+
+### 2. Memory layout
 `__slots__ = ("__weakref__",)` ensures:
 - no `__dict__`,
 - minimal memory footprint,
 - weakref support for caching and tracking.
 
-### 2. Mixin lifecycle
+### 3. Mixin lifecycle
 `init_mixins` acts as a stable hook for dynamically injected behaviors.
 
-### 3. Metadata access
+### 4. Metadata access
 `meta` resolves metadata in constant time by reading `__metadata__` directly
 from the class.
 
-### 4. Introspection
+### 5. Introspection
 `__repr__` provides a diagnostic snapshot:
 - class name,
 - blueprint path,

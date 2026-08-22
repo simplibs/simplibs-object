@@ -1,13 +1,19 @@
-# create_simple_object_bulk_from_dicts.py
 from typing import Any
-from ...data_classes.bulk_dict import BulkCase
-from ..create_simple_object_bulk_from_bulk_calse_class import create_simple_object_bulk_from_bulk_calse_class
+# Outers
+from ..BulkCase import BulkCase
+# Inners
+from .create_simple_object_bulk_from_bulk_case_class import create_simple_object_bulk_from_bulk_case_class
+from ._validations import raise_bulk_input_not_sequence
 
 
 def create_simple_object_bulk_from_dicts(dicts: list[dict[str, Any]]):
-    """Vytvoří bulk z kolekce slovníků."""
+    """Creates a bulk collection of Simple objects from a sequence of dictionaries."""
     if not isinstance(dicts, (list, tuple)):
-        raise TypeError("Vstup musí být list nebo tuple slovníků.")
+        raise_bulk_input_not_sequence(
+            value=dicts,
+            runner_name="create_simple_object_bulk_from_dicts",
+            expected_items_description="dictionaries",
+        )
 
     bulk = tuple(BulkCase(**d) for d in dicts)
-    return create_simple_object_bulk_from_bulk_calse_class(bulk)
+    return create_simple_object_bulk_from_bulk_case_class(bulk)

@@ -37,23 +37,20 @@ class NodesTuple(SimpleMixin):
         self: "NodesTupleProtocol"
     ) -> None:
 
-        # 1. Initialize parents
-        super().init_mixins()
-
-        # 2. Base tuple with instance and path (main source of truth)
+        # 1. Base tuple with instance and path (main source of truth)
         self._nodes_tuple: "_NodesTuple" = build_nodes_tuple(self)
 
-        # 3. Tuple with names in the same order as _nodes_tuple
+        # 2. Tuple with names in the same order as _nodes_tuple
         self._node_names_tuple: "NamesTuple" = tuple(
             instance.meta.name_snake
             for instance, _ in self._nodes_tuple
         )
 
-        # 4. Tuple with constant names
+        # 3. Tuple with constant names
         self._constant_names_set: "NamesSet" = {
             instance.meta.name_snake
             for instance, path in self._nodes_tuple
-            if path[-1] is not VALUE
+            if not path or path[-1] is not VALUE
         }
 
 

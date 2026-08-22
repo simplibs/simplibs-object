@@ -1,251 +1,371 @@
-from typing import TYPE_CHECKING, Any
+# 🧱 `History` — Full Undo/Redo History
+
+`History` provides a full undo/redo history for a mutable instance. State-changing
+actions are recorded as timestamped snapshots, navigable step by step or by
+index/timestamp, diffable between any two points, and exportable to/from a dict.
+
+```python
 from datetime import datetime
-# Outers
 from ..core_mixins import Serialization
-# Inners
 from ._history_utils.core import set_history_limit, record_state, find_snapshot
 from ._history_utils.transfer import export_history_to_dict, import_history_from_dict
 from ._history_utils.navigations import (
-    history_undo,
-    history_redo,
-    go_to_last_history,
-    go_to_history_on_timestamp,
-    go_to_history_on_index
+    history_undo, history_redo,
+    go_to_last_history, go_to_history_on_timestamp, go_to_history_on_index
 )
-# Annotations
-if TYPE_CHECKING:
-    from ..._core.protocols.mixins.state import HistoryProtocol
-    from ..._core.protocols.alias_typings import HistoryEntry, HistoryDict, SnapshotDiffTuple
-
 
 class History(Serialization):
-    """
-    Provides a full undo/redo history for a mutable instance.
+    ...
+```
 
-    Every state-changing action can be recorded as a timestamped snapshot.
-    The history can be navigated step by step (undo/redo), jumped to by
-    index or timestamp, diffed between any two recorded points, and
-    exported to / imported from a dict for persistence.
-    """
+`_mutable_only = True`.
 
-    # ----------------------------------------
-    # Basic interface
-    # ----------------------------------------
+---
 
-    # Compatibility declaration
-    _mutable_only = True
+## 🧭 Table of Contents
 
-    # Slot definition
-    __slots__ = (
-        "_history",
-        "_history_index",
-        "_history_limit",
-        "_history_count"
+* [`init_mixins`](#init_mixins)
+* [`record_state`](#record_state)
+* [`history`](#history)
+* [`history_index`](#history_index)
+* [`history_limit`](#history_limit)
+* [`undo`](#undo)
+* [`redo`](#redo)
+* [`go_to_last`](#go_to_last)
+* [`go_to_index`](#go_to_index)
+* [`go_to_timestamp`](#go_to_timestamp)
+* [`export_history_to_dict`](#export_history_to_dict)
+* [`import_history_from_dict`](#import_history_from_dict)
+* [`remove_history_limit`](#remove_history_limit)
+* [`diff`](#diff)
+
+---
+
+### `init_mixins`
+
+Sets up empty history state and records the instance's own starting state as the
+first entry.
+
+**Parameters:**
+* *(none)*
+
+**Returns:**
+* `None`
+
+**Under the hood:**
+```python
+def init_mixins(self):
+    super().init_mixins()
+    self._history = []
+    self._history_limit = None
+    self._history_index = 0
+    self._history_count = 0
+    self.record_state()
+```
+
+[▲ Back to top](#-table-of-contents)
+
+---
+
+### `record_state`
+
+Creates a snapshot of the current state and saves it to history.
+
+**Parameters:**
+* *(none)*
+
+**Returns:**
+* `HistoryEntry`
+
+**Example usage:**
+```python
+person.first_name = "Bob"
+person.record_state()
+```
+
+**Under the hood:**
+```python
+def record_state(self):
+    return record_state(self)
+```
+
+[▲ Back to top](#-table-of-contents)
+
+---
+
+### `history`
+
+Returns the full history as a tuple.
+
+**Parameters:**
+* *(none — property getter)*
+
+**Returns:**
+* `tuple[HistoryEntry, ...]`
+
+**Under the hood:**
+```python
+@property
+def history(self):
+    return tuple(self._history)
+```
+
+[▲ Back to top](#-table-of-contents)
+
+---
+
+### `history_index`
+
+Returns the index of the currently active history entry.
+
+**Parameters:**
+* *(none — property getter)*
+
+**Returns:**
+* `int | None`
+
+**Under the hood:**
+```python
+@property
+def history_index(self):
+    return self._history_index
+```
+
+[▲ Back to top](#-table-of-contents)
+
+---
+
+### `history_limit`
+
+Gets or sets the history size limit.
+
+**Parameters (setter):**
+* `value` (*int*): the new limit.
+
+**Returns:**
+* `int | None` (getter)
+
+**Example usage:**
+```python
+person.history_limit = 50
+```
+
+**Under the hood:**
+```python
+@property
+def history_limit(self):
+    return self._history_limit
+
+@history_limit.setter
+def history_limit(self, value):
+    set_history_limit(self, value)
+```
+
+[▲ Back to top](#-table-of-contents)
+
+---
+
+### `undo`
+
+Moves to the previous history entry, if one exists.
+
+**Parameters:**
+* *(none)*
+
+**Returns:**
+* `bool`: whether the move succeeded.
+
+**Example usage:**
+```python
+person.undo()
+```
+
+**Under the hood:**
+```python
+def undo(self):
+    return history_undo(self)
+```
+
+[▲ Back to top](#-table-of-contents)
+
+---
+
+### `redo`
+
+Moves to the next history entry, if one exists.
+
+**Parameters:**
+* *(none)*
+
+**Returns:**
+* `bool`
+
+**Example usage:**
+```python
+person.redo()
+```
+
+**Under the hood:**
+```python
+def redo(self):
+    return history_redo(self)
+```
+
+[▲ Back to top](#-table-of-contents)
+
+---
+
+### `go_to_last`
+
+Moves to the last recorded history entry.
+
+**Parameters:**
+* *(none)*
+
+**Returns:**
+* `None`
+
+**Under the hood:**
+```python
+def go_to_last(self):
+    go_to_last_history(self)
+```
+
+[▲ Back to top](#-table-of-contents)
+
+---
+
+### `go_to_index`
+
+Moves to a specific history index.
+
+**Parameters:**
+* `index` (*int*)
+
+**Returns:**
+* `None`
+
+**Under the hood:**
+```python
+def go_to_index(self, index):
+    go_to_history_on_index(self, index)
+```
+
+[▲ Back to top](#-table-of-contents)
+
+---
+
+### `go_to_timestamp`
+
+Moves to the history entry closest to a given timestamp.
+
+**Parameters:**
+* `timestamp` (*datetime*)
+
+**Returns:**
+* `None`
+
+**Under the hood:**
+```python
+def go_to_timestamp(self, timestamp):
+    go_to_history_on_timestamp(self, timestamp)
+```
+
+[▲ Back to top](#-table-of-contents)
+
+---
+
+### `export_history_to_dict`
+
+Exports the full history to a dict, for persistence or transfer.
+
+**Parameters:**
+* *(none)*
+
+**Returns:**
+* `HistoryDict`
+
+**Under the hood:**
+```python
+def export_history_to_dict(self):
+    return export_history_to_dict(self)
+```
+
+[▲ Back to top](#-table-of-contents)
+
+---
+
+### `import_history_from_dict`
+
+Imports a previously exported history dict, restoring it in place.
+
+**Parameters:**
+* `history_dict` (*HistoryDict*)
+
+**Returns:**
+* `None`
+
+**Under the hood:**
+```python
+def import_history_from_dict(self, history_dict):
+    import_history_from_dict(self, history_dict)
+```
+
+[▲ Back to top](#-table-of-contents)
+
+---
+
+### `remove_history_limit`
+
+Removes the history size limit entirely.
+
+**Parameters:**
+* *(none)*
+
+**Returns:**
+* `None`
+
+**Under the hood:**
+```python
+def remove_history_limit(self):
+    self._history_limit = None
+```
+
+[▲ Back to top](#-table-of-contents)
+
+---
+
+### `diff`
+
+Compares two recorded snapshots (by index or timestamp) and returns the changed
+`(path, old_value, new_value)` triples.
+
+**Parameters:**
+* `snap1` (*int | datetime*): first snapshot selector.
+* `snap2` (*int | datetime*): second snapshot selector.
+* `constants_only` (*bool*, keyword-only, default `False`)
+
+**Returns:**
+* `SnapshotDiffTuple`
+
+**Example usage:**
+```python
+person.diff(0, 3)
+person.diff(some_timestamp, "now")
+```
+
+**Under the hood:**
+```python
+def diff(self, snap1, snap2, *, constants_only=False):
+    return self._compare_snapshots(
+        find_snapshot(self, snap1),
+        find_snapshot(self, snap2),
+        constants_only=constants_only
     )
+```
 
-    # ----------------------------------------
-    # Initialization hook
-    # ----------------------------------------
+[▲ Back to top](#-table-of-contents)
 
-    # noinspection PyAttributeOutsideInit
-    def init_mixins(
-        self: "HistoryProtocol"
-    ) -> None:
-        """
-        Method forwarding its logic into the instance's initialization
-        process.
-        """
+---
 
-        # 1. Initialize parents
-        super().init_mixins()
-
-        # 2. Create internal elements
-        self._history: list["HistoryEntry"] = []
-        self._history_limit: int | None  = None
-        self._history_index: int = 0
-        self._history_count: int = 0
-
-        # 3. Create the first entry
-        self.record_state()
-
-    # ----------------------------------------
-    # Initialization-related method
-    # ----------------------------------------
-
-    def record_state(
-        self: "HistoryProtocol"
-    ) -> "HistoryEntry":
-        """Creates a snapshot of the current state and saves it to history."""
-        return record_state(self)
-
-    # ----------------------------------------
-    # Property - getters
-    # ----------------------------------------
-
-    @property
-    def history(
-        self: "HistoryProtocol"
-    ) -> tuple["HistoryEntry", ...]:
-        """Returns the history as a tuple."""
-        return tuple(self._history)
-
-    @property
-    def history_index(
-        self: "HistoryProtocol"
-    ) -> int | None:
-        """Returns the index of the latest history entry."""
-        return self._history_index
-
-    @property
-    def history_limit(
-        self: "HistoryProtocol"
-    ) -> int | None:
-        """Returns the history size limit."""
-        return self._history_limit
-
-    # ----------------------------------------
-    # Property - setters
-    # ----------------------------------------
-
-    @history_limit.setter
-    def history_limit(
-        self: "HistoryProtocol",
-        value: int
-    ) -> None:
-        """Sets the history size limit."""
-        set_history_limit(self, value)
-
-    # ----------------------------------------
-    # Methods - UNDO / REDO
-    # ----------------------------------------
-
-    def undo(
-        self: "HistoryProtocol"
-    ) -> bool:
-        """Method for moving to the previous entry (if it exists)."""
-        return history_undo(self)
-
-    def redo(
-        self: "HistoryProtocol"
-    ) -> bool:
-        """Method for moving to the next entry (if it exists)."""
-        return history_redo(self)
-
-    # ----------------------------------------
-    # Methods - GOTO
-    # ----------------------------------------
-
-    def go_to_last(
-        self: "HistoryProtocol"
-    ) -> None:
-        """Method for moving to the last history entry."""
-        go_to_last_history(self)
-
-    def go_to_index(
-        self: "HistoryProtocol",
-        index: int
-    ) -> None:
-        """Method for moving to a specific index."""
-        go_to_history_on_index(self, index)
-
-    def go_to_timestamp(
-        self: "HistoryProtocol",
-        timestamp: datetime
-    ) -> None:
-        """Method for moving to a specific timestamp."""
-        go_to_history_on_timestamp(self, timestamp)
-
-    # ----------------------------------------
-    # Methods - EXPORT / IMPORT
-    # ----------------------------------------
-
-    def export_history_to_dict(
-        self: "HistoryProtocol"
-    ) -> "HistoryDict":
-        """Exports the history to a dict."""
-        return export_history_to_dict(self)
-
-    def import_history_from_dict(
-        self: "HistoryProtocol",
-        history_dict: "HistoryDict"
-    ) -> None:
-        """Imports the history from a dict."""
-        import_history_from_dict(self, history_dict)
-
-    # ----------------------------------------
-    # Methods - REMOVE / DIFF
-    # ----------------------------------------
-
-    def remove_history_limit(
-        self: "HistoryProtocol"
-    ) -> None:
-        """Removes the history size limit."""
-        # noinspection PyAttributeOutsideInit
-        self._history_limit = None
-
-    def diff(
-        self: "HistoryProtocol",
-        snap1: int | datetime,
-        snap2: int | datetime,
-        *,
-        constants_only: bool = False
-    ) -> "SnapshotDiffTuple":
-        """Compares two snapshots — returns a tuple of changed (path, old_value, new_value)."""
-        return self._compare_snapshots(
-            find_snapshot(self, snap1),
-            find_snapshot(self, snap2),
-            constants_only=constants_only
-        )
-
-
-_DESIGN_NOTES = """
-# History
-
-## Purpose
-Full undo/redo history for a mutable instance — records snapshots over
-time, lets you step backward/forward, jump to a specific index or
-timestamp, diff any two recorded states, and export/import the whole
-history as a dict.
-
-## Compatibility
-- `_mutable_only = True` — history tracks in-place mutations over time;
-  an immutable instance has no in-place timeline to record.
-
-## Logic
-`History` is mostly a thin coordinating layer over the
-`_history_utils` package, which does the heavy lifting:
-
-- **Recording**: `init_mixins` sets up empty `_history`/`_history_index`/
-  `_history_limit`/`_history_count`, then immediately calls
-  `record_state()` once, so a freshly created instance already has one
-  entry — its own starting state — rather than an empty history.
-  `record_state()` itself delegates to the `record_state` utility.
-- **Limit management**: `history_limit` is a property with both a
-  getter (plain attribute read) and a setter that delegates to
-  `set_history_limit` (presumably handling trimming older entries when
-  the limit shrinks). `remove_history_limit()` bypasses that utility and
-  sets `_history_limit = None` directly, since removing a limit needs no
-  trimming logic.
-- **Navigation**: `undo()`/`redo()` delegate to `history_undo`/
-  `history_redo` and return a `bool` (presumably whether the move
-  succeeded, e.g. `False` at the start/end of history). `go_to_last()`,
-  `go_to_index()`, `go_to_timestamp()` delegate to their matching
-  `_history_utils.navigations` functions.
-- **Export/import**: `export_history_to_dict()`/
-  `import_history_from_dict()` delegate straight to the `transfer`
-  utilities — this is what makes history itself serializable, separate
-  from the instance's own `to_dict()`/`from_dict()` in `Serialization`.
-- **Diffing**: `diff(snap1, snap2, constants_only=...)` accepts either an
-  index or a `datetime` for each side, resolves each via
-  `find_snapshot`, then reuses `_compare_snapshots` (inherited via
-  `Serialization` → `Infrastructure` → `Snapshot`) to produce the actual
-  diff.
-
-## Notes
-- Builds on `Serialization` (not directly on `Snapshot`), since history
-  export/import needs the same dict/JSON foundation the instance's own
-  state serialization uses.
-- `diff()`'s dual `int | datetime` snapshot selectors mean a caller never
-  has to manually look up an entry first — `find_snapshot` handles both
-  identification schemes.
-"""
+[⬅️ Back to Mixins Overview](../../../README_MIXINS_OVERVIEW.md)

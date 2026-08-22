@@ -1,14 +1,12 @@
-VALUE = "_value"
-
-_DESIGN_NOTES = """
-# Constant Name Token
-
-## Purpose
-Represents a single, immutable string token used as an internal attribute
-identifier within the Simple system. Serves as the sole source of truth for
-the value attribute name, preventing accidental typos or shadowing.
-
-## Notes
-Changing this constant would break mixin attribute resolution and internal
-object wiring. It is treated as a core invariant of the system.
 """
+Tests for `VALUE` constant name.
+"""
+from simplibs.object.mixins._common_logic.constants.names import VALUE
+
+
+def test_value_value():
+    assert VALUE == "_value"
+
+
+def test_value_is_str():
+    assert isinstance(VALUE, str)

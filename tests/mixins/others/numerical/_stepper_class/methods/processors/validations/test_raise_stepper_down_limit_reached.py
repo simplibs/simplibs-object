@@ -1,34 +1,41 @@
-from typing import TYPE_CHECKING, NoReturn, Any
-# Outers
-from .......exceptions import SimpleMixinError
-# Annotations
-if TYPE_CHECKING:
-    from ......._core.protocols.mixins.numerical.stepper import StepperProtocol
+from unittest.mock import Mock
+from simplibs.object.exceptions import SimpleRuntimeError
+from simplibs.exception.testing.assert_exception_function import assert_exception_function
+from simplibs.object.mixins.others.numerical._stepper_class.methods.processors.validations.raise_stepper_down_limit_reached import (
+    raise_stepper_down_limit_reached,
+)
 
 
-def raise_stepper_down_limit_reached(
-    stepper: "StepperProtocol",
-    new_value: Any,
-) -> NoReturn:
-    """
-    Raises a structured error when a step operation attempts to go below
-    the configured down limit.
-    """
+def test_raise_stepper_down_limit_reached(subtests) -> None:
+    """Tests that raise_stepper_down_limit_reached raises SimpleRuntimeError."""
 
-    raise SimpleMixinError(
+    dummy_stepper = Mock()
+    dummy_instance = Mock()
+    type(dummy_instance).__name__ = "MyStepperObj"
+    dummy_instance.value = 10
+    dummy_stepper._instance = dummy_instance
+    dummy_stepper.down_limit = 5
+
+    new_invalid_value = 2
+
+    assert_exception_function(
+        subtests,
+        raise_stepper_down_limit_reached,
+        invalid_params=(dummy_stepper, new_invalid_value),
+        exception_type=SimpleRuntimeError,
         error_name="STEPPER DOWN LIMIT ERROR",
         label="new value",
-        value=new_value,
-        expected=f"Value >= {stepper.down_limit!r}",
+        value=new_invalid_value,
+        expected="Value >= 5",
         problem=(
             "The step operation attempted to decrease the value below the "
             "configured down limit."
         ),
         context=(
-            f"Instance type: {type(stepper._instance).__name__}.",
-            f"Current value: {stepper._instance.value!r}.",
-            f"Down limit: {stepper.down_limit!r}.",
-            "The stepper enforces numeric boundaries to prevent invalid state transitions."
+            "Instance type: MyStepperObj.",
+            "Current value: 10.",
+            "Down limit: 5.",
+            "The stepper enforces numeric boundaries to prevent invalid state transitions.",
         ),
         how_to_fix=(
             "Increase the down limit if lower values should be allowed.",
@@ -36,80 +43,5 @@ def raise_stepper_down_limit_reached(
             "Disable limit enforcement if this behavior is intentional.",
         ),
         exception=ValueError,
+        verbose=False,
     )
-
-
-_DESIGN_NOTES = """
-# raise_stepper_down_limit_reached
-
-## Purpose
-Provides a structured diagnostic error when a step operation attempts to move
-the value below the configured down limit.  
-This replaces the generic `ValueError` with a rich, contextual, and actionable
-error message consistent with the rest of the Simple ecosystem.
-
-The function ensures that limit violations are always reported clearly and
-predictably.
-
----
-
-## Architectural reasoning
-Stepper is a numerical mixin subsystem responsible for:
-
-- controlled value manipulation,
-- enforcing numeric boundaries,
-- triggering limit actions,
-- maintaining safe state transitions.
-
-Crossing the down limit is not a trivial numeric error — it is a **logical
-violation of the stepper’s configuration**.  
-Therefore, it must be reported using a structured error that:
-
-- explains what happened,
-- shows the offending value,
-- shows the configured limit,
-- provides actionable steps to fix the issue,
-- includes contextual information about the instance.
-
-This mirrors the design of immutability, history, metadata, and composite
-errors.
-
----
-
-## Pipeline position
-This function is used inside `verify_down_limit`:
-
-1. Check if `new_value < down_limit`.
-2. Trigger `down_limit_action` if present.
-3. If `raise_exception=True`, call this function.
-4. Otherwise return `False`.
-
-This ensures:
-
-- consistent behavior across all step operations,
-- predictable error handling,
-- clear separation of validation and error raising.
-
----
-
-## Diagnostic value
-The error message includes:
-
-- the invalid new value,
-- the expected minimum value,
-- the current instance value,
-- the configured down limit,
-- the instance type,
-- actionable steps to resolve the issue.
-
-This makes debugging significantly easier and aligns with the philosophy of
-Simple’s structured error system.
-
----
-
-## Notes
-- This is a pure `raise_...` function: it performs no branching logic.
-- It is internal and not part of the public API.
-- All stepper limit violations must use this function.
-- The error type is `SimpleMixinError` with `ValueError` as the underlying exception.
-"""

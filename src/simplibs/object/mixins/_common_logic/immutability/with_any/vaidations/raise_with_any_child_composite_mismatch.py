@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, NoReturn, Any
 # Outers
-from ......exceptions import SimpleLogicError
+from ......exceptions import SimpleRuntimeError
 # Annotations
 if TYPE_CHECKING:
     from ......_core.protocols.mixins.core_mixins import InfrastructureProtocol
@@ -17,7 +17,7 @@ def raise_with_any_child_composite_mismatch(
     the recalculated snapshot value.
     """
 
-    raise SimpleLogicError(
+    raise SimpleRuntimeError(
         error_name="IMMUTABILITY CHILD COMPOSITE ERROR",
         label="child composite mismatch",
         expected=f"Child composite '{name}' must match its recalculated value.",

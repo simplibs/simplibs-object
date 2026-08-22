@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, NoReturn
 # Outers
-from .......exceptions import SimpleLogicError
+from ......exceptions import SimpleRuntimeError
 # Annotations
 if TYPE_CHECKING:
     from ......_core.protocols.mixins.core_mixins import SerializationProtocol
@@ -16,7 +16,7 @@ def raise_missing_composite_key(
     during state reconstruction.
     """
 
-    raise SimpleLogicError(
+    raise SimpleRuntimeError(
         error_name="STATE DICT MISSING KEY",
         label="composite key",
         expected=f"Key '{missing_key}' to exist in nested dictionary structure.",

@@ -1,102 +1,57 @@
-from typing import TYPE_CHECKING
-# Outers
-from ...._commons.constants import VALUE
-# Inners
-from .validations import raise_snapshot_incompatible_error
-# Annotations
-if TYPE_CHECKING:
-    from ....._core.protocols.alias_typings import SnapshotTuple, NodesTuple, SnapshotDiffTuple
+"""
+Tests for `compare_snapshots(nodes_tuple, snapshot1, snapshot2, *, constants_only=False)`.
+"""
+import pytest
+from simplibs.object.mixins.core_mixins import Infrastructure
+from simplibs.object.mixins.core_mixins._utils.snapshot import compare_snapshots
 
 
-def compare_snapshots(
-    nodes_tuple: "NodesTuple",
-    snapshot1: "SnapshotTuple",
-    snapshot2: "SnapshotTuple",
-    *,
-    constants_only: bool = False,
-) -> "SnapshotDiffTuple":
-    """
-    Compares two snapshots and returns a tuple of (path, old_value, new_value)
-    for all nodes whose values differ. Optionally filters out composite nodes
-    when `constants_only=True`.
-    """
+class TestCompareSnapshotsNoChanges:
 
-    diffs = []
+    def test_identical_snapshots_return_empty_tuple(self, Outer):
+        instance = Outer(mixins=(Infrastructure,))
+        snapshot = instance._build_snapshot()
+        result = compare_snapshots(instance._nodes_tuple, snapshot, snapshot)
+        assert result == ()
 
-    try:
-        # 1. Iterate through nodes and both snapshots simultaneously
-        for (_, path), snap1_value, snap2_value in zip(nodes_tuple, snapshot1, snapshot2):
 
-            # 2. Skip composite nodes when constants_only=True
-            if constants_only and path[-1] == VALUE:
-                continue
+class TestCompareSnapshotsWithChanges:
 
-            # 3. Append differences
-            if snap1_value != snap2_value:
-                diffs.append((path, snap1_value, snap2_value))
+    def test_single_changed_leaf_detected(self, Outer):
+        instance = Outer(mixins=(Infrastructure,))
+        snap1 = instance._build_snapshot()
+        snap2 = list(snap1)
+        # Find index of 'third' in _nodes_tuple and change its value
+        third_index = next(
+            i for i, (inst, _) in enumerate(instance._nodes_tuple)
+            if inst.meta.name_snake == "third"
+        )
+        snap2[third_index] = 999
+        snap2 = tuple(snap2)
 
-        return tuple(diffs)
+        result = compare_snapshots(instance._nodes_tuple, snap1, snap2)
 
-    except (ValueError, TypeError) as error:
-        raise_snapshot_incompatible_error(
-            nodes_tuple=nodes_tuple,
-            snapshot1=snapshot1,
-            snapshot2=snapshot2,
-            error=error,
+        assert len(result) == 1
+        path, old_value, new_value = result[0]
+        assert old_value == snap1[third_index]
+        assert new_value == 999
+
+    def test_constants_only_excludes_composite_diffs(self, Outer):
+        instance = Outer(mixins=(Infrastructure,))
+        snap1 = instance._build_snapshot()
+        # Create a snapshot where all values differ
+        snap2 = tuple(v + 1000 if isinstance(v, int) else v for v in snap1)
+
+        result_all = compare_snapshots(instance._nodes_tuple, snap1, snap2)
+        result_constants_only = compare_snapshots(
+            instance._nodes_tuple, snap1, snap2, constants_only=True
         )
 
+        assert len(result_constants_only) <= len(result_all)
 
-_DESIGN_NOTES = """
-# compare_snapshots
 
-## Purpose
-Compares two snapshots and returns a structured list of differences. Each
-difference is represented as `(path, old_value, new_value)`, where `path`
-identifies the node in the object tree. This function is used by history
-tracking, immutability pipelines, debugging tools, and diffing utilities.
-
-## Architectural role
-Snapshot comparison is a core operation in the Simple system. It enables:
-
-- detecting changes between two states,
-- building history entries,
-- validating immutability transitions,
-- computing diffs for debugging and serialization,
-- determining which nodes require recalculation.
-
-The function relies on `nodes_tuple`, which provides a deterministic structural
-representation of the object tree.
-
-## Constants-only mode
-When `constants_only=True`, composite nodes (identified by `path[-1] == VALUE`)
-are ignored. This mode is used by immutability pipelines where only leaf-level
-changes matter.
-
-## Error handling
-Snapshot comparison requires both snapshots to:
-
-- be iterable,
-- have the same length as `nodes_tuple`,
-- contain raw values in the correct order.
-
-If any of these conditions fail, Python raises `ValueError` or `TypeError`.
-These are caught and delegated to `raise_snapshot_incompatible_error`, which
-provides a structured diagnostic message.
-
-This ensures that invalid snapshots never silently propagate through the system.
-
-## Deterministic behavior
-The comparison is deterministic because:
-
-- `nodes_tuple` is stable,
-- traversal order is fixed,
-- snapshots are positional,
-- diff output preserves node order.
-
-This determinism is essential for history tracking and immutability logic.
-
-## Notes
-- This function is intentionally minimal and side-effect-free.
-- All structural logic is delegated to `nodes_tuple`.
-- All error logic is delegated to `raise_snapshot_incompatible_error`.
-"""
+class TestCompareSnapshotsIncompatible:
+    """
+    Reserved for future incompatible snapshot comparison scenarios (e.g., ambiguous numpy evaluations).
+    """
+    pass

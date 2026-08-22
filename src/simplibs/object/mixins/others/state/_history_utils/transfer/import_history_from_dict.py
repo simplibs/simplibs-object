@@ -29,22 +29,29 @@ def import_history_from_dict(
     if self.meta.owner_class != owner_class:
         raise_unvalide_owner_class_mismatch(self, owner_class)
 
-    # 3. Backup previous history
-    backup = self._history
+    # 3. Backup previous history and state
+    backup_history = list(self._history)
+    backup_count = self._history_count
+    backup_index = self._history_index
 
     # 4. Replace history
     try:
-        # 4.1 Load new history
+        # 4.1 Load new history and sync count
         self._history = list(history_dict[HISTORY])
+        self._history_count = len(self._history)
+
+        # 4.2 Jump to the newest state
         self.go_to_last()
 
-        # 4.2 Apply limit trimming (if configured)
+        # 4.3 Apply limit trimming (if configured)
         if self.history_limit:
             self.history_limit = self.history_limit
 
     # 5. Restore previous state on failure
     except Exception as e:
-        self._history = backup
+        self._history = backup_history
+        self._history_count = backup_count
+        self._history_index = backup_index
         self.go_to_last()
         raise e
 
@@ -81,27 +88,30 @@ Checks that the dictionary belongs to the same class as the current instance.
 This prevents accidental or malicious history injection from incompatible
 objects.
 
-### 3. Backup previous history
-Stores the current history list so it can be restored if import fails.
+### 3. Backup previous history and state
+Creates a complete shallow copy of `_history` and captures `_history_count`
+and `_history_index` so that the entire navigation subsystem state can be
+atomically restored if the import fails.
 
-### 4. Replace history
+### 4. Replace history and synchronize state
 Attempts to load the new history:
 
-- converts the history list to a Python list,
-- navigates to the last entry,
-- applies history limit trimming if configured.
+- converts the imported history list to a mutable Python list,
+- synchronizes `_history_count = len(_history)` to maintain subsystem invariants,
+- calls `go_to_last()` to navigate to the newest entry and restore its snapshot,
+- re-applies history limit trimming via the `history_limit` setter if configured.
 
-All operations are performed inside a `try` block to guarantee safety.
+All operations are performed inside a `try` block to guarantee transaction-like safety.
 
 ### 5. Restore previous state on failure
 If any exception occurs during import:
 
-- the original history is restored,
-- the instance is navigated back to its last valid snapshot,
+- `_history`, `_history_count`, and `_history_index` are restored from backup,
+- `go_to_last()` is invoked to guarantee that the instance snapshot reflects the original state,
 - the original exception is re‑raised.
 
 This ensures atomicity: either the import succeeds fully, or the instance
-remains unchanged.
+remains completely unchanged.
 
 ## Integration requirements
 The function assumes the instance implements:
@@ -127,15 +137,17 @@ History must be importable for:
 - transferring state between processes or machines.
 
 This function encapsulates the minimal logic required to safely reconstruct
-history from a portable representation.
+history from a portable representation while enforcing consistency across
+all internal pointers and counters.
 
 ## Deterministic behavior
 History import is guaranteed to be:
 
 - validated,
 - owner‑safe,
-- atomic,
+- atomic and rollback-safe,
 - consistent with export format,
+- synchronized with internal navigation pointers (`_history_count`, `_history_index`),
 - compatible with undo/redo and navigation tools.
 
 ## Stability guarantee

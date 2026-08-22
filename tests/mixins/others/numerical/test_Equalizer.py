@@ -1,88 +1,71 @@
-from typing import TYPE_CHECKING
+"""
+Tests for `Equalizer` mixin.
+"""
+import pytest
 from numbers import Number
-# Outers
-from .._commons.constants import STEPPER
-from ..core_mixins import NodesTuple
-# Inners
-from ._stepper_class import Stepper
-# Annotations
-if TYPE_CHECKING:
-    from ..._core.protocols.mixins.numerical import EqualizerProtocol
-    from ..._core.protocols.mixins.numerical.internal_types import SteppersMap
-    from ..._core.protocols.instance import SimpleInstanceLike
+from simplibs.object.mixins._common_logic.constants import STEPPER
+from simplibs.object.mixins.core_mixins import NodesTuple
+from simplibs.object.mixins.others.numerical import Equalizer
+from simplibs.object.mixins.others.numerical._stepper_class import Stepper
+from simplibs.object.testing import assert_simple_mixin
 
 
-class Equalizer(NodesTuple):
-    """
-    Poskytuje přístup k stepperu pro všechny inners.
+class TestEqualizerStructure:
 
-    Garantuje přítomnost číselných ovladačů (stepperů) pro všechny sub-node prvky
-    kompozice. Tyto ovladače jsou generovány dynamicky na základě blueprintu
-    a jsou dostupné skrze dynamické properties s postfixem.
-    """
+    def test_composite_only_flag(self):
+        assert Equalizer._composite_only is True
 
-    # ----------------------------------------
-    # Základní rozhraní
-    # ----------------------------------------
+    def test_mutable_only_flag(self):
+        assert Equalizer._mutable_only is True
 
-    # Definice určení
-    _composite_only = True
-    _mutable_only = True
-    _only_types = Number
+    def test_only_types_is_number(self):
+        assert Equalizer._only_types is Number
 
-    # Definice slotů
-    __slots__ = ("_steppers",)
+    def test_inherits_from_nodes_tuple(self):
+        assert issubclass(Equalizer, NodesTuple)
 
-    # ----------------------------------------
-    # Hook pro úpravu instanční třídy
-    # ----------------------------------------
+    def test_assert_simple_mixin_shallow(self, subtests, Outer):
+        assert_simple_mixin(
+            subtests,
+            Equalizer,
+            test_class=Outer,
+            slots_names=("_steppers",),
+        )
 
-    @staticmethod
-    def __extend_instance_class__(
-        instance_cls: "SimpleInstanceLike"
-    ) -> "SimpleInstanceLike":
-        """
-        Interní metoda pro připojení prvků k třídě, před inicializačním procesem.
-        """
 
-        # 1. Vytvoření potřebných properties
-        for name in instance_cls.meta.node_names_set:
+class TestEqualizerDynamicProperties:
 
-            # 1.1 Definice getteru
-            def getter(self: "EqualizerProtocol", _name: str = name):
-                return self._steppers[_name]
-
-            # 1.2 Nastavení jména getteru a docstringu
+    def test_stepper_property_generated_for_every_node(self, Outer):
+        instance = Outer(mixins=(Equalizer,), mutable=True)
+        for name in Outer.meta.node_names_set:
             prop_name = f"{name}{STEPPER}"
-            getter.__name__ = f"get_{prop_name}"
-            getter.__doc__ = (
-                f"Vrací Stepper objekt pro uzel `{name}`.\n"
-                f"Generováno dynamicky podle struktury objektu."
-            )
+            assert hasattr(instance, prop_name)
+            assert isinstance(getattr(instance, prop_name), Stepper)
 
-            # 1.3 Vytvoření property a uložení na třídu
-            setattr(instance_cls, prop_name, property(getter))
+    def test_each_stepper_bound_to_correct_node_instance(self, Outer):
+        instance = Outer(mixins=(Equalizer,), mutable=True)
+        third_stepper = getattr(instance, f"third{STEPPER}")
+        assert third_stepper._instance.meta.name_snake == "third"
 
-        # 2. Navrácení pozměněné třídy
-        return instance_cls
+    def test_steppers_dict_keyed_by_name_snake(self, Outer):
+        instance = Outer(mixins=(Equalizer,), mutable=True)
+        assert set(instance._steppers.keys()) == set(Outer.meta.node_names_set)
 
-    # ----------------------------------------
-    # Hook pro inicializaci
-    # ----------------------------------------
+    def test_stepping_one_node_does_not_affect_others(self, Outer):
+        instance = Outer(mixins=(Equalizer,), mutable=True)
+        original_second = instance._steppers["second"]._instance._value
 
-    # noinspection PyAttributeOutsideInit
-    def init_mixins(
-        self: "EqualizerProtocol"
-    ) -> None:
-        """
-        Metoda, předávající svojí logiku do inicializačního procesu instance.
-        """
+        instance.third_stepper.step_up()
 
-        # 1. Inicializace předků
-        super().init_mixins()
+        assert instance._steppers["second"]._instance._value == original_second
 
-        # 2. Slovník se steppery pro všechny prvky
-        self._steppers: "SteppersMap" = {
-            instance.meta.name_snake: Stepper(instance)
-            for instance, _ in self._nodes_tuple
-        }
+
+class TestEqualizerCompatibility:
+
+    def test_rejects_atom_instance(self, IntLeaf):
+        with pytest.raises(Exception):
+            IntLeaf(mixins=(Equalizer,), as_atom=True, mutable=True)
+
+    def test_rejects_immutable_instance(self, Outer):
+        with pytest.raises(Exception):
+            Outer(mixins=(Equalizer,), mutable=False)

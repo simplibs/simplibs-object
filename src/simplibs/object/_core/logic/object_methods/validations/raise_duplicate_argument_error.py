@@ -1,6 +1,6 @@
 from typing import NoReturn, TYPE_CHECKING
 # Outers
-from .....exceptions import SimpleLogicError
+from .....exceptions import SimpleRuntimeError
 # Annotations
 if TYPE_CHECKING:
     from ....protocols.classes import SimpleObjectProtocol
@@ -14,7 +14,7 @@ def raise_duplicate_argument_error(
 
     class_name = cls.__name__
 
-    raise SimpleLogicError(
+    raise SimpleRuntimeError(
         error_name="INVALID PARAMETERS",
         label=param_name,
         value=f"Positional and keyword argument for '{param_name}'",
@@ -50,7 +50,7 @@ argument mapping in composite objects.
 
 ## Behavior
 - Detects when the same parameter name appears in both `args` and `kwargs`.
-- Raises a structured `SimpleLogicError` explaining the conflict.
+- Raises a structured `SimpleRuntimeError` explaining the conflict.
 - Provides actionable guidance on how to correct the call.
 
 ---

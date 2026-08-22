@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING
+from simplibs.sentinels import UNSET
 # Outers
-from .....exceptions import SimpleLogicError
+from .....exceptions import SimpleRuntimeError
 # Annotations
 if TYPE_CHECKING:
     from ....protocols.metadata import SimpleMetadataLike
@@ -34,7 +35,7 @@ def raise_class_not_decomposeable(
             f"but some of its inner composite elements cannot be decomposed."
         )
 
-    raise SimpleLogicError(
+    raise SimpleRuntimeError(
         error_name="COMPOSITE VALUE ASSIGNMENT ERROR",
         label="composite_not_decomposeable",
         expected="A composite that supports direct value assignment",

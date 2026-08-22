@@ -1,117 +1,94 @@
-from typing import TYPE_CHECKING
-from types import NoneType, UnionType
-from functools import reduce
-from operator import or_
-from simplibs.sentinels import UNSET
-# Inners
-from .validations import (
-    validate_type_is_defined,
-    validate_type_is_not_none,
-    validate_type_is_not_empty,
-    raise_validate_type_is_not_valid,
-    validate_type_from_tuple_is_not_none,
-    validate_type_tuple_is_not_nested,
-    raise_union_type_contain_none,
-)
-# Annotations
-if TYPE_CHECKING:
-    from ....protocols.classes import SimpleClassLike
-
-
-def process_type(
-    owner_class: "SimpleClassLike",
-) -> tuple[type | UnionType, str]:
-    """Validates and normalizes the '_type' attribute."""
-
-    # 1. Fetch raw type
-    raw_type = getattr(owner_class, "_type", UNSET)
-
-    # 2. Early guards
-    if raw_type is UNSET or not raw_type:
-        validate_type_is_defined(raw_type, owner_class)
-        validate_type_is_not_none(raw_type, owner_class)
-        validate_type_is_not_empty(raw_type, owner_class)
-
-    # 3. Atomic type
-    if isinstance(raw_type, type):
-        return raw_type, raw_type.__name__
-
-    # 4. UnionType
-    if isinstance(raw_type, UnionType):
-        if NoneType in raw_type.__args__:
-            raise_union_type_contain_none(owner_class)
-        return raw_type, str(raw_type)
-
-    # 5. Tuple of types
-    if isinstance(raw_type, tuple):
-        valid_types = []
-        for inner_type in raw_type:
-            if isinstance(inner_type, tuple) or inner_type is None:
-                validate_type_tuple_is_not_nested(inner_type, raw_type, owner_class)
-                validate_type_from_tuple_is_not_none(inner_type, raw_type, owner_class)
-            valid_types.append(inner_type)
-
-        final_type = reduce(or_, valid_types)
-        return final_type, str(final_type)
-
-    # 6. Fallback
-    raise_validate_type_is_not_valid(raw_type, owner_class)
-
-
-
-_DESIGN_NOTES = """
-# process_type
-
-## Purpose
-Normalizes the `_type` attribute into a single, predictable runtime type.  
-Supports three forms:
-
-- atomic types (`int`, `str`, `MyClass`)
-- modern UnionType (`int | str`)
-- flat tuples (`(int, str)`)
-
-All other forms are rejected.
-
-## Pipeline overview
-
-1. **Early guards**
-   - `_type` must exist.
-   - `_type` cannot be None.
-   - `_type` cannot be empty.
-
-2. **Atomic type**
-   Fast path. Returns immediately.
-
-3. **UnionType**
-   - Must not contain `NoneType`.
-   - Returned as-is.
-
-4. **Tuple**
-   - Must be flat.
-   - Must not contain literal None.
-   - Converted to a UnionType via `reduce(or_, ...)`.
-
-5. **Fallback**
-   Anything else is invalid.
-
-## Why this normalization exists
-The metadata system requires a single, concrete type object that can be used with:
-
-- `isinstance(value, compiled_type)`
-- validation routines
-- default value processors
-- classmethod validators
-
-By converting all supported forms into a UnionType, the system avoids branching
-logic and keeps runtime checks fast and deterministic.
-
-## Anti-optional rule
-Optionality (`None`, `NoneType`) is not allowed inside `_type`.  
-Absence of value must be modeled at a higher level, not inside the core type
-constraint.
-
-## Performance notes
-- Atomic types short‑circuit immediately.
-- Tuple processing is linear in the number of elements.
-- UnionType handling is constant time.
 """
+Tests for `_core/metadata/init_processors/type/process_type.py`.
+
+Covers all branches of `_type` resolution:
+    1. Plain type (`int`)
+    2. UnionType (`int | str`)
+    3. UnionType containing None -> error (must use a tuple with None instead)
+    4. Tuple of types (`(int, str)`) -> merged into UnionType
+    5. Tuple containing None or nested tuples -> error
+    6. Missing or empty `_type` -> error
+    7. Invalid `_type` value (fallback) -> error
+"""
+import pytest
+from simplibs.object import SimpleConstant
+from simplibs.object.exceptions import SimpleDefinitionError
+
+
+class TestProcessTypePlainType:
+
+    def test_plain_type_is_used_directly(self):
+        class Age(SimpleConstant):
+            _type = int
+            _default = 0
+
+        assert Age.meta.value_type is int
+        assert Age.meta.value_type_name == "int"
+
+
+class TestProcessTypeUnionType:
+
+    def test_union_type_is_accepted(self):
+        class Flexible(SimpleConstant):
+            _type = int | str
+            _default = 0
+
+        assert Flexible.meta.value_type == (int | str)
+
+    def test_union_type_name_is_stringified(self):
+        class Flexible(SimpleConstant):
+            _type = int | str
+            _default = 0
+
+        assert Flexible.meta.value_type_name == str(int | str)
+
+    def test_union_type_containing_none_raises(self):
+        with pytest.raises(SimpleDefinitionError):
+            class Nullable(SimpleConstant):
+                _type = int | None
+                _default = 0
+
+
+class TestProcessTypeTuple:
+
+    def test_tuple_of_types_is_merged_into_union(self):
+        class Flexible(SimpleConstant):
+            _type = (int, str)
+            _default = 0
+
+        assert Flexible.meta.value_type == (int | str)
+
+    def test_tuple_with_none_raises(self):
+        with pytest.raises(SimpleDefinitionError):
+            class Bad(SimpleConstant):
+                _type = (int, None)
+                _default = 0
+
+    def test_nested_tuple_raises(self):
+        with pytest.raises(SimpleDefinitionError):
+            class Bad(SimpleConstant):
+                _type = (int, (str, float))
+                _default = 0
+
+
+class TestProcessTypeMissing:
+
+    def test_missing_type_raises(self):
+        with pytest.raises(SimpleDefinitionError):
+            class NoType(SimpleConstant):
+                _default = 0
+
+    def test_falsy_type_raises(self):
+        with pytest.raises(SimpleDefinitionError):
+            class EmptyType(SimpleConstant):
+                _type = ()
+                _default = 0
+
+
+class TestProcessTypeInvalidFallback:
+
+    def test_non_type_value_raises(self):
+        with pytest.raises(SimpleDefinitionError):
+            class Invalid(SimpleConstant):
+                _type = "int"
+                _default = 0

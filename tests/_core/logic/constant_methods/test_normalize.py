@@ -1,92 +1,78 @@
-from typing import Any, TYPE_CHECKING
-# Inners
-from .validations import raise_missing_value_error
-# Annotations
-if TYPE_CHECKING:
-    from ...protocols.classes import SimpleConstantProtocol
-
-
-def normalize(
-    cls: "SimpleConstantProtocol",
-    value: Any,
-    *,
-    process_none: bool = False,
-) -> Any:
-    """Normalizes a value according to constant metadata rules."""
-
-    # 1. Handle None
-    if value is None:
-
-        # 1.1 None is allowed only when explicitly requested
-        if process_none:
-            return cls.meta.default
-
-        # 1.2 Otherwise raise a structured error
-        raise_missing_value_error(cls)
-
-    # 2. Handle default value identity optimization
-    # noinspection PyBroadException
-    try:
-        # 2.1 If the value equals the default, return the default instance
-        if value == cls.meta.default:
-            return cls.meta.default
-
-    except Exception:
-        # 2.2 Non-comparable values fall through to validation
-        pass
-
-    # 3. Validate the value
-    cls.validate(value)
-
-    # 4. Return validated value
-    return value
-
-
-_DESIGN_NOTES = """
-# normalize
-
-## Purpose
-Normalizes incoming values for constant definitions. This function enforces the
-rules for handling `None`, default values, and validation. It is used by both
-constant and object classes whenever a value is assigned.
-
----
-
-## Why `None` is forbidden
-The SimpleObject ecosystem does not allow `None` as a valid value. This is
-intentional:
-
-- Composite objects compute their value from inner elements.
-- If any inner element were `None`, the composite value could not be computed.
-- Metadata already prevents `None` from being used as a declared default.
-- `normalize` enforces this rule at runtime for user-provided values.
-
-The only exception is when `process_none=True`, which instructs the system to
-replace `None` with the class’s default value.
-
----
-
-## Behavior
-1. **Handling `None`**
-   - If `process_none=True`, return the default value.
-   - Otherwise, raise `raise_missing_value_error`.
-
-2. **Default Value Optimization**
-   - If the provided value equals the default, return the default instance.
-   - This avoids unnecessary allocations and keeps identity stable.
-
-3. **Validation**
-   - All non-default values are validated through the full validation pipeline.
-
-4. **Return**
-   - Returns either the default instance or the validated value.
-
----
-
-## Notes
-- This function is intentionally minimal; all diagnostics are delegated to
-  specialized error helpers.
-- The public-facing docstring belongs to the class method `SimpleConstant.normalize`,
-  not to this internal helper.
-- Composite objects reuse this normalization logic through their own pipelines.
 """
+Tests for `_core/logic/constant_methods/normalize.py`.
+
+Verifies:
+    1. None handling with `process_none` flag.
+    2. Default value identity short-circuit optimization.
+    3. Delegation to validation pipeline for non-default values.
+"""
+import pytest
+from simplibs.object.exceptions import SimpleRuntimeError
+
+
+class TestNormalizeNoneHandling:
+
+    def test_none_with_process_none_true_returns_default(self, IntConst) -> None:
+        """Verifies passing None with process_none=True resolves to default value."""
+        assert IntConst.normalize(None, process_none=True) == IntConst.meta.default
+
+    def test_none_with_process_none_false_raises(self, IntConst) -> None:
+        """Verifies passing None with process_none=False raises SimpleRuntimeError."""
+        with pytest.raises(SimpleRuntimeError):
+            IntConst.normalize(None, process_none=False)
+
+    def test_process_none_defaults_to_false(self, IntConst) -> None:
+        """Verifies process_none defaults to False, rejecting None by default."""
+        with pytest.raises(SimpleRuntimeError):
+            IntConst.normalize(None)
+
+
+class TestNormalizeDefaultIdentityOptimization:
+
+    def test_value_equal_to_default_returns_default(self, IntConst) -> None:
+        """Verifies default value comparison returns the default directly."""
+        result = IntConst.normalize(IntConst.meta.default)
+        assert result == IntConst.meta.default
+
+    def test_value_equal_to_default_short_circuits_validation(self) -> None:
+        """Verifies values equal to default bypass custom validation checks."""
+        from simplibs.object import SimpleConstant
+
+        class ZeroOnlyConst(SimpleConstant):
+            _type = int
+            _default = 0
+
+            @classmethod
+            def _validate(cls, value, *, return_bool=False):
+                if value == cls._default:
+                    return True
+                return cls.bool_or_raise_validate_error(
+                    value, problem="always rejects", return_bool=return_bool
+                )
+
+        assert ZeroOnlyConst.normalize(0) == 0
+
+
+class TestNormalizeNonComparableValues:
+
+    def test_non_comparable_value_falls_through_to_validation(self, IntConst) -> None:
+        """Verifies objects raising on equality fall through to normal validation without crashing normalize."""
+
+        class Unorderable:
+            def __eq__(self, other):
+                raise TypeError("cannot compare")
+
+        with pytest.raises(SimpleRuntimeError):
+            IntConst.normalize(Unorderable())
+
+
+class TestNormalizeValidValue:
+
+    def test_valid_value_is_returned_unchanged(self, IntConst) -> None:
+        """Verifies valid values pass through normalize unchanged."""
+        assert IntConst.normalize(42) == 42
+
+    def test_invalid_value_raises_via_validate(self, IntConst) -> None:
+        """Verifies invalid values trigger validation errors."""
+        with pytest.raises(SimpleRuntimeError):
+            IntConst.normalize("not-an-int")

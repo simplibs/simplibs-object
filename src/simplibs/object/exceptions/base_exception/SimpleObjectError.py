@@ -68,13 +68,13 @@ Instantiation-time exception raised during `__init__` or `__new__` pipeline.
 Signals incompatible runtime creation parameters, missing requirements, or
 mixin composition conflicts. Main consumer: Instance and mixin initialization logic.
 
-### `SimpleLogicError`
+### `SimpleRuntimeError`
 
 Data-level exception raised during execution when values fail validation,
 normalization, or state rules. This is the primary public exception that end
 users encounter during normal application usage.
 
-### `SimpleLogicError`
+### `SimpleRuntimeError`
 
 Utility exception raised exclusively by test-assistance functions (e.g., fuzz-filling
 or randomized data generation). Signals exhausted retries or unsupported test setups.

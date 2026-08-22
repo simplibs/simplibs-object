@@ -1,6 +1,6 @@
 from typing import Any, NoReturn, TYPE_CHECKING
 # Outers
-from .....exceptions import SimpleLogicError
+from .....exceptions import SimpleRuntimeError
 # Annotations
 if TYPE_CHECKING:
     from ....protocols.classes import SimpleConstantProtocol
@@ -15,7 +15,7 @@ def raise_unexpected_validation_error(
 
     class_name = cls.__name__
 
-    raise SimpleLogicError(
+    raise SimpleRuntimeError(
         error_name="VALIDATION ERROR",
         label="value",
         value=value,
@@ -52,7 +52,7 @@ exception rather than a structured validation error.
 
 ## Behavior
 - Triggered when `_validate` raises an exception that is **not** a `SimpleObjectError`.
-- Wraps the original exception into a structured `SimpleLogicError`.
+- Wraps the original exception into a structured `SimpleRuntimeError`.
 - Provides clear guidance for both possible scenarios:
   1. The value is invalid and caused the user’s validation logic to fail.
   2. The validation logic itself contains an error.

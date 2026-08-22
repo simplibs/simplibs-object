@@ -1,4 +1,5 @@
 from typing import Any, TYPE_CHECKING
+from simplibs.sentinels import UNSET
 # Inners
 from .process_value import process_value
 from .validations import raise_stepper_invalid_up_limit
@@ -22,7 +23,7 @@ def process_up_limit_value(
     _value = process_value(self, value)
 
     # 2. Validate boundary consistency
-    if self.down_limit > _value:
+    if self.down_limit is not UNSET and self.down_limit > _value:
         raise_stepper_invalid_up_limit(self, value)
 
     return _value
@@ -36,7 +37,7 @@ Normalizes and validates the upper‑limit value for the stepper.
 This function ensures that:
 
 - the provided limit value is converted to the correct numeric type,
-- the upper limit is not lower than the currently configured down limit,
+- the upper limit is not lower than the currently configured down limit (if one is set),
 - invalid configurations are rejected early using structured errors.
 
 It provides the canonical logic for configuring the upper numeric boundary.
@@ -46,8 +47,11 @@ It provides the canonical logic for configuring the upper numeric boundary.
 ## Architectural role
 `process_up_limit_value` is used by the setter:
 
+
 ```
+
 Stepper.up_limit = ...
+
 ```
 
 It acts as the validation and normalization layer for upper‑limit configuration.
@@ -65,8 +69,11 @@ The function integrates with:
 ### 1. Value normalization
 The function first calls:
 
+
 ```
+
 _value = process_value(self, value)
+
 ```
 
 This ensures:
@@ -78,16 +85,24 @@ This ensures:
 ### 2. Boundary consistency check
 The function verifies:
 
-```
-self.down_limit > _value
-```
-
-If true, the configuration is invalid because:
 
 ```
+
+self.down_limit is not UNSET and self.down_limit > _value
+
+```
+
+If `down_limit` is configured and is strictly greater than the requested up limit,
+the configuration is invalid because:
+
+
+```
+
 up_limit must be >= down_limit
+
 ```
 
+If `down_limit` is UNSET, the boundary check is skipped safely.
 Violations are reported using a structured diagnostic error.
 
 ### 3. Returning the normalized value
@@ -101,7 +116,7 @@ Stepper requires consistent numeric boundaries to operate safely.
 This function encapsulates:
 
 - normalization,
-- boundary validation,
+- boundary validation respecting UNSET states,
 - structured error raising.
 
 It ensures that invalid configurations never reach deeper layers of the stepper

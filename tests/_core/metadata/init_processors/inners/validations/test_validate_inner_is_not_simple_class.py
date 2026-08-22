@@ -1,60 +1,54 @@
-from typing import TYPE_CHECKING
-# Outers
-from ......exceptions import SimpleMetadataError
-# Inners
-from ._exception_info_for_inners import _exception_info_for_inners
-# Annotations
-if TYPE_CHECKING:
-    from .....protocols.classes import SimpleClassLike
+import pytest
+from unittest.mock import Mock
+
+from simplibs.exception.testing import assert_exception_function
+from simplibs.object._core.metadata.init_processors.inners.validations.validate_inner_is_not_simple_class import (
+    validate_inner_is_not_simple_class,
+)
+from simplibs.object.exceptions import SimpleDefinitionError
+from simplibs.object import SimpleConstant, SimpleObject
 
 
-def validate_inner_is_not_simple_class(
-    inner: "SimpleClassLike",
-    owner_class: "SimpleClassLike",
-) -> None:
-    """Validates that inner is not SimpleConstant or SimpleObject."""
+def test_validate_inner_is_not_simple_class_pass() -> None:
+    """Test that concrete subclasses pass validation."""
 
-    # Lazy imports to avoid circular dependencies
-    from .......SimpleConstant import SimpleConstant
-    from .......SimpleObject import SimpleObject
+    dummy_owner = Mock(__name__="OwnerClass")
 
-    # 1. Check identity
-    if inner is not SimpleConstant and inner is not SimpleObject:
-        return
+    class ConcreteConstant(SimpleConstant):
+        _type = int
+        _default = 1
 
-    # 2. Diagnostic info
-    class_name, error_name, context, acceptable = _exception_info_for_inners(owner_class)
+    validate_inner_is_not_simple_class(ConcreteConstant, dummy_owner)
 
-    # 3. Raise error
-    raise SimpleMetadataError(
-        error_name=error_name,
+
+@pytest.mark.parametrize("base_class", [SimpleConstant, SimpleObject])
+def test_validate_inner_is_not_simple_class_raises_error(subtests, base_class: type) -> None:
+    """Test that referencing base classes directly raises SimpleDefinitionError."""
+
+    dummy_owner = Mock(__name__="OwnerClass")
+
+    assert_exception_function(
+        subtests,
+        validate_inner_is_not_simple_class,
+
+        invalid_params=(base_class, dummy_owner),
+        exception_type=SimpleDefinitionError,
+
+        error_name="INVALID INNERS DEFINITION",
         label="inner_is_base_class",
         expected="Concrete subclass of SimpleConstant or SimpleObject",
-        value=inner,
-        problem=f"Class '{class_name}' declares base class '{inner.__name__}' inside _inners.",
-        context=context,
+        value=base_class,
+        problem=f"Class 'OwnerClass' declares base class '{base_class.__name__}' inside _inners.",
+        context="OwnerClass._inners validation",
         how_to_fix=(
             "Use concrete subclasses, not the base framework classes.",
             "SimpleObject and SimpleConstant serve only as inheritance roots.",
             "Replace this reference with a specific subclass representing actual data.",
-        ) + acceptable,
+            "Acceptable definition:",
+            "class OwnerClass(SimpleObject):",
+            "    _inners = (FirstElement, SecondElement)",
+        ),
         exception=TypeError,
+
+        verbose=False,
     )
-
-
-_DESIGN_NOTES = """
-# validate_inner_is_not_simple_class
-
-## Purpose
-Ensures that `_inners` does not contain the raw base classes `SimpleObject`
-or `SimpleConstant`. Only concrete subclasses are allowed.
-
-## Behavior
-1. Compares the inner element using identity (`is`) with the base classes.
-2. If invalid, retrieves shared diagnostic info.
-3. Raises a structured `SimpleMetadataError`.
-
-## Notes
-This validator complements `validate_inner_is_simple_subclass`.  
-The first checks inheritance; this one checks that the class is not the root itself.
-"""

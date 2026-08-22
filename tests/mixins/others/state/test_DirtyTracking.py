@@ -1,101 +1,87 @@
-from typing import TYPE_CHECKING
-# Outers
-from ..core_mixins import Snapshot
-# Annotations
-if TYPE_CHECKING:
-    from ..._core.protocols.mixins.state import DirtyTrackingProtocol
-    from ..._core.protocols.alias_typings import SnapshotDiffTuple, SnapshotTuple
+"""
+Tests for `DirtyTracking` mixin.
+"""
+import pytest
+from simplibs.object.mixins.others.state import DirtyTracking
+from simplibs.object.mixins.core_mixins import Snapshot
+from simplibs.object.testing import assert_simple_mixin
 
 
-class DirtyTracking(Snapshot):
-    """
-    Moderní dirty tracking založený na snapshotu.
-    Funguje pro atomy, composites i nested struktury.
-    """
+class TestDirtyTrackingStructure:
 
-    # ----------------------------------------
-    # Základní rozhraní
-    # ----------------------------------------
+    def test_mutable_only_flag(self):
+        assert DirtyTracking._mutable_only is True
 
-    # Definice určení
-    _mutable_only = True
+    def test_inherits_from_snapshot(self):
+        assert issubclass(DirtyTracking, Snapshot)
 
-    # Definice slotů
-    __slots__ = ("_clean_snapshot",)
-
-    # ----------------------------------------
-    # Hook pro inicializaci
-    # ----------------------------------------
-
-    # noinspection PyAttributeOutsideInit
-    def init_mixins(
-        self: "DirtyTrackingProtocol"
-    ) -> None:
-        """
-        Metoda, předávající svojí logiku do inicializačního procesu instance.
-        """
-
-        # 1. Inicializace předků
-        super().init_mixins()
-
-        # 2. Vytvoření snapshotu defaultního stavu
-        self._clean_snapshot = self._build_snapshot()
-
-    # ----------------------------------------
-    # Property - getters
-    # ----------------------------------------
-
-    @property
-    def is_dirty(
-        self: "DirtyTrackingProtocol"
-    ) -> bool:
-        """True pokud se aktuální stav liší od čistého snapshotu."""
-        current_snapshot = self._build_snapshot()
-        return current_snapshot != self._clean_snapshot
-
-    @property
-    def dirty_paths(
-        self: "DirtyTrackingProtocol"
-    ) -> "SnapshotDiffTuple":
-        """Vrací tuple změněných cest (path, old_value, new_value)."""
-        current_snapshot = self._build_snapshot()
-        return self._compare_snapshots(
-            self._clean_snapshot,
-            current_snapshot,
-            constants_only=True
+    def test_assert_simple_mixin_shallow(self, subtests, Outer):
+        assert_simple_mixin(
+            subtests,
+            DirtyTracking,
+            test_class=Outer,
+            slots_names=("_clean_snapshot",),
+            attribute_names=("is_dirty", "dirty_paths", "clean_snapshot"),
+            method_names=("get_dirty_paths", "reset_to_clean", "mark_clean"),
         )
 
-    @property
-    def clean_snapshot(
-        self: "DirtyTrackingProtocol"
-    ) -> "SnapshotTuple":
-        return self._clean_snapshot
 
-    # ----------------------------------------
-    # Methods - GET DIRTY / RESET / MARK CLEAN
-    # ----------------------------------------
+class TestDirtyTrackingIsDirty:
 
-    def get_dirty_paths(
-        self: "DirtyTrackingProtocol",
-        *,
-        constants_only: bool = True
-    ) -> "SnapshotDiffTuple":
-        """Vrací změněné cesty s volbou zda jen konstanty nebo vše."""
-        return self._compare_snapshots(
-            self._clean_snapshot,
-            self._build_snapshot(),
-            constants_only=constants_only
-    )
+    def test_starts_clean(self, Outer):
+        instance = Outer(mixins=(DirtyTracking,), mutable=True)
+        assert instance.is_dirty is False
 
-    def reset_to_clean(
-        self: "DirtyTrackingProtocol"
-    ) -> None:
-        """Vrátí objekt do čistého snapshotu."""
-        self._restore_snapshot(self._clean_snapshot)
+    def test_becomes_dirty_after_change(self, Outer):
+        instance = Outer(mixins=(DirtyTracking,), mutable=True)
+        instance.value = 999
+        assert instance.is_dirty is True
 
-    def mark_clean(
-        self: "DirtyTrackingProtocol"
-    ) -> None:
-        """Označí aktuální stav jako nový čistý snapshot."""
-        # noinspection PyAttributeOutsideInit
-        self._clean_snapshot = self._build_snapshot()
+
+class TestDirtyTrackingPaths:
+
+    def test_dirty_paths_empty_when_clean(self, Outer):
+        instance = Outer(mixins=(DirtyTracking,), mutable=True)
+        assert instance.dirty_paths == ()
+
+    def test_dirty_paths_non_empty_after_change(self, Outer):
+        instance = Outer(mixins=(DirtyTracking,), mutable=True)
+        instance.value = 999
+        assert len(instance.dirty_paths) > 0
+
+    def test_get_dirty_paths_constants_only_false_includes_composites(self, Outer):
+        instance = Outer(mixins=(DirtyTracking,), mutable=True)
+        instance.value = 999
+        all_paths = instance.get_dirty_paths(constants_only=False)
+        constants_paths = instance.get_dirty_paths(constants_only=True)
+        assert len(all_paths) >= len(constants_paths)
+
+
+class TestDirtyTrackingResetAndMark:
+
+    def test_reset_to_clean_restores_snapshot(self, Outer):
+        instance = Outer(mixins=(DirtyTracking,), mutable=True)
+        clean_snapshot = instance.clean_snapshot
+        instance.value = 999
+
+        instance.reset_to_clean()
+
+        assert instance._build_snapshot() == clean_snapshot
+        assert instance.is_dirty is False
+
+    def test_mark_clean_updates_baseline(self, Outer):
+        instance = Outer(mixins=(DirtyTracking,), mutable=True)
+        instance.value = 999
+        assert instance.is_dirty is True
+
+        instance.mark_clean()
+
+        assert instance.is_dirty is False
+        assert instance.clean_snapshot == instance._build_snapshot()
+
+
+class TestDirtyTrackingCompatibility:
+
+    def test_rejects_immutable_instance(self, Outer):
+        with pytest.raises(Exception):
+            Outer(mixins=(DirtyTracking,), mutable=False)

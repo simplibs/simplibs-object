@@ -1,93 +1,49 @@
-from typing import Any, TYPE_CHECKING
-# Outers
-from ......exceptions import SimpleMetadataError
-# Inners
-from ._exception_info_for_type import _exception_info_for_type
-# Annotations
-if TYPE_CHECKING:
-    from .....protocols.classes import SimpleClassLike
+from simplibs.object import SimpleConstant, SimpleObject
+from simplibs.object.exceptions.SimpleDefinitionError import SimpleDefinitionError
+from simplibs.exception.testing.assert_exception_function import assert_exception_function
+from simplibs.object._core.metadata.init_processors.type.validations.validate_type_is_not_empty import (
+    validate_type_is_not_empty,
+)
 
 
-def validate_type_is_not_empty(
-    processed_type: Any,
-    owner_class: "SimpleClassLike"
-) -> None:
-    """Validates that '_type' is not an empty container."""
+def test_validate_type_is_not_empty_pass(sample_object_classes) -> None:
+    """Tests that a non-empty _type attribute passes validation."""
 
-    # 1. Empty container or falsy value
-    if not processed_type:
-        (
-            class_name,
-            class_parent,
-            error_name,
-            context,
-            acceptable_definitions,
-        ) = _exception_info_for_type(owner_class)
+    MyTestConstant, MyTestObject = sample_object_classes
 
-        # 2. Raise structured error
-        raise SimpleMetadataError(
-            error_name=error_name,
-            label="_type",
-            value=processed_type,
-            problem=(
-                "The '_type' attribute evaluates to an empty value.",
-            ),
-            expected="A non-empty type, UnionType, or tuple of types.",
-            how_to_fix=(
-                "Define '_type' as a real type or a non-empty collection of types.",
-                "Empty definitions cannot be validated or mapped.",
-                "Update '_type' to reflect the actual allowed value structure.",
-            ) + acceptable_definitions,
-            context=context,
-            exception=ValueError,
-        )
+    validate_type_is_not_empty(int, MyTestObject)
+    validate_type_is_not_empty((int, str), MyTestObject)
 
-_DESIGN_NOTES = """
-# validate_type_is_not_empty
 
-## Purpose
-Prevents `_type` from being defined as an empty container or any falsy value.
-Examples of invalid definitions:
+def test_validate_type_is_not_empty_raises_error(subtests, sample_object_classes) -> None:
+    """Tests that an empty container for _type raises SimpleDefinitionError."""
 
-- `_type = ()`
-- `_type = []`
-- `_type = {}`
-- `_type = ""`
+    MyTestConstant, MyTestObject = sample_object_classes
 
-Empty definitions cannot be validated and provide no structural information.
+    empty_tuple = ()
 
-## Why this validation exists
-The type system requires a concrete type matrix.  
-If `_type` is empty, downstream logic such as:
-
-- UnionType casting,
-- tuple flattening,
-- validation,
-- instance creation,
-
-cannot operate.
-
-## Pipeline position
-This check runs immediately after:
-
-- `validate_type_is_defined`
-- `validate_type_is_not_none`
-
-It ensures that `_type` is not missing, not `None`, and not empty.
-
-## Error structure
-The helper `_exception_info_for_type` provides:
-
-- class name,
-- parent type (constant vs object),
-- error name,
-- context string,
-- example definitions.
-
-These are injected directly into the exception.
-
-## Notes
-This validator uses truthiness (`if not processed_type:`) intentionally.
-It catches all empty containers without needing explicit type checks.
-
-"""
+    assert_exception_function(
+        subtests,
+        validate_type_is_not_empty,
+        invalid_params=(empty_tuple, MyTestObject),
+        exception_type=SimpleDefinitionError,
+        error_name="INVALID TYPE DEFINITION",
+        label="_type",
+        value=empty_tuple,
+        expected="A non-empty type, UnionType, or tuple of types.",
+        problem="The '_type' attribute evaluates to an empty value.",
+        context="Metadata validation for: MyTestObject._type",
+        how_to_fix=(
+            "Define '_type' as a real type or a non-empty collection of types.",
+            "Empty definitions cannot be validated or mapped.",
+            "Update '_type' to reflect the actual allowed value structure.",
+            "Acceptable definitions:",
+            "class MyTestObject(SimpleObject):",
+            "    _type = int",
+            "    _type = int | str",
+            "    _type = (int, str)",
+            "    ...",
+        ),
+        exception=ValueError,
+        verbose=False,
+    )

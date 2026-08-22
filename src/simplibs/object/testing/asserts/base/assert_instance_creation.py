@@ -34,6 +34,7 @@ def assert_instance_creation(
     subintro = "test_instance_creation::"
 
     # 1. Create instance with TestMixin
+    instance = None
     with maybe_subtest(
         subtests,
         name=f"{intro}{subintro}create_instance",
@@ -45,6 +46,10 @@ def assert_instance_creation(
             pytest.fail(f"Unexpected error during instance creation: {exc}")
 
         assert instance is not None
+
+    # 1.1 Guard clause: If the instance has not been created, we end the test
+    if instance is None:
+        return None
 
     # 2. Verify slot propagation
     with maybe_subtest(
@@ -99,7 +104,8 @@ can instantiate the target class blueprint while properly binding and propagatin
 
 ## Verification Pipeline
 The function executes a comprehensive check of mixin feature propagation across multiple architectural layers:
-1. **Instantiation:** Instantiates `test_class` with `mixins=(TestMixin,)`, ensuring zero unexpected exceptions.
+1. **Instantiation & Guard Gate:** Instantiates `test_class` with `mixins=(TestMixin,)`. If instantiation fails, 
+   a fail-fast guard terminates execution early to prevent downstream cascading errors on an uninitialized instance.
 2. **Slot Propagation:** Confirms internal instance slots (`_test_slot`) are correctly allocated and initialized.
 3. **Property Propagation:** Validates dynamic property getters (`test_property`).
 4. **Instance Method Propagation:** Confirms instance methods (`test_method()`) execute and access instance state.
