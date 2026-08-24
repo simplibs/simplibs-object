@@ -5,10 +5,10 @@
 names.
 
 ```python
-from collections.abc import Iterator
+from src.simplibs.object.mixins.base_class import SimpleMixin
 from .CollectionBase import CollectionBase
 
-class Iterable(CollectionBase):
+class Iterable(CollectionBase, SimpleMixin):
     ...
 ```
 

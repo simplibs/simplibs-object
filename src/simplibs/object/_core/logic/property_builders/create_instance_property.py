@@ -23,10 +23,10 @@ def create_instance_property(
 
     # 4. Build docstring
     doc_string = (
-        f"Instance vnitřního prvku `{inner_meta.name_snake}`.\n\n"
-        f"Getter vrací instanci atomu nebo kompozice uloženou v privátním slotu "
-        f"`{inner_meta.name_private}`.\n"
-        f"Tato property je read-only – přiřazení nové instance není povoleno."
+        f"Instance of the inner element `{inner_meta.name_snake}`.\n\n"
+        f"The getter returns the instance of the atom or composition stored in the "
+        f"private slot `{inner_meta.name_private}`.\n"
+        f"This property is read-only – assigning a new instance is not allowed."
     )
 
     # 5. Return read-only property

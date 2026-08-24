@@ -5,13 +5,10 @@
 plain `int` in bit-manipulation code.
 
 ```python
-import operator
-from numbers import Integral
-from ...core_mixins import NodesDicts, Snapshot
-from ..._commons.immutability import with_constant
-from ._utils import execute_bitwise_op
+from src.simplibs.object.mixins.base_class import SimpleMixin
+from src.simplibs.object.mixins.core_mixins import NodesDicts, NodesTuple, Snapshot
 
-class Bitwise(NodesDicts, Snapshot):
+class Bitwise(Snapshot, NodesDicts, NodesTuple, SimpleMixin):
     ...
 ```
 

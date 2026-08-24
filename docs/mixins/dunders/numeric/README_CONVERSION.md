@@ -6,10 +6,7 @@ the other numeric mixins, every method here returns a plain Python value, never 
 SimpleObject.
 
 ```python
-import math
-from numbers import Number
-from ...base_class import SimpleMixin
-from ._utils import execute_conversion
+from src.simplibs.object.mixins.base_class import SimpleMixin
 
 class Conversion(SimpleMixin):
     ...

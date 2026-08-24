@@ -5,9 +5,10 @@ point — `is_dirty`, `dirty_paths`, `reset_to_clean()`, `mark_clean()` — the 
 concept as "unsaved changes" indicators in editors, generalized to nested composites.
 
 ```python
-from ...core_mixins import Snapshot
+from src.simplibs.object.mixins.base_class import SimpleMixin
+from src.simplibs.object.mixins.core_mixins import Snapshot, NodesTuple
 
-class DirtyTracking(Snapshot):
+class DirtyTracking(Snapshot, NodesTuple, SimpleMixin):
     ...
 ```
 
@@ -40,7 +41,6 @@ Captures the initial clean snapshot right after construction.
 **Under the hood:**
 ```python
 def init_mixins(self):
-    super().init_mixins()
     self._clean_snapshot = self._build_snapshot()
 ```
 
@@ -145,7 +145,9 @@ person.get_dirty_paths(constants_only=False)
 ```python
 def get_dirty_paths(self, *, constants_only=True):
     return self._compare_snapshots(
-        self._clean_snapshot, self._build_snapshot(), constants_only=constants_only
+        self._clean_snapshot, 
+        self._build_snapshot(), 
+        constants_only=constants_only
     )
 ```
 

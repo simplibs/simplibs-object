@@ -6,7 +6,7 @@ representation. Opt-in, intended for "value object" types like `Decimal`, `UUID`
 `PhoneNumber`.
 
 ```python
-from ...base_class import SimpleMixin
+from src.simplibs.object.mixins.base_class import SimpleMixin
 
 class ValueDisplay(SimpleMixin):
     ...

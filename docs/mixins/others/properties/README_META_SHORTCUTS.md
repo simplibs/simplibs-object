@@ -5,7 +5,7 @@ exposes them as top-level properties on the instance — adds no new behavior, o
 convenience.
 
 ```python
-from ...base_class import SimpleMixin
+from src.simplibs.object.mixins.base_class import SimpleMixin
 
 class MetaShortcuts(SimpleMixin):
     ...

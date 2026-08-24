@@ -5,9 +5,11 @@ inner of a composite, so instead of writing `obj.with_composite("uzel", value)`
 generically, callers get a specific, autocomplete-friendly `obj.with_uzel(value)`.
 
 ```python
+from src.simplibs.object.mixins.base_class import SimpleMixin
+from src.simplibs.object.mixins.core_mixins import Snapshot, NodesDicts, NodesTuple
 from .ImmutableMethods import ImmutableMethods
 
-class ImmutableWithInners(ImmutableMethods):
+class ImmutableWithInners(ImmutableMethods, Snapshot, NodesDicts, NodesTuple, SimpleMixin):
     ...
 ```
 

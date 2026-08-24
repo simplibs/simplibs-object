@@ -5,8 +5,7 @@ side effects — no cleanup, no state change — it simply enables the syntax an
 suppresses exceptions.
 
 ```python
-from types import TracebackType
-from ...base_class import SimpleMixin
+from src.simplibs.object.mixins.base_class import SimpleMixin
 
 class ContextManager(SimpleMixin):
     ...

@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 from ._collect_nested_inner_properties import _collect_nested_inner_properties
 # Annotations
 if TYPE_CHECKING:
-    from ......_core.protocols.metadata import SimpleMetadataLike
+    from ....._core.protocols.metadata import SimpleMetadataLike
 
 
 def collect_all_nested_properties(

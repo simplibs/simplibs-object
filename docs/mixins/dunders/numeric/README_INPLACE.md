@@ -5,10 +5,7 @@
 instance's own value via the normal validation/reactivity pipeline, and return `self`.
 
 ```python
-import operator
-from numbers import Number
-from ...base_class import SimpleMixin
-from ._utils import execute_inplace_op
+from src.simplibs.object.mixins.base_class import SimpleMixin
 
 class Inplace(SimpleMixin):
     ...

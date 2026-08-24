@@ -5,9 +5,10 @@
 data is a readable dict rather than an opaque attribute dump.
 
 ```python
-from ...core_mixins import Serialization
+from src.simplibs.object.mixins.base_class import SimpleMixin
+from src.simplibs.object.mixins.core_mixins import NodesDicts, NodesTuple, Snapshot
 
-class PickleState(Serialization):
+class PickleState(Snapshot, NodesDicts, NodesTuple, SimpleMixin):
     ...
 ```
 

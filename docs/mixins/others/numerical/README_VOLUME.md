@@ -4,8 +4,7 @@
 limit enforcement — directly to an instance's own value.
 
 ```python
-from numbers import Number
-from ...base_class import SimpleMixin
+from src.simplibs.object.mixins.base_class import SimpleMixin
 from ._stepper_class import Stepper
 
 class Volume(SimpleMixin):
@@ -42,7 +41,6 @@ volume.value_stepper.up(10)
 **Under the hood:**
 ```python
 def init_mixins(self):
-    super().init_mixins()
     self._value_stepper = Stepper(self)
 ```
 

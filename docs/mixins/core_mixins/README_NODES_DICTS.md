@@ -5,10 +5,10 @@ name-keyed lookup dictionaries — so instead of scanning the tuple linearly to 
 node by name, mixins can do a direct dict lookup.
 
 ```python
-from types import MappingProxyType
+from src.simplibs.object.mixins.base_class import SimpleMixin
 from .NodesTuple import NodesTuple
 
-class NodesDicts(NodesTuple):
+class NodesDicts(NodesTuple, SimpleMixin):
     ...
 ```
 
@@ -42,7 +42,6 @@ index = instance._nodes_index_map["first_name"]
 **Under the hood:**
 ```python
 def init_mixins(self) -> None:
-    super().init_mixins()
 
     self._nodes_dict = MappingProxyType({
         instance.meta.name_snake: (instance, path)

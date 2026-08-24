@@ -4,10 +4,13 @@
 an instance gets full `copy`/`deepcopy`/`pickle` support from a single mixin.
 
 ```python
+from src.simplibs.object.mixins.base_class import SimpleMixin
+from src.simplibs.object.mixins.core_mixins import NodesDicts, NodesTuple, Snapshot
+from ..PickleState import PickleState
 from ..PickleReduce import PicleReduce
 from ..Copyable import Copyable
 
-class Lifecycle(Copyable, PicleReduce):
+class Lifecycle(PickleState, PicleReduce, Copyable, Snapshot, NodesDicts, NodesTuple, SimpleMixin):
     ...
 ```
 

@@ -5,7 +5,7 @@ feel a little like a read-only dict. Provides `keys()`, `values()`, `items()` ov
 instance's direct inners, and freezes the underlying key structures once at init time.
 
 ```python
-from ...base_class import SimpleMixin
+from src.simplibs.object.mixins.base_class import SimpleMixin
 
 class CollectionBase(SimpleMixin):
     ...
@@ -45,7 +45,6 @@ print(person._inners_name_tuple)  # ("first_name", "last_name")
 **Under the hood:**
 ```python
 def init_mixins(self) -> None:
-    super().init_mixins()
     self._inners_name_tuple = tuple(
         inner.meta.name_snake
         for inner in self.meta.inners

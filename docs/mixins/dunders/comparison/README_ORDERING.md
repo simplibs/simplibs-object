@@ -5,7 +5,7 @@ compared, and used with `min()`/`max()` the same way as the raw values they wrap
 Comparing against an incompatible type returns `NotImplemented` rather than raising.
 
 ```python
-from ...base_class import SimpleMixin
+from src.simplibs.object.mixins.base_class import SimpleMixin
 
 class Ordering(SimpleMixin):
     ...

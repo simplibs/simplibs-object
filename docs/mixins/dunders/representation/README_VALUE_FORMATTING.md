@@ -5,7 +5,7 @@ support via `__format__`, `bytes(obj)`, and `bool(obj)` — all routed through
 `self.value`, without touching `__repr__`/`__str__`.
 
 ```python
-from ...base_class import SimpleMixin
+from src.simplibs.object.mixins.base_class import SimpleMixin
 
 class ValueFormatting(SimpleMixin):
     ...

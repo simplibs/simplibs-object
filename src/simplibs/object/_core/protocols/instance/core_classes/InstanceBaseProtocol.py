@@ -14,6 +14,8 @@ class InstanceBaseProtocol(
     for all instance objects (Atoms and Composites) in the Simple system.
     """
 
+    _is_instance_class: bool
+
     def init_mixins(self) -> None:
         """Default empty anchor for reactive mixin initialization."""
         ...

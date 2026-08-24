@@ -5,10 +5,10 @@ compact shortcut for producing a changed instance. It's syntactic sugar over the
 `with_any` change engine; all real logic lives there.
 
 ```python
-from ..._commons.immutability import with_any
-from ...core_mixins import Infrastructure
+from src.simplibs.object.mixins.base_class import SimpleMixin
+from src.simplibs.object.mixins.core_mixins import NodesDicts, NodesTuple, Snapshot
 
-class Call(Infrastructure):
+class Call(Snapshot, NodesDicts, NodesTuple, SimpleMixin):
     ...
 ```
 

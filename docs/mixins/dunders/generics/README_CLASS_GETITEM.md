@@ -5,7 +5,7 @@ to inherit from `typing.Generic`. Purely cosmetic/typing sugar — it doesn't ch
 what the class does at runtime.
 
 ```python
-from ...base_class import SimpleMixin
+from src.simplibs.object.mixins.base_class import SimpleMixin
 
 class ClassGetItem(SimpleMixin):
     ...

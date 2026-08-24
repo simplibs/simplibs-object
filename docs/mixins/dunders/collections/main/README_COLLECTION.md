@@ -6,10 +6,12 @@ single mixin, so a composite instance can behave like a full read-mostly mapping
 both mixins separately.
 
 ```python
+from src.simplibs.object.mixins.base_class import SimpleMixin
 from ..Iterable import Iterable
 from ..Mapping import Mapping
+from ..CollectionBase import CollectionBase
 
-class Collection(Iterable, Mapping):
+class Collection(Iterable, Mapping, CollectionBase, SimpleMixin):
     ...
 ```
 

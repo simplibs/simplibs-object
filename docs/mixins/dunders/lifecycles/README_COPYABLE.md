@@ -4,11 +4,10 @@
 Simple instances, built entirely on the shared snapshot foundation.
 
 ```python
-import copy as _copy
-from ...core_mixins import NodesDicts, Snapshot
-from ..._commons.immutability import create_new_instance
+from src.simplibs.object.mixins.base_class import SimpleMixin
+from src.simplibs.object.mixins.core_mixins import NodesDicts, NodesTuple, Snapshot
 
-class Copyable(NodesDicts, Snapshot):
+class Copyable(Snapshot, NodesDicts, NodesTuple, SimpleMixin):
     ...
 ```
 

@@ -6,10 +6,12 @@ both name-keyed node lookup and snapshot-based state (build / restore / compare)
 inherit from this one class instead of listing both parents separately.
 
 ```python
+from src.simplibs.object.mixins.base_class import SimpleMixin
+from .NodesTuple import NodesTuple
 from .NodesDicts import NodesDicts
 from .Snapshot import Snapshot
 
-class Infrastructure(NodesDicts, Snapshot):
+class Infrastructure(Snapshot, NodesDicts, NodesTuple, SimpleMixin):
     ...
 ```
 

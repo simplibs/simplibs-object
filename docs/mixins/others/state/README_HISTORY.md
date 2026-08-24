@@ -5,16 +5,10 @@ actions are recorded as timestamped snapshots, navigable step by step or by
 index/timestamp, diffable between any two points, and exportable to/from a dict.
 
 ```python
-from datetime import datetime
-from ..core_mixins import Serialization
-from ._history_utils.core import set_history_limit, record_state, find_snapshot
-from ._history_utils.transfer import export_history_to_dict, import_history_from_dict
-from ._history_utils.navigations import (
-    history_undo, history_redo,
-    go_to_last_history, go_to_history_on_timestamp, go_to_history_on_index
-)
+from src.simplibs.object.mixins.base_class import SimpleMixin
+from src.simplibs.object.mixins.core_mixins import Serialization, Snapshot, NodesDicts, NodesTuple
 
-class History(Serialization):
+class History(Serialization, Snapshot, NodesDicts, NodesTuple, SimpleMixin):
     ...
 ```
 
@@ -55,7 +49,6 @@ first entry.
 **Under the hood:**
 ```python
 def init_mixins(self):
-    super().init_mixins()
     self._history = []
     self._history_limit = None
     self._history_index = 0
@@ -86,7 +79,23 @@ person.record_state()
 **Under the hood:**
 ```python
 def record_state(self):
-    return record_state(self)
+    
+    # 1. Create timestamp and snapshot
+    timestamp = datetime.now()
+    snapshot = self._build_snapshot()
+
+    # 2. Enforce history limit
+    if self._history_limit and self._history_count >= self._history_limit:
+        self._history.pop(0)
+
+    # 3. Store entry
+    history_entry = (timestamp, snapshot)
+    self._history.append(history_entry)
+    self._history_count = len(self._history)
+    self._history_index = self._history_count - 1
+
+    # 4. Return entry
+    return history_entry
 ```
 
 [▲ Back to top](#-table-of-contents)
@@ -158,7 +167,19 @@ def history_limit(self):
 
 @history_limit.setter
 def history_limit(self, value):
-    set_history_limit(self, value)
+
+    # 1. Validate value
+    if not isinstance(value, int) or value < 1:
+        raise_history_limit_not_positive_integer(self, value)
+
+    # 2. Adjust history to the new limit
+    if self._history_count > value:
+        del self._history[:(self._history_count - value)]
+        self._history_count = len(self._history)
+        self._history_index = self._history_count - 1
+
+    # 3. Store limit
+    self._history_limit = value
 ```
 
 [▲ Back to top](#-table-of-contents)
@@ -183,7 +204,16 @@ person.undo()
 **Under the hood:**
 ```python
 def undo(self):
-    return history_undo(self)
+
+    # 1. Check if a backward move is possible
+    if self._history_index <= 0:
+        return False
+
+    # 2. Move to the previous entry
+    self._history_index -= 1
+    _, snapshot = self._history[self._history_index]
+    self._restore_snapshot(snapshot)
+    return True
 ```
 
 [▲ Back to top](#-table-of-contents)
@@ -208,7 +238,16 @@ person.redo()
 **Under the hood:**
 ```python
 def redo(self):
-    return history_redo(self)
+
+    # 1. Check if a forward move is possible
+    if self._history_index >= self._history_count - 1:
+        return False
+
+    # 2. Move to the next entry
+    self._history_index += 1
+    _, snapshot = self._history[self._history_index]
+    self._restore_snapshot(snapshot)
+    return True
 ```
 
 [▲ Back to top](#-table-of-contents)
@@ -228,7 +267,15 @@ Moves to the last recorded history entry.
 **Under the hood:**
 ```python
 def go_to_last(self):
-    go_to_last_history(self)
+
+    # 1. Check if already at the last entry
+    last_index = self._history_count - 1
+    if self._history_index != last_index:
+
+        # 2. Switch to the last entry
+        self._history_index = last_index
+        _, snapshot = self._history[self._history_index]
+        self._restore_snapshot(snapshot)
 ```
 
 [▲ Back to top](#-table-of-contents)
@@ -248,7 +295,15 @@ Moves to a specific history index.
 **Under the hood:**
 ```python
 def go_to_index(self, index):
-    go_to_history_on_index(self, index)
+
+    # 1. Validate index
+    if not (0 <= index < self._history_count):
+        raise_unvalide_snapshot_index(self, index)
+
+    # 2. Switch to the selected entry
+    self._history_index = index
+    _, snapshot = self._history[self._history_index]
+    self._restore_snapshot(snapshot)
 ```
 
 [▲ Back to top](#-table-of-contents)
@@ -268,7 +323,20 @@ Moves to the history entry closest to a given timestamp.
 **Under the hood:**
 ```python
 def go_to_timestamp(self, timestamp):
-    go_to_history_on_timestamp(self, timestamp)
+
+    # 1. Validate timestamp type
+    if not isinstance(timestamp, datetime):
+        raise_unvalide_timestamp(self, timestamp)
+
+    # 2. Search for matching timestamp
+    for i, (ts, snapshot) in enumerate(self._history):
+        if ts == timestamp:
+            self._history_index = i
+            self._restore_snapshot(snapshot)
+            return
+
+    # 3. Timestamp not found
+    raise_unvalide_snopshot_timestamp(self, timestamp)
 ```
 
 [▲ Back to top](#-table-of-contents)
@@ -288,7 +356,10 @@ Exports the full history to a dict, for persistence or transfer.
 **Under the hood:**
 ```python
 def export_history_to_dict(self):
-    return export_history_to_dict(self)
+    return {
+        "_owner_class": self.meta.owner_class,
+        "history": self.history
+    }
 ```
 
 [▲ Back to top](#-table-of-contents)
@@ -308,7 +379,41 @@ Imports a previously exported history dict, restoring it in place.
 **Under the hood:**
 ```python
 def import_history_from_dict(self, history_dict):
-    import_history_from_dict(self, history_dict)
+
+    # 1. Validate input type
+    if not isinstance(history_dict, dict):
+        raise_unvalide_history_import_file(self, history_dict)
+
+    # 2. Validate owner class
+    owner_class = history_dict.get("_owner_class", UNSET)
+    if self.meta.owner_class != owner_class:
+        raise_unvalide_owner_class_mismatch(self, owner_class)
+
+    # 3. Backup previous history and state
+    backup_history = list(self._history)
+    backup_count = self._history_count
+    backup_index = self._history_index
+
+    # 4. Replace history
+    try:
+        # 4.1 Load new history and sync count
+        self._history = list(history_dict["history"])
+        self._history_count = len(self._history)
+
+        # 4.2 Jump to the newest state
+        self.go_to_last()
+
+        # 4.3 Apply limit trimming (if configured)
+        if self.history_limit:
+            self.history_limit = self.history_limit
+
+    # 5. Restore previous state on failure
+    except Exception as e:
+        self._history = backup_history
+        self._history_count = backup_count
+        self._history_index = backup_index
+        self.go_to_last()
+        raise e
 ```
 
 [▲ Back to top](#-table-of-contents)

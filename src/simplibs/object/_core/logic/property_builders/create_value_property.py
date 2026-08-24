@@ -39,13 +39,13 @@ def create_value_property(
     # 5. Extend docstring (setter part)
     if is_constant:
         doc_string += (
-            "Setter provádí normalizaci hodnoty, uložení a "
-            "spouští aktualizační kaskádu směrem nahoru."
+            "The setter normalizes the value, stores it, and "
+            "triggers an update cascade upwards."
         )
     else:
         doc_string += (
-            "Setter rozloží (dekomponuje) vstupní hodnotu a distribuuje ji "
-            "do vnitřních prvků kompozice."
+            "The setter decomposes the input value and distributes it "
+            "among the internal elements of the composition."
         )
 
     # 6. Return full property

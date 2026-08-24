@@ -4,9 +4,10 @@
 `obj[key] = value`, `key in obj`, `obj.get(key, default)`, `len(obj)`.
 
 ```python
+from src.simplibs.object.mixins.base_class import SimpleMixin
 from .CollectionBase import CollectionBase
 
-class Mapping(CollectionBase):
+class Mapping(CollectionBase, SimpleMixin):
     ...
 ```
 

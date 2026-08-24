@@ -6,12 +6,10 @@ instances behave like plain numbers in expressions. Every operator returns a **n
 instance and includes a lazy fallback type conversion when the raw operation fails.
 
 ```python
-import operator
-from numbers import Number
-from ...core_mixins import NodesDicts, Snapshot
-from ._utils import execute_arithmetic_op
+from src.simplibs.object.mixins.base_class import SimpleMixin
+from src.simplibs.object.mixins.core_mixins import NodesDicts, NodesTuple, Snapshot
 
-class Arithmetic(NodesDicts, Snapshot):
+class Arithmetic(Snapshot, NodesDicts, NodesTuple, SimpleMixin):
     ...
 ```
 

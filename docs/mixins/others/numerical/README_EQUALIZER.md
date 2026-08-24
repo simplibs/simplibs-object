@@ -4,12 +4,11 @@
 property named `<inner_name>_stepper` — one fader per channel.
 
 ```python
-from numbers import Number
-from .._commons.constants import STEPPER
-from ..core_mixins import NodesTuple
+from src.simplibs.object.mixins.base_class import SimpleMixin
+from src.simplibs.object.mixins.core_mixins import NodesTuple
 from ._stepper_class import Stepper
 
-class Equalizer(NodesTuple):
+class Equalizer(NodesTuple, SimpleMixin):
     ...
 ```
 
@@ -53,7 +52,7 @@ def __extend_instance_class__(instance_cls):
         def getter(self, _name=name):
             return self._steppers[_name]
 
-        prop_name = f"{name}{STEPPER}"
+        prop_name = f"{name}{"_stepper"}"
         setattr(instance_cls, prop_name, property(getter))
 
     return instance_cls
@@ -81,7 +80,6 @@ mixer = Mixer(volume=50, treble=10)
 **Under the hood:**
 ```python
 def init_mixins(self):
-    super().init_mixins()
     self._steppers = {
         instance.meta.name_snake: Stepper(instance)
         for instance, _ in self._nodes_tuple

@@ -5,7 +5,7 @@ further writes into errors, `obj.unlock()` turns them back on. Unlike structural
 immutability, this is a *runtime* toggle on an otherwise mutable instance.
 
 ```python
-from ...base_class import SimpleMixin
+from src.simplibs.object.mixins.base_class import SimpleMixin
 
 class Permission(SimpleMixin):
     ...

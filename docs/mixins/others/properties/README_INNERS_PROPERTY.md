@@ -5,8 +5,7 @@ convenient access to their inner elements, based on the blueprint definition —
 attribute-style counterpart to `Mapping`'s dict-style access.
 
 ```python
-from ...base_class import SimpleMixin
-from ._utils._utils_for_inners_property import collect_all_nested_properties
+from src.simplibs.object.mixins.base_class import SimpleMixin
 
 class InnersProperty(SimpleMixin):
     ...
@@ -50,6 +49,51 @@ def __extend_instance_class__(instance_cls):
     for name, prop in nested_props.items():
         setattr(instance_cls, name, prop)
     return instance_cls
+```
+
+```python
+def collect_all_nested_properties(meta):
+
+    # 1. Initialize result container
+    result = {}
+
+    # 2. Iterate through direct inners
+    for inner in meta.inners:
+
+        # 2.1 Extract metadata
+        inner_meta = inner.meta
+        inner_meta: "SimpleMetadataLike"
+
+        # 2.2 Process only composite inners
+        if not inner_meta.is_constant:
+
+            # 2.2.1 Build initial path tuple
+            path = (inner_meta.name_private,)
+
+            # 2.2.2 Recursively collect nested properties
+            _collect_nested_inner_properties(inner_meta, path, result)
+
+    # 3. Return collected properties
+    return result
+```
+
+```python
+def _collect_nested_inner_properties(meta, path, result):
+
+    # 1. Iterate through inner elements
+    for inner in meta.inners:
+
+        # 1.1 Extract metadata and extend path
+        inner_meta = inner.meta
+        new_path = path + (inner_meta.name_private,)
+
+        # 1.2 Create properties (for constants and composites)
+        props = create_properties_for_inner(inner_meta, new_path)
+        result.update(props)
+
+        # 1.3 Recursively process composite inners
+        if not inner_meta.is_constant:
+            _collect_nested_inner_properties(inner_meta, new_path, result)
 ```
 
 [▲ Back to top](#-table-of-contents)

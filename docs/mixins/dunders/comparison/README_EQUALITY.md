@@ -5,7 +5,7 @@ compares values (unwrapping other Simple instances); hashing strategy depends on
 mutability — identity hash for mutable instances, value hash for immutable ones.
 
 ```python
-from ...base_class import SimpleMixin
+from src.simplibs.object.mixins.base_class import SimpleMixin
 
 class Equality(SimpleMixin):
     ...

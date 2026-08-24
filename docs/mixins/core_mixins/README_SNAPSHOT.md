@@ -6,10 +6,10 @@ shared foundation behind copying, pickling, default-state resets, dirty tracking
 undo/redo history.
 
 ```python
+from src.simplibs.object.mixins.base_class import SimpleMixin
 from .NodesTuple import NodesTuple
-from ._utils.snapshot import compare_snapshots
 
-class Snapshot(NodesTuple):
+class Snapshot(NodesTuple, SimpleMixin):
     ...
 ```
 
@@ -104,12 +104,30 @@ diff = instance._compare_snapshots(old_snapshot, new_snapshot, constants_only=Tr
 **Under the hood:**
 ```python
 def _compare_snapshots(self, snapshot1, snapshot2, *, constants_only=False):
-    return compare_snapshots(
-        self._nodes_tuple,
-        snapshot1,
-        snapshot2,
-        constants_only=constants_only
-    )
+    diffs = []
+    nodes_tuple = self._nodes_tuple
+
+    try:
+        # 1. Iterate through nodes and both snapshots simultaneously
+        for (_, path), snap1_value, snap2_value in zip(nodes_tuple, snapshot1, snapshot2):
+
+            # 2. Skip composite nodes when constants_only=True
+            if constants_only and path[-1] == "_value":
+                continue
+
+            # 3. Append differences
+            if snap1_value != snap2_value:
+                diffs.append((path, snap1_value, snap2_value))
+
+        return tuple(diffs)
+
+    except (ValueError, TypeError) as error:
+        raise_snapshot_incompatible_error(
+            nodes_tuple=nodes_tuple,
+            snapshot1=snapshot1,
+            snapshot2=snapshot2,
+            error=error,
+        )
 ```
 
 [▲ Back to top](#-table-of-contents)

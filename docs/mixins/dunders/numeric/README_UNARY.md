@@ -5,12 +5,10 @@ the same lazy fallback type conversion as `Arithmetic`. Every operator returns a
 instance.
 
 ```python
-import operator
-from numbers import Number
-from ...core_mixins import NodesDicts, Snapshot
-from ._utils import execute_unary_op
+from src.simplibs.object.mixins.base_class import SimpleMixin
+from src.simplibs.object.mixins.core_mixins import NodesDicts, NodesTuple, Snapshot
 
-class Unary(NodesDicts, Snapshot):
+class Unary(Snapshot, NodesDicts, NodesTuple, SimpleMixin):
     ...
 ```
 

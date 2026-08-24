@@ -5,12 +5,10 @@ instances — every method here returns a **new** instance rather than modifying
 `self`.
 
 ```python
-from ...core_mixins import Infrastructure
-from .._commons.immutability import (
-    with_constants, with_constant, with_composite, with_any, create_new_instance
-)
+from src.simplibs.object.mixins.base_class import SimpleMixin
+from src.simplibs.object.mixins.core_mixins import Snapshot, NodesDicts, NodesTuple
 
-class ImmutableMethods(Infrastructure):
+class ImmutableMethods(Snapshot, NodesDicts, NodesTuple, SimpleMixin):
     ...
 ```
 

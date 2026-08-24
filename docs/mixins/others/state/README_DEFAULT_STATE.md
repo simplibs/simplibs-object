@@ -5,10 +5,10 @@ three ways to use that memory: reset to it, build a fresh instance from it, or c
 the current state into a new instance.
 
 ```python
-from ...core_mixins import Snapshot
-from .._commons.immutability import create_new_instance
+from src.simplibs.object.mixins.base_class import SimpleMixin
+from src.simplibs.object.mixins.core_mixins import Snapshot, NodesTuple
 
-class DefaultState(Snapshot):
+class DefaultState(Snapshot, NodesTuple, SimpleMixin):
     ...
 ```
 
@@ -38,7 +38,6 @@ Captures the default-state snapshot once, right after construction.
 **Under the hood:**
 ```python
 def init_mixins(self):
-    super().init_mixins()
     self._default_state_snapshot = self._build_snapshot()
 ```
 
@@ -65,7 +64,7 @@ clone = person.clone_instance()
 ```python
 def clone_instance(self):
     new_instance = self.create_new_default_instance()
-    new_instance._restore_snapshot(self._build_snapshot())
+    new_instance.reset_to_default_values()
     return new_instance
 ```
 
@@ -117,7 +116,16 @@ fresh = person.create_new_default_instance()
 **Under the hood:**
 ```python
 def create_new_default_instance(self):
-    return create_new_instance(self, self._default_state_snapshot)
+    
+    # 1. Create a new instance
+    new_instance = object.__new__(type(self))
+    new_instance.__init__()
+
+    # 2. Load snapshot values
+    new_instance.reset_to_default_values()
+
+    # 3. Return the new instance
+    return new_instance
 ```
 
 [▲ Back to top](#-table-of-contents)

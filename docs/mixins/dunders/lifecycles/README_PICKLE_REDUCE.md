@@ -9,9 +9,11 @@ and what state to apply afterward. Builds on `PickleState` to reuse its
 > match the existing codebase.
 
 ```python
+from src.simplibs.object.mixins.base_class import SimpleMixin
+from src.simplibs.object.mixins.core_mixins import NodesDicts, NodesTuple, Snapshot
 from .PickleState import PickleState
 
-class PicleReduce(PickleState):
+class PicleReduce(PickleState, Snapshot, NodesDicts, NodesTuple, SimpleMixin):
     ...
 ```
 
