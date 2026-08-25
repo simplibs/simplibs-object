@@ -24,6 +24,8 @@ other mixin that needs to walk or snapshot the instance's node tree.
 
 * [Composition](#composition)
 
+[⬅️ Back to main Mixins Overview](../README_MIXINS_OVERVIEW.md)
+
 ---
 
 ### Composition
@@ -54,4 +56,3 @@ class Infrastructure(NodesDicts, Snapshot):
 
 ---
 
-[⬅️ Back to Mixins Overview](../../README_MIXINS_OVERVIEW.md)

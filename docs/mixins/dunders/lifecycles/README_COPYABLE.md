@@ -18,6 +18,8 @@ class Copyable(Snapshot, NodesDicts, NodesTuple, SimpleMixin):
 * [`__copy__`](#__copy__)
 * [`__deepcopy__`](#__deepcopy__)
 
+[⬅️ Back to main Mixins Overview](../../README_MIXINS_OVERVIEW.md)
+
 ---
 
 ### `__copy__`
@@ -75,4 +77,3 @@ def __deepcopy__(self, memo):
 
 ---
 
-[⬅️ Back to Mixins Overview](../../../README_MIXINS_OVERVIEW.md)

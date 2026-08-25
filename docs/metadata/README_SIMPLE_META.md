@@ -1,9 +1,9 @@
-# 🧠 `SimpleMeta` — Metaclass, která řídí celý životní cyklus
+# 🧠 `SimpleMeta` — The metaclass that runs the whole lifecycle
 
-`SimpleMeta` je mozek celého Simple systému. Zatímco `SimpleBase`,
-`SimpleConstant` a `SimpleObject` popisují, *co* uživatel smí deklarovat,
-`SimpleMeta` řídí, *co se s tím stane* — od okamžiku definice třídy až po
-vytvoření běžící instance.
+`SimpleMeta` is the brain of the whole Simple system. While `SimpleBase`,
+`SimpleConstant`, and `SimpleObject` describe *what* the user is allowed to
+declare, `SimpleMeta` controls *what happens with it* — from the moment the
+class is defined all the way to the creation of a running instance.
 
 ```
 SimpleBase(metaclass=SimpleMeta)
@@ -11,32 +11,29 @@ SimpleBase(metaclass=SimpleMeta)
     └── SimpleObject
 ```
 
-Metaclass se stará o pět věcí, v tomhle pořadí (a není to náhoda — kopíruje
-to přirozený životní cyklus třídy: vznik → ochrana → instanciace →
-reprezentace → přístup k metadatům):
-
-1. [`__new__`](#__new__--vznik-třídy) — vznik třídy a napojení metadat
-2. [`__setattr__`](#__setattr__--write-once-ochrana) — write-once ochrana
-3. [`__call__`](#__call__--vytváření-instancí) — vytváření instancí
-4. [`__repr__` a `__str__`](#__repr__-a-__str__--reprezentace) — reprezentace
-5. [`meta`](#meta--přístup-k-metadatům) — přístup k metadatům
+The metaclass takes care of five things, in this order. And it's not a
+coincidence — it mirrors a class's natural lifecycle: creation → protection
+→ instantiation → representation → metadata access.
 
 ---
 
-## 🧭 Obsah
+## 🧭 Contents
 
-* [`__new__` — vznik třídy](#__new__--vznik-třídy)
-* [`__setattr__` — write-once ochrana](#__setattr__--write-once-ochrana)
-* [`__call__` — vytváření instancí](#__call__--vytváření-instancí)
-* [`__repr__` a `__str__` — reprezentace](#__repr__-a-__str__--reprezentace)
-* [`meta` — přístup k metadatům](#meta--přístup-k-metadatům)
-* [Doporučené pořadí dunder metod](#doporučené-pořadí-dunder-metod)
+* [`__new__` — class creation](#__new__--class-creation)
+* [`__setattr__` — write-once protection](#__setattr__--write-once-protection)
+* [`__call__` — creating instances](#__call__--creating-instances)
+* [`__repr__` and `__str__` — representation](#__repr__-and-__str__--representation)
+* [`meta` — metadata access](#meta--metadata-access)
+* [Recommended dunder method order](#recommended-dunder-method-order)
+
+[⬅️ Back to main README](../../README.md)
 
 ---
 
-## `__new__` — vznik třídy
+## `__new__` — class creation
 
-Spouští se v okamžiku, kdy Python načítá definici nové třídy (`class Age(SimpleConstant): ...`).
+Runs the moment Python processes the definition of a new class
+(`class Age(SimpleConstant): ...`).
 
 ```python
 def __new__(mcls, name, bases, namespace):
@@ -55,35 +52,37 @@ def __new__(mcls, name, bases, namespace):
     return cls
 ```
 
-Tři důležité detaily:
+Three important details:
 
-**1. Rozlišení konstanta vs. kompozice je jediný `hasattr` check.** Systém
-nikde nenutí uživatele explicitně říct "tohle je kompozice" — stačí, že
-třída definuje `_inners`, a metaclass sama pozná, že potřebuje
-`SimpleObjectMetadata` místo `SimpleConstantMetadata`. Jednoduché, ale
-elegantní rozhodovací pravidlo.
+**1. Distinguishing constant vs. composition is a single `hasattr`
+check.** The system never forces the user to explicitly say "this is a
+composition" — it's enough for the class to define `_inners`, and the
+metaclass figures out on its own that it needs `SimpleObjectMetadata`
+instead of `SimpleConstantMetadata`. A simple, but elegant, decision rule.
 
-**2. Dvojí guard proti nekonečné rekurzi / zbytečné práci.** `name in
-BASE_CLASS_NAMES` přeskočí systémové třídy (`SimpleBase`, `SimpleConstant`,
-`SimpleObject` samotné — ty žádná metadata mít nemají). `hasattr(cls,
-"_is_instance_class")` přeskočí **dynamicky vytvořené runtime třídy**
-(atomické a kompozitní instance vytvořené přes `make_atom_class`/
-`make_composite_class`) — ty totiž procházejí stejnou metaclassou
-(dědí `_type`/`_inners` atd. z blueprintu), ale metadata už mají hotová
-a nový výpočet by byl zbytečný i chybný. Tohle je přesně to místo, kde se
-setkává deklarativní svět (blueprinty) s runtime světem (instance).
+**2. A double guard against infinite recursion / needless work.** `name in
+BASE_CLASS_NAMES` skips the system classes (`SimpleBase`, `SimpleConstant`,
+`SimpleObject` themselves — those don't get any metadata at all).
+`hasattr(cls, "_is_instance_class")` skips **dynamically created runtime
+classes** (atomic and composite instances created via
+`make_atom_class`/`make_composite_class`) — these go through the same
+metaclass (they inherit `_type`/`_inners` etc. from the blueprint), but
+their metadata is already computed, and recomputing it would be both
+wasteful and wrong. This is exactly the point where the declarative world
+(blueprints) meets the runtime world (instances).
 
-**3. Metadata se počítají jednou a natvrdo se přilepí na třídu.**
-`cls.__metadata__ = calculated_metadata` — od teď je metadata pro danou
-třídu hotová, spočítaná a (díky `__setattr__` níže) neměnná.
+**3. Metadata is computed once and permanently attached to the class.**
+`cls.__metadata__ = calculated_metadata` — from this point on, the metadata
+for the given class is complete, computed, and (thanks to the `__setattr__`
+below) immutable.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## `__setattr__` — write-once ochrana
+## `__setattr__` — write-once protection
 
-Spouští se při **každém** přiřazení atributu na úrovni třídy.
+Runs on **every** attribute assignment at the class level.
 
 ```python
 def __setattr__(cls, attr_name, new_value):
@@ -92,28 +91,28 @@ def __setattr__(cls, attr_name, new_value):
     super().__setattr__(attr_name, new_value)
 ```
 
-Kontrola je záměrně `attr_name in cls.__dict__`, ne `getattr(cls,
-attr_name, UNSET) is not UNSET` (viz zakomentovaný řádek v kódu) —
-rozdíl je důležitý: `cls.__dict__` hlídá jen atributy definované **přímo
-na téhle třídě**, ne zděděné. Kdyby se kontrolovalo přes `getattr`, nešlo
-by v podtřídě vůbec nic nastavit, protože by to vždy narazilo na zděděnou
-hodnotu z rodiče.
+The check is deliberately `attr_name in cls.__dict__`, not `getattr(cls,
+attr_name, UNSET) is not UNSET` (see the commented-out line in the code) —
+the difference matters: `cls.__dict__` only guards attributes defined
+**directly on this class**, not inherited ones. If the check went through
+`getattr`, it would be impossible to set anything at all in a subclass,
+because it would always hit the inherited value from the parent.
 
-**Proč blueprint musí být write-once:** jakmile jednou proběhne
-`__new__` a spočítají se metadata, celý zbytek systému (validace, výpočet
-defaultů, instance builders) spoléhá na to, že se definice třídy už nikdy
-nezmění. Kdyby šlo za běhu přepsat `_type` nebo `_default`, metadata by
-okamžitě zastarala a nikdo by o tom nevěděl. Write-once ochrana tohle
-riziko úplně eliminuje — jakýkoliv pokus o přepsání je okamžitá,
-srozumitelná chyba místo tichého nekonzistentního stavu.
+**Why a blueprint has to be write-once:** once `__new__` has run and the
+metadata has been computed, the rest of the system (validation, default
+computation, instance builders) relies on the class definition never
+changing again. If `_type` or `_default` could be overwritten at runtime,
+the metadata would instantly go stale and nobody would know. Write-once
+protection eliminates this risk entirely — any attempt to overwrite results
+in an immediate, clear error instead of a silent, inconsistent state.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## `__call__` — vytváření instancí
+## `__call__` — creating instances
 
-Spouští se, když se blueprint třída *zavolá jako funkce*
+Runs when a blueprint class is *called like a function*
 (`Age()`, `Person(mutable=False)`).
 
 ```python
@@ -121,71 +120,76 @@ def __call__(cls, *, mixins=(), as_atom=False, mutable=True):
     return create_instance(cls, mixins=mixins, as_atom=as_atom, mutable=mutable)
 ```
 
-Sama `SimpleMeta` tady žádnou logiku neobsahuje — jen deleguje na
-`create_instance`, což je samostatný, mnohem komplexnější orchestrátor
-celého vytváření instance. Stručný přehled toho, co se pod kapotou stane
-(detailní dokumentace bude v samostatném README pro instance buildery):
+`SimpleMeta` itself contains no logic here — it just delegates to
+`create_instance`, a separate, much more complex orchestrator of the whole
+instance-creation process. A brief overview of what happens under the hood
+(detailed documentation will be in a dedicated README about instance
+builders):
 
-1. **Validace vstupu** — `cls` nesmí být systémová base třída, `as_atom`
-   a `mutable` musí být `bool`.
-2. **Rozhodnutí atom vs. composite** (`is_atom = cls.meta.is_constant or
-   as_atom`) — konstanta je vždy atom, kompozice může být vynucena do
-   atomického chování přes `as_atom=True`.
-3. **Kontrola hashovatelnosti pro immutable** — immutable hodnota musí
-   být hashovatelná, jinak by nedávala smysl jako neměnná.
-4. **Výběr strukturální base třídy** (`get_base_class`) — vybírá se
-   z kombinace atom/composite × mutable/immutable.
-5. **Kompilace finální runtime třídy** (`create_instance_class`) —
-   zpracování mixinů, sestavení namespace, sloty, rozšiřující hooky.
-6. **Alokace syrové paměti** přes `object.__new__` — bez předčasného
-   spuštění `__init__` rodičovských tříd.
-7. **Inicializace** (`instance.__init__()`).
-8. **Vrácení hotové instance.**
+1. **Input validation** — `cls` must not be a system base class, `as_atom`
+   and `mutable` must be `bool`.
+2. **Deciding atom vs. composite** (`is_atom = cls.meta.is_constant or
+   as_atom`) — a constant is always an atom; a composition can be forced
+   into atomic behavior via `as_atom=True`.
+3. **Hashability check for immutable** — an immutable value must be
+   hashable, otherwise it wouldn't make sense as immutable.
+4. **Selecting the structural base class** (`get_base_class`) — chosen from
+   the combination of atom/composite × mutable/immutable.
+5. **Compiling the final runtime class** (`create_instance_class`) —
+   processing mixins, building the namespace, slots, extension hooks.
+6. **Allocating raw memory** via `object.__new__` — without prematurely
+   running the parent classes' `__init__`.
+7. **Initialization** (`instance.__init__()`).
+8. **Returning the finished instance.**
 
-Klíčová myšlenka je **dvoufázová konstrukce**: nejdřív se jednou zkompiluje
-runtime třída (`create_instance_class`), teprve pak se z ní alokuje
-instance. Tohle oddělení znamená, že dynamická tvorba třídy (ta drahá
-část) proběhne jednou za spuštění dané kombinace parametrů, ne opakovaně
-pro každou jednotlivou instanci.
+The key idea is **two-phase construction**: first the runtime class is
+compiled once (`create_instance_class`), and only then is an instance
+allocated from it. This separation means the dynamic class creation (the
+expensive part) happens once per given combination of parameters, not
+repeatedly for every single instance.
 
-### Odkud se berou skutečné runtime třídy
+### Where the actual runtime classes come from
 
-`create_instance` interně sahá po dvou "továrnách", které žijí
-v `_core/metadata/instance_builders/`:
+Internally, `create_instance` reaches for two "factories" that live in
+`_core/metadata/instance_builders/`:
 
-* **`make_atom_class(meta, mutable=...)`** — vytvoří atomickou instanční
-  třídu. Dědí ze dvou rodičů: `InstanceBase` (identita, `_is_instance_class`,
-  sloty, přístup k metadatům) a `meta.owner_class` (doménové chování
-  z blueprintu). Přidá sloty `_value`, `_owner`, `_locked`, hotový
-  `__init__`, `value` property, a u mutable varianty i
-  `_root_value_setter` pro reaktivní zápis. Nakonec **odstraní deklarativní
-  artefakty** (`_type`, `_default`, `_validate`, ...) — instance nemá
-  přístup ke schématu, jen k výsledku.
-* **`make_composite_class(meta, mutable=...)`** — postaví kompozitní
-  instanční třídu **nad atomickou** (`class_parents = (base_class,)`, kde
-  `base_class` je právě `atom_class_mutable`/`atom_class_immutable`). Přidá
-  slot pro každý vnitřní prvek (`inner.meta.name_private`), properties pro
-  přístup k jednotlivým `_inners`, a u mutable varianty reaktivní hooky
-  `_recalculate_self` a `_recalculate_inners` — tohle je přesně ten
-  mechanismus, který dělá ze změny v jednom vnitřním prvku okamžitý
-  přepočet celé kompozice.
+* **`make_atom_class(meta, mutable=...)`** — creates an atomic instance
+  class. It inherits from two parents: `InstanceBase` (identity,
+  `_is_instance_class`, slots, metadata access) and `meta.owner_class`
+  (the domain behavior from the blueprint). It adds the slots `_value`,
+  `_owner`, `_locked`, a finished `__init__`, a `value` property, and, for
+  the mutable variant, `_root_value_setter` for reactive writes. Finally,
+  it **removes the declarative artifacts** (`_type`, `_default`,
+  `_validate`, ...) — an instance has no access to the schema, only to the
+  result.
+* **`make_composite_class(meta, mutable=...)`** — builds a composite
+  instance class **on top of the atomic one** (`class_parents =
+  (base_class,)`, where `base_class` is precisely
+  `atom_class_mutable`/`atom_class_immutable`). It adds a slot for every
+  inner element (`inner.meta.name_private`), properties for accessing each
+  individual `_inners` element, and, for the mutable variant, the reactive
+  hooks `_recalculate_self` and `_recalculate_inners` — this is exactly the
+  mechanism that makes a change in one inner element trigger an immediate
+  recalculation of the whole composition.
 
-Obě funkce sdílejí stejný vzor: **sestav jméno → vyber rodiče → postav
-`class_dict` → `type(name, bases, dict)` → ukliď deklarativní zbytky.**
-Použití `type(...)` místo `exec` drží celou kompilaci bezpečnou
-a explicitní — žádný generovaný zdrojový kód, žádné parsování řetězců.
+Both functions share the same pattern: **build the name → choose the
+parents → build the `class_dict` → `type(name, bases, dict)` → clean up
+declarative leftovers.** Using `type(...)` instead of `exec` keeps the whole
+compilation safe and explicit — no generated source code, no string
+parsing.
 
-A `InstanceBase` je společný kořen obou — dává jim `_is_instance_class =
-True` (aby je `SimpleMeta.__new__` nebral jako nové blueprinty, viz výše),
-`__slots__ = ("__weakref__",)` (žádný `__dict__`, podpora weak referencí),
-rychlý přístup k metadatům (`meta` property čte přímo `__metadata__`
-z třídy) a diagnostické `__repr__`/`__str__`.
+And `InstanceBase` is the common root of both — it gives them
+`_is_instance_class = True` (so `SimpleMeta.__new__` doesn't treat them as
+new blueprints, see above), `__slots__ = ("__weakref__",)` (no `__dict__`,
+weak-reference support), fast metadata access (the `meta` property reads
+`__metadata__` directly off the class), and diagnostic
+`__repr__`/`__str__`.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## `__repr__` a `__str__` — reprezentace
+## `__repr__` and `__str__` — representation
 
 ```python
 def __repr__(cls):
@@ -200,16 +204,16 @@ def __str__(cls):
     return cls.__name__
 ```
 
-`__repr__` je technická, ladicí reprezentace **blueprintu** (ne instance) —
-ukazuje cestu v hierarchii a jestli jde o konstantu, nebo kompozici.
-`__str__` je záměrně strohé — jen čisté jméno třídy, vhodné pro logy
-a uživatelsky čitelné výstupy.
+`__repr__` is a technical, debugging-oriented representation of the
+**blueprint** (not the instance) — it shows the hierarchy path and whether
+it's a constant or a composition. `__str__` is deliberately terse — just
+the plain class name, suitable for logs and human-readable output.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## `meta` — přístup k metadatům
+## `meta` — metadata access
 
 ```python
 @property
@@ -217,28 +221,29 @@ def meta(cls) -> "SimpleMetadataLike":
     return cls.__metadata__
 ```
 
-Stabilní veřejné rozhraní k metadatům — všude v systému (validace,
-`calculate_value`, `decompose_value`, instance buildery) se sahá přes
-`cls.meta`, nikdy přímo přes `cls.__metadata__`. Tahle jedna úroveň
-indirection znamená, že se interní úložiště metadat může v budoucnu změnit,
-aniž by se muselo přepisovat cokoliv jiného v knihovně.
+The stable public interface to the metadata — everywhere in the system
+(validation, `calculate_value`, `decompose_value`, instance builders)
+access goes through `cls.meta`, never directly through `cls.__metadata__`.
+This one level of indirection means the internal metadata storage can
+change in the future without having to rewrite anything else in the
+library.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## Doporučené pořadí dunder metod
+## Recommended dunder method order
 
-Pořadí použité v `SimpleMeta` (`__new__` → `__setattr__` → `__call__` →
-`__repr__` → `__str__` → `meta`) odpovídá přirozenému životnímu cyklu
-třídy: **vznik → ochrana → instanciace → reprezentace → přístup k
-metadatům.** Je to zároveň pořadí, které používá CPython u vlastních
-metaclassů i většina zavedených frameworků — takže se dá brát jako
-doporučená konvence i pro další metaclassy v ekosystému.
+The order used in `SimpleMeta` (`__new__` → `__setattr__` → `__call__` →
+`__repr__` → `__str__` → `meta`) matches a class's natural lifecycle:
+**creation → protection → instantiation → representation → metadata
+access.** It's also the order CPython itself uses for its own metaclasses,
+and the order most established frameworks follow — so it can be taken as a
+recommended convention for any other metaclasses in the ecosystem too.
 
-➡️ Hlubší dokumentace k metadatům a vytváření instancí (`SimpleBaseMetadata`,
-`SimpleConstantMetadata`, `SimpleObjectMetadata`, `make_atom_class`,
-`make_composite_class`, `create_instance`) bude v navazujícím README, až se
-k této sekci dostaneme podle osnovy.
+➡️ Deeper documentation on metadata and instance creation
+(`SimpleBaseMetadata`, `SimpleConstantMetadata`, `SimpleObjectMetadata`,
+`make_atom_class`, `make_composite_class`, `create_instance`) will be in
+the follow-up README, once we get to that section per the outline.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)

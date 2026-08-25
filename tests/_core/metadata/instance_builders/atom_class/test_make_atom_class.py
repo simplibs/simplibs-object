@@ -52,7 +52,7 @@ class TestMakeAtomClassImmutable:
         assert atom_class.__name__ == "IntConstAtomImmutableBase"
 
 
-class TestMakeAtomClassCleanup:
+class TestMakeAtomClassNoLeakedDeclarativeAttrs:
 
     def test_declarative_attributes_are_removed(self, IntConst):
         atom_class = make_atom_class(IntConst.meta, mutable=True)

@@ -23,6 +23,8 @@ class PicleReduce(PickleState, Snapshot, NodesDicts, NodesTuple, SimpleMixin):
 
 * [`__reduce__`](#__reduce__)
 
+[⬅️ Back to main Mixins Overview](../../README_MIXINS_OVERVIEW.md)
+
 ---
 
 ### `__reduce__`
@@ -57,4 +59,3 @@ def __reduce__(self):
 
 ---
 
-[⬅️ Back to Mixins Overview](../../../README_MIXINS_OVERVIEW.md)

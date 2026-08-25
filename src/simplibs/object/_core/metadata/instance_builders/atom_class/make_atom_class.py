@@ -50,12 +50,7 @@ def make_atom_class(
         class_dict,
     )
 
-    # 6. Remove declarative metadata artifacts
-    for name in ("_type", "_default", "_validate", "bool_or_raise_validate_error"):
-        if name in atom_class.__dict__:
-            delattr(atom_class, name)
-
-    # 7. Return class
+    # 6. Return class
     atom_class: "AtomInstanceProtocol"
     return atom_class
 
@@ -91,15 +86,16 @@ Defines:
 ### 4. Mutable-only setter
 If mutable, injects `_root_value_setter` for reactive updates.
 
-### 5. Cleanup
-Removes metadata blueprint attributes so instances cannot access schema-level
-definitions.
-
 ## Notes
 - Inheriting `_is_instance_class` from `InstanceBase` prevents the metaclass from generating secondary metadata
   for compiled runtime classes (avoiding synthetic names like `*AtomMutableBase`).
 - Direct assignment of `__metadata__` guarantees that `instance.meta` always resolves to
   the declarative blueprint specification.
+- `class_dict` passed to `type(...)` only ever contains the members listed above — declarative
+  attributes such as `_type`, `_default`, `_validate`, and `bool_or_raise_validate_error` are
+  never placed there, so they are never present on the compiled class's own `__dict__` in the
+  first place. They do, however, remain reachable through the MRO via `meta.owner_class`, since
+  `type(...)` only controls the new class's own namespace, not what its parents already expose.
 - This function is part of the public instance-building API and is used by both
   constant metadata and composition metadata.
 """

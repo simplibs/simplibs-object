@@ -1,41 +1,43 @@
-# 🧩 `SimpleObject` — Deklarativní kompozice
+# 🧩 `SimpleObject` — Declarative composition
 
-`SimpleObject` rozšiřuje `SimpleConstant` o schopnost skládat hodnotu
-z vnitřních prvků (`_inners`). Je to vlajková třída celého systému —
-umožňuje deklarativně, typově bezpečně a deterministicky modelovat
-strukturovaná data, kde se výsledná hodnota vždy počítá z prvků, ze kterých
-je kompozice postavená.
+`SimpleObject` extends `SimpleConstant` with the ability to compose a value
+from inner elements (`_inners`). It's the flagship class of the whole system —
+it lets you model structured data declaratively, in a type-safe and
+deterministic way, where the resulting value is always computed from the
+elements the composition is built from.
 
 ```
 SimpleBase
 └── SimpleConstant
-    └── SimpleObject   ← jsi tady (dědí VŠE ze SimpleConstant)
+    └── SimpleObject   ← you are here (inherits EVERYTHING from SimpleConstant)
 ```
 
-Protože `SimpleObject` dědí ze `SimpleConstant`, každá kompozice automaticky
-umí i vše z [README_SIMPLE_CONSTANT.md](README_SIMPLE_CONSTANT.md) —
-`validate`, `normalize`, `is_valid` atd. Tenhle dokument popisuje jen to, co
-`SimpleObject` přidává navíc.
+Because `SimpleObject` inherits from `SimpleConstant`, every composition
+automatically has everything from
+[README_SIMPLE_CONSTANT](README_SIMPLE_CONSTANT.md) too — `validate`,
+`normalize`, `is_valid`, and so on. This document only covers what
+`SimpleObject` adds on top of that.
 
 ---
 
-## 🧭 Obsah
+## 🧭 Contents
 
-* [Deklarativní rozhraní](#deklarativní-rozhraní)
-  * [`_type`](#_type)
+* [Declarative interface](#declarative-interface)
   * [`_inners`](#_inners)
   * [`_logic`](#_logic)
   * [`_decompose`](#_decompose)
   * [`_validate`](#_validate)
-* [Důležité: `_default` se nesmí definovat](#důležité-_default-se-nesmí-definovat)
-* [Veřejné API](#veřejné-api)
+* [Important: _default must not be defined](#important-_default-must-not-be-defined)
+* [Public API](#public-api)
   * [`calculate_value`](#calculate_value)
   * [`decompose_value`](#decompose_value)
-* [Architektonická role](#architektonická-role)
+* [Architectural role](#architectural-role)
+
+[⬅️ Back to main README](../../README.md)
 
 ---
 
-## Deklarativní rozhraní
+## Declarative interface
 
 ```python
 class FullName(SimpleObject):
@@ -54,95 +56,98 @@ class FullName(SimpleObject):
 
 ### `_type`
 
-Typová anotace pro **výsledek** kompozice. Výstup `_logic` musí projít
-stejnou plnou validací jako u atomu (viz
-[validační pipeline](README_SIMPLE_CONSTANT.md#validační-pipeline-jako-celek)).
+A type annotation for the composition's **result**. The output of `_logic`
+has to pass the same full validation as an atom's value does (see the
+[validation pipeline](README_SIMPLE_CONSTANT.md#the-validation-pipeline-as-a-whole)).
 
 ### `_inners`
 
-Povinný tuple vnitřních prvků — každý je buď `SimpleConstant`, nebo další
-`SimpleObject` (kompozice se tedy mohou vnořovat do libovolné hloubky).
-Struktura `_inners` určuje:
+A required tuple of inner elements — each one is either a `SimpleConstant` or
+another `SimpleObject` (so compositions can be nested to any depth). The
+structure of `_inners` determines:
 
-* jaké parametry očekává `_logic`,
-* jakou má kompozice výchozí hodnotu (spočte se z defaultů vnitřních prvků),
-* zda kompozice podporuje zpětnou dekompozici,
-* rozvržení metadat celé kompozice.
+* what parameters `_logic` expects,
+* the composition's default value (computed from the inner elements'
+  defaults),
+* whether the composition supports decomposing back,
+* the metadata layout of the whole composition.
 
 ### `_logic`
 
-Povinný výpočetní hook — definuje, jak se z vnitřních prvků spočítá
-výsledná hodnota kompozice. Přijímá parametry odpovídající `_inners`
-(podle jména, ne jen podle pozice) a musí vrátit hodnotu, která projde plnou
-validací.
+A required computation hook — it defines how the composition's resulting
+value is computed from its inner elements. It receives parameters matching
+`_inners` (by name, not just by position), and must return a value that
+passes full validation.
 
-**Výchozí hodnota celé kompozice** se počítá automaticky zavoláním `_logic`
-s defaulty všech vnitřních prvků — proto kompozice nikdy sama nedefinuje
-`_default` (viz [níže](#důležité-_default-se-nesmí-definovat)).
+**The whole composition's default value** is computed automatically by
+calling `_logic` with all inner elements' defaults — which is why a
+composition never defines `_default` itself (see
+[below](#important-_default-must-not-be-defined)).
 
 ### `_decompose`
 
-Volitelný hook pro opačný směr — převede hotovou hodnotu kompozice zpět na
-hodnoty pro jednotlivé vnitřní prvky. Umožňuje obousměrné modely: nahoru
-(vnitřní prvky → kompozice) i dolů (kompozice → vnitřní prvky). Pokud ho
-uživatel nedefinuje, kompozice je považována za nedekomponovatelnou.
+An optional hook for the reverse direction — it converts a finished
+composition value back into values for the individual inner elements. This
+enables bidirectional models: upward (inner elements → composition) and
+downward (composition → inner elements). If the user doesn't define it, the
+composition is treated as non-decomposable.
 
 ### `_validate`
 
-Stejný hook jako u `SimpleConstant` — volitelná rozšířená validace nad
-rámec typové kontroly, se stejnými třemi možnostmi (vrátit bool, vyhodit
-výjimku, nebo použít `bool_or_raise_validate_error`).
+The same hook as on `SimpleConstant` — optional extended validation beyond
+the type check, with the same three options (return a bool, raise an
+exception, or use `bool_or_raise_validate_error`).
 
-[▲ Nahoru](#-obsah)
-
----
-
-## Důležité: `_default` se nesmí definovat
-
-Na rozdíl od `SimpleConstant` kompozice **nikdy** nedefinuje `_default`
-sama — metadata to aktivně hlídají a při pokusu o definici vyhodí
-strukturovanou chybu (`raise_default_is_defined_in_composition`, viz
-`SimpleObjectMetadata`). Výchozí hodnota se vždy odvozuje automaticky:
-
-```
-_default kompozice = _logic(defaulty všech _inners)
-```
-
-Tohle pravidlo je záměrné a důležité: garantuje, že default kompozice je
-vždy **konzistentní** s jejím vlastním výpočetním pravidlem — nemůže se
-stát, že by si někdo ručně nastavil default, který neodpovídá tomu, co by
-`_logic` doopravdy spočítala.
-
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## Veřejné API
+## Important: `_default` must not be defined
 
-Stejně jako u `SimpleConstant` jsou i tyhle metody tenké wrappery nad
-interní logikou v `_core/logic/object_methods/`.
+Unlike `SimpleConstant`, a composition **never** defines `_default` itself —
+the metadata actively enforces this and raises a structured error if you try
+(`raise_default_is_defined_in_composition`, see `SimpleObjectMetadata`). The
+default value is always derived automatically:
+
+```
+composition's _default = _logic(defaults of all _inners)
+```
+
+This rule is deliberate and important: it guarantees that a composition's
+default is always **consistent** with its own computation rule — it can never
+happen that someone manually sets a default that doesn't match what `_logic`
+would actually compute.
+
+[▲ Back to Contents](#-contents)
+
+---
+
+## Public API
+
+Just like with `SimpleConstant`, these methods are thin wrappers over
+internal logic in `_core/logic/object_methods/`.
 
 ### `calculate_value`
 
-Spočítá hodnotu kompozice zavoláním uživatelské `_logic`, s plným
-zpracováním a validací parametrů před tím, než se `_logic` vůbec spustí.
+Computes the composition's value by calling the user's `_logic`, with full
+parameter processing and validation happening before `_logic` even runs.
 
-**Parametry:**
-* `*args`, `**kwargs`: hodnoty mapované na vnitřní prvky (podle pořadí
-  v `_inners`, nebo podle jména).
+**Parameters:**
+* `*args`, `**kwargs`: values mapped to inner elements (by order in
+  `_inners`, or by name).
 
-**Návratová hodnota:**
-* `Any`: spočítaná hodnota kompozice.
+**Return value:**
+* `Any`: the computed composition value.
 
-**Výjimky:**
-* `SimpleRuntimeError`, pokud selže zpracování parametrů nebo validace.
+**Exceptions:**
+* `SimpleRuntimeError`, if parameter processing or validation fails.
 
-**Zajímavost pro IDE:** signatura používá `ParamSpec` (`LogicSignature[P,
-R]`), díky čemuž PyCharm (i jiná IDE) nabízí **automatické doplňování
-přesně těch parametrů, které očekává tvoje `_logic`** — i když
-`calculate_value` samo o sobě žádné konkrétní parametry nedeklaruje.
+**Nice detail for IDEs:** the signature uses `ParamSpec`
+(`LogicSignature[P, R]`), which means PyCharm (and other IDEs) offer
+**autocomplete for exactly the parameters your `_logic` expects** — even
+though `calculate_value` itself doesn't declare any specific parameters.
 
-**Pod kapotou — zpracování parametrů (`_process_calculate_value_params`):**
+**Under the hood — parameter processing (`_process_calculate_value_params`):**
 ```python
 def _process_calculate_value_params(cls, *args, **kwargs):
     inners_map = cls.meta.inners_map
@@ -174,41 +179,43 @@ def _process_calculate_value_params(cls, *args, **kwargs):
     return clean_kwargs
 ```
 
-Tahle funkce dělá čtyři věci najednou a každou hlídá strukturovanou chybou:
+This function does four things at once, each guarded with a structured
+error:
 
-1. **Kontrola počtu pozičních argumentů** — nesmí jich být víc, než kolik
-   je vnitřních prvků.
-2. **Detekce duplicit** — pokud je parametr zadaný poziční *i* klíčovým
-   argumentem zároveň, je to chyba (ne tiché přepsání).
-3. **Fallback na default** — chybějící parametr se doplní z
-   `inner_cls.meta.default`, ne z nějaké obecné `None` hodnoty.
-4. **Detekce neznámých klíčových argumentů** — cokoliv, co zbyde
-   v `kwargs` po zpracování všech známých `_inners`, je chyba.
+1. **Checks the number of positional arguments** — there can't be more of
+   them than there are inner elements.
+2. **Detects duplicates** — if a parameter is given both positionally *and*
+   as a keyword argument, that's an error (not a silent overwrite).
+3. **Falls back to the default** — a missing parameter is filled in from
+   `inner_cls.meta.default`, not from some generic `None` value.
+4. **Detects unknown keyword arguments** — anything left over in `kwargs`
+   after processing all known `_inners` is an error.
 
-Samotné `calculate_value` pak už jen zavolá `cls.meta.logic(**params_dict)`
-— veškerá složitost zpracování parametrů je schválně oddělená do vlastní
-funkce, aby zůstalo čitelné, co dělá co.
+`calculate_value` itself then simply calls `cls.meta.logic(**params_dict)` —
+all the complexity of parameter processing is deliberately kept in its own
+function, so it stays clear what does what.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
 ### `decompose_value`
 
-Rozloží hotovou hodnotu kompozice zpět na hodnoty jejích vnitřních prvků,
-pomocí uživatelské `_decompose`.
+Decomposes a finished composition value back into the values of its inner
+elements, using the user's `_decompose`.
 
-**Parametry:**
-* `value` (*Any*): hodnota kompozice k rozložení.
+**Parameters:**
+* `value` (*Any*): the composition value to decompose.
 
-**Návratová hodnota:**
-* `Any`: rozložená reprezentace (typicky tuple hodnot pro `_inners`).
+**Return value:**
+* `Any`: the decomposed representation (typically a tuple of values for
+  `_inners`).
 
-**Výjimky:**
-* `SimpleRuntimeError`, pokud kompozice není dekomponovatelná, nebo pokud
-  `value` neprojde validací.
+**Exceptions:**
+* `SimpleRuntimeError`, if the composition isn't decomposable, or if `value`
+  fails validation.
 
-**Pod kapotou:**
+**Under the hood:**
 ```python
 def decompose_value(cls, value):
     if not cls.meta.is_decomposeable:
@@ -219,33 +226,33 @@ def decompose_value(cls, value):
     return outcome
 ```
 
-Pořadí kroků tu není náhodné: nejdřív se ověří, že dekompozice vůbec dává
-smysl (`is_decomposeable`), teprve pak se validuje vstupní `value` a až
-nakonec proběhne samotné rozložení. Tohle pořadí zabraňuje zbytečné práci —
-nemá smysl validovat hodnotu pro operaci, která stejně skončí chybou
-"nedekomponovatelné".
+The order of steps here isn't accidental: first it checks that decomposition
+even makes sense (`is_decomposeable`), only then does it validate the input
+`value`, and only after that does the actual decomposition run. This order
+avoids unnecessary work — there's no point validating a value for an
+operation that's going to fail with "not decomposable" anyway.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## Architektonická role
+## Architectural role
 
-`SimpleObject` je vlajková třída celého Simple systému:
+`SimpleObject` is the flagship class of the whole Simple system:
 
-* deklarativní modelování složených struktur,
-* deterministické odvozování výchozí hodnoty z vnitřních prvků,
-* metadaty řízený výpočet (`calculate_value`) i volitelná zpětná dekompozice
-  (`decompose_value`),
-* plné dědictví validace a normalizace ze `SimpleConstant`,
-* typově bezpečné, čitelné, deklarativní API — uživatel píše jen `_type`,
-  `_inners`, `_logic` (a volitelně `_decompose`/`_validate`), zbytek
-  (parsing parametrů, validace, chybové hlášky) obstará systém.
+* declarative modeling of composite structures,
+* deterministic derivation of the default value from inner elements,
+* metadata-driven computation (`calculate_value`) plus optional decomposition
+  back (`decompose_value`),
+* full inheritance of validation and normalization from `SimpleConstant`,
+* a type-safe, readable, declarative API — the user only writes `_type`,
+  `_inners`, `_logic` (and optionally `_decompose`/`_validate`); the rest
+  (parameter parsing, validation, error messages) is handled by the system.
 
-Skutečné vytváření běžících instancí z takhle definované třídy (atomické
-i kompozitní, mutable i immutable varianty) je popsané v navazujícím
-dokumentu o metadatech a instance builderech.
+Actually creating running instances from a class defined this way (both atom
+and composite variants, mutable and immutable) is covered in the next
+document, about metadata and instance builders.
 
-➡️ Pokračování: [README_SIMPLE_META.md](README_SIMPLE_META.md)
+➡️ Next: [README_SIMPLE_META](../metadata/README_SIMPLE_META.md)
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)

@@ -21,6 +21,8 @@ class ImmutableWithInners(ImmutableMethods, Snapshot, NodesDicts, NodesTuple, Si
 
 * [`__extend_instance_class__`](#__extend_instance_class__)
 
+[⬅️ Back to main Mixins Overview](../../README_MIXINS_OVERVIEW.md)
+
 ---
 
 ### `__extend_instance_class__`
@@ -62,4 +64,3 @@ def __extend_instance_class__(instance_cls):
 
 ---
 
-[⬅️ Back to Mixins Overview](../../../README_MIXINS_OVERVIEW.md)

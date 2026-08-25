@@ -18,6 +18,8 @@ class NodesTuple(SimpleMixin):
 
 * [`init_mixins`](#init_mixins)
 
+[⬅️ Back to main Mixins Overview](../README_MIXINS_OVERVIEW.md)
+
 ---
 
 ### `init_mixins`
@@ -107,4 +109,3 @@ def _collect_nodes_data(instance, path, nodes_list):
 
 ---
 
-[⬅️ Back to Mixins Overview](../../README_MIXINS_OVERVIEW.md)

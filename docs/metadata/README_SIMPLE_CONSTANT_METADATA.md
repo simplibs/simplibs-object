@@ -1,29 +1,31 @@
-# ⚛️ `SimpleConstantMetadata` — Kompilátor metadat pro atomy
+# ⚛️ `SimpleConstantMetadata` — Metadata compiler for atoms
 
-`SimpleConstantMetadata` přebírá strukturu ze `SimpleBaseMetadata` (jméno,
-jmenný prostor, blueprint path) a doplňuje ji o vše doménově specifické pro
-konstanty: typ, default, validaci a líné vytváření atomických instančních
-tříd.
+`SimpleConstantMetadata` takes over the structure from `SimpleBaseMetadata`
+(name, namespace, blueprint path) and adds everything domain-specific to
+constants: type, default, validation, and lazy creation of atomic instance
+classes.
 
 ```
 SimpleBaseMetadata
-└── SimpleConstantMetadata     ← jsi tady
+└── SimpleConstantMetadata     ← you are here
     └── SimpleObjectMetadata
 ```
 
 ---
 
-## 🧭 Obsah
+## 🧭 Contents
 
-* [`_process_user_data` — inicializační pipeline](#_process_user_data--inicializační-pipeline)
-* [Zpracování typu (`process_type`)](#zpracování-typu-process_type)
-* [Zpracování defaultu (`process_default_for_constant`)](#zpracování-defaultu-process_default_for_constant)
-* [Zpracování `_validate`](#zpracování-_validate)
-* [Líné vytváření atomických tříd](#líné-vytváření-atomických-tříd)
+* [`_process_user_data` — initialization pipeline](#_process_user_data--initialization-pipeline)
+* [Type processing (`process_type`)](#type-processing-process_type)
+* [Default processing (`process_default_for_constant`)](#default-processing-process_default_for_constant)
+* [Processing `_validate`](#processing-_validate)
+* [Lazy creation of atomic classes](#lazy-creation-of-atomic-classes)
+
+[⬅️ Back to main README](../../README.md)
 
 ---
 
-## `_process_user_data` — inicializační pipeline
+## `_process_user_data` — initialization pipeline
 
 ```python
 def _process_user_data(self):
@@ -47,61 +49,62 @@ def _process_user_data(self):
     self._atom_class_immutable = UNSET
 ```
 
-Pět kroků, které se spustí přesně jednou, při definici uživatelské třídy:
+Five steps, run exactly once, when the user-defined class is defined:
 
-1. **Označení jako konstanta** (`is_constant = True`) — `SimpleObjectMetadata`
-   tohle později přepíše na `False`, viz
-   [README_SIMPLE_OBJECT_METADATA.md](README_SIMPLE_OBJECT_METADATA.md).
-2. **Zpracování `_type`** přes `process_type`.
-3. **Zpracování `_default`** přes `process_default_for_constant` — všimni
-   si, že jako `default_type` dostává přesně to, co vrátil krok 2, ne
-   surové `_type` — typ je tedy vždy validovaný dřív, než se proti němu
-   ověřuje default.
-4. **Zpracování `_validate`** přes sdílenou pipeline `process_classmethod`
-   (viz [README_METHOD_PROCESSING.md](README_METHOD_PROCESSING.md)).
-   Testovací hodnota pro dry-run je `(self.default,)` — validace se tedy
-   hned při definici třídy vyzkouší na výchozí hodnotě.
-5. **Reset cache** pro atomické instanční třídy (viz níže).
+1. **Marking it as a constant** (`is_constant = True`) —
+   `SimpleObjectMetadata` later overrides this to `False`, see
+   [README_SIMPLE_OBJECT_METADATA](README_SIMPLE_OBJECT_METADATA.md).
+2. **Processing `_type`** via `process_type`.
+3. **Processing `_default`** via `process_default_for_constant` — note that
+   it receives exactly what step 2 returned as `default_type`, not the raw
+   `_type` — so the type is always validated before the default is checked
+   against it.
+4. **Processing `_validate`** via the shared `process_classmethod` pipeline
+   (see [README_METHOD_PROCESSING](README_METHOD_PROCESSING.md)). The
+   test value for the dry run is `(self.default,)` — so validation is
+   already tried out against the default value at class-definition time.
+5. **Cache reset** for atomic instance classes (see below).
 
-[▲ Nahoru](#-obsah)
-
----
-
-## Zpracování typu (`process_type`)
-
-Normalizuje `_type` do jediné, předvídatelné runtime formy — bez ohledu na
-to, jestli ho uživatel zapsal jako holý typ, moderní union, nebo tuple typů.
-
-**Podporované vstupní formy:**
-
-| Zápis `_type` | Rozpoznáno jako | Výsledek |
-|---|---|---|
-| `int` | atomický typ | vrací se okamžitě, beze změny |
-| `int \| str` | `UnionType` | vrací se beze změny (po kontrole na `None`) |
-| `(int, str)` | tuple typů | převedeno na `UnionType` přes `reduce(or_, ...)` |
-
-**Pravidlo proti volitelnosti:** `_type` nikdy nesmí (přímo ani skrz
-union/tuple) obsahovat `NoneType` — pokud ano, `process_type` vyhodí
-`raise_union_type_contain_none`. Nepřítomnost hodnoty se v systému modeluje
-jinde (na úrovni `normalize`/`process_none`, viz
-[README_SIMPLE_CONSTANT.md](README_SIMPLE_CONSTANT.md#normalize)), nikdy
-zamíchaná přímo do typové definice.
-
-**Proč sjednocovat na `UnionType`:** zbytek systému pak může na typ vždy
-zavolat obyčejné `isinstance(value, compiled_type)`, bez ohledu na to,
-jestli šlo původně o jeden typ, union, nebo tuple — žádné větvení
-podle "jaký byl vlastně vstupní formát" se nikde jinde v kódu nemusí řešit.
-
-**Poznámka ke vstupu jako tuple:** na rozdíl od `UnionType` (kde se jen
-kontroluje přítomnost `None`), u tuple se navíc kontroluje, že není
-vnořená (`(int, (str, float))` je neplatné — `_type` musí být plochý) a že
-neobsahuje doslovné `None` jako prvek.
-
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## Zpracování defaultu (`process_default_for_constant`)
+## Type processing (`process_type`)
+
+Normalizes `_type` into a single, predictable runtime form — regardless of
+whether the user wrote it as a plain type, a modern union, or a tuple of
+types.
+
+**Supported input forms:**
+
+| `_type` written as | Recognized as  | Result                                          |
+|:-------------------|:---------------|:------------------------------------------------|
+| `int`              | atomic type    | returned immediately, unchanged                 |
+| `int \| str`       | `UnionType`    | returned unchanged (after checking for `None`)  |
+| `(int, str)`       | tuple of types | converted to `UnionType` via `reduce(or_, ...)` |
+
+**Rule against optionality:** `_type` may never contain `NoneType` (neither
+directly nor via a union/tuple) — if it does, `process_type` raises
+`raise_union_type_contain_none`. The absence of a value is modeled
+elsewhere in the system (at the `normalize`/`process_none` level, see
+[README_SIMPLE_CONSTANT](../core/README_SIMPLE_CONSTANT.md#normalize)), never
+mixed directly into the type definition itself.
+
+**Why unify into `UnionType`:** the rest of the system can then always call
+a plain `isinstance(value, compiled_type)` on the type, regardless of
+whether it was originally a single type, a union, or a tuple — no branching
+on "what was the actual input format" is needed anywhere else in the code.
+
+**Note on tuple input:** unlike `UnionType` (where only the presence of
+`None` is checked), a tuple is additionally checked to make sure it isn't
+nested (`(int, (str, float))` is invalid — `_type` must be flat) and
+doesn't contain a literal `None` as an element.
+
+[▲ Back to Contents](#-contents)
+
+---
+
+## Default processing (`process_default_for_constant`)
 
 ```python
 def process_default_for_constant(default_type, owner_class):
@@ -112,35 +115,35 @@ def process_default_for_constant(default_type, owner_class):
     return raw_default
 ```
 
-Krátká, ale důležitá funkce se dvěma pravidly: `_default` musí **existovat**
-a musí **odpovídat typu** vypočítanému v `process_type`. Šťastná cesta
-(`isinstance` sedí) se vrátí okamžitě bez volání validátorů — ty se spustí
-jen v chybovém případě, aby poskytly přesnou diagnostiku.
+A short but important function with two rules: `_default` must **exist**
+and must **match the type** computed in `process_type`. The happy path
+(`isinstance` matches) returns immediately without calling the validators —
+those only run in the error case, to provide precise diagnostics.
 
-Protože konstanty nemají žádnou vnitřní strukturu (na rozdíl od kompozic),
-je `_default` jediným zdrojem jejich výchozí runtime identity — proto je
-u konstant povinný, zatímco u kompozic je zakázaný (viz
-[README_SIMPLE_OBJECT_METADATA.md](README_SIMPLE_OBJECT_METADATA.md#zakázaný-_default)).
+Since constants have no internal structure (unlike compositions),
+`_default` is the sole source of their default runtime identity — which is
+why it's required for constants, while it's forbidden for compositions (see
+[README_SIMPLE_OBJECT_METADATA](README_SIMPLE_OBJECT_METADATA.md#the-forbidden-_default)).
 
-[▲ Nahoru](#-obsah)
-
----
-
-## Zpracování `_validate`
-
-Kompletní popis toho, jak `process_classmethod` (a jeho vnitřní
-verifikátory `verify_classmethod`, `verify_params`,
-`verify_annotations_and_defaults`, `verify_calculation`) ověřuje a
-normalizuje `_validate`, je ve sdíleném dokumentu
-[README_METHOD_PROCESSING.md](README_METHOD_PROCESSING.md) — stejná
-pipeline se beze změny používá i pro `_logic` a `_decompose` na
-`SimpleObjectMetadata`.
-
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## Líné vytváření atomických tříd
+## Processing `_validate`
+
+A full description of how `process_classmethod` (and its internal
+verifiers `verify_classmethod`, `verify_params`,
+`verify_annotations_and_defaults`, `verify_calculation`) validates and
+normalizes `_validate` is in the shared document
+[README_METHOD_PROCESSING](README_METHOD_PROCESSING.md) — the same
+pipeline is used, unchanged, for `_logic` and `_decompose` on
+`SimpleObjectMetadata` as well.
+
+[▲ Back to Contents](#-contents)
+
+---
+
+## Lazy creation of atomic classes
 
 ```python
 @property
@@ -158,20 +161,22 @@ def atom_class_immutable(self):
     return self._atom_class_immutable
 ```
 
-Skutečné runtime třídy pro atomické instance (mutable i immutable varianta)
-se **nevytváří automaticky při definici blueprintu** — vznikají líně, až
-při prvním přístupu k příslušné property. `make_atom_class` (definovaná
-v `_core/metadata/instance_builders/atom_class/`) pak zkompiluje konkrétní
-runtime třídu přes `type(...)`.
+The actual runtime classes for atomic instances (both the mutable and
+immutable variants) are **not created automatically when the blueprint is
+defined** — they're created lazily, on first access to the corresponding
+property. `make_atom_class` (defined in
+`_core/metadata/instance_builders/atom_class/`) then compiles the concrete
+runtime class via `type(...)`.
 
-Tenhle lazy přístup má jasný důvod: kompilace runtime třídy je relativně
-drahá operace (sestavení `class_dict`, sloty, `__init__` closure...) a ne
-každý blueprint někdy potřebuje obě varianty (mutable i immutable) — proč
-tedy platit cenu za kompilaci, kterou možná nikdo nikdy nevyužije.
+This lazy approach has a clear rationale: compiling a runtime class is a
+relatively expensive operation (building the `class_dict`, slots, the
+`__init__` closure...), and not every blueprint ever needs both variants
+(mutable and immutable) — so why pay the cost of a compilation that might
+never actually be used.
 
-Hlubší popis toho, co přesně `make_atom_class` sestavuje, je
-v navazujícím README o vytváření instancí.
+A deeper look at exactly what `make_atom_class` assembles will be in the
+follow-up README about instance creation.
 
-➡️ Pokračování: [README_SIMPLE_OBJECT_METADATA.md](README_SIMPLE_OBJECT_METADATA.md)
+➡️ Next: [README_SIMPLE_OBJECT_METADATA](README_SIMPLE_OBJECT_METADATA.md)
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)

@@ -4,14 +4,15 @@
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/downloads/)
 [![Licence](https://img.shields.io/badge/licence-MIT-green)](https://github.com/simplibs/simplibs-object/blob/main/LICENSE)
 
-**Systém pro vytváření deterministických, typově bezpečných a reaktivních objektů.**
+**A system for building deterministic, type-safe, and reactive objects.**
 
 
-`simplibs-object` je knihovna pro **deklarativní modelování dat**.
+`simplibs-object` is a library for **declarative data modeling**.
 
-Místo psaní konstruktorů, setterů, validací a ručního přepočítávání závislostí definuješ třídu 
-a řekneš jí jaký má typ, jakou má výchozí hodnotu, z čeho se skládá, a jak se z těchto částí vytvoří výsledná hodnota.
-A o zbytek se postará knihovna.
+Instead of writing constructors, setters, validators, and manually recalculating
+dependencies, you define a class and tell it what type it has, what its default
+value is, what it's composed of, and how the resulting value is built from those
+parts. The library takes care of the rest.
 
 ```bash
 pip install simplibs-object
@@ -19,15 +20,15 @@ pip install simplibs-object
 
 ---
 
-Základ knihovny tvoří tři jednoduché stavební prvky:
+The library is built on three simple building blocks:
 
-* **`SimpleConstant`** — atomická hodnota,
-* **`SimpleObject`** — kompozice dalších objektů,
-* **`SimpleMixin`** — schopnost, kterou lze k objektu přidat.
+* **`SimpleConstant`** — an atomic value,
+* **`SimpleObject`** — a composition of other objects,
+* **`SimpleMixin`** — a capability that can be added to an object.
 
-Z těchto prvků se dají skládat jednoduché objekty stejně jako větší struktury.
+These blocks can be combined into simple objects as well as larger structures.
 
-Uživatel napíše například:
+For example, you might write:
 
 ```python
 class Age(SimpleConstant):
@@ -35,7 +36,7 @@ class Age(SimpleConstant):
     _default = 20
 ```
 
-nebo:
+or:
 
 ```python
 class Person(SimpleObject):
@@ -47,69 +48,70 @@ class Person(SimpleObject):
         return f"{first_name} {last_name}"
 ```
 
-A tím je hotovo — žádné psaní konstruktorů, žádné validace, žádné ruční kontroly.
+And that's it — no constructors to write, no validation, no manual checks.
 
-Knihovna ví, že konstanta `Age` obsahuje `int`, zná jeho výchozí hodnotu a připraví objekt s odpovídajícím rozhraním.
+The library knows that the `Age` constant holds an `int`, knows its default
+value, and prepares an object with the matching interface.
 
-Kompozice je pak objekt složený z konstant a objektů a jeho výsledná hodnota vzniká z jejich hodnot.
+A composition is then an object made up of constants and other objects, and its
+resulting value is derived from theirs.
 
-To je základní princip celé knihovny.
+That's the core principle of the whole library.
 
 ---
 
-## 🏛️ Architektura v kostce
+## 🏛️ Architecture at a glance
 
-Celý systém lze zjednodušeně chápat jako několik vrstev:
+The whole system can be understood, in simplified form, as a series of layers:
 
 ```text
 ┌────────────────────────────────┐
-│      Definiční třídy           │ ◄── SimpleBase, SimpleConstant, SimpleObject — co uživatel píše
-└──────────────┬─────────────────┘
+│      Definition classes        │ ◄── SimpleBase, SimpleConstant, SimpleObject
+└──────────────┬─────────────────┘     (what the user writes)
                ▼
 ┌────────────────────────────────┐
-│      Metadatový proces         │ ◄── SimpleMeta a *Metadata třídy — validace a kompilace při definici
-└──────────────┬─────────────────┘
+│      Metadata process          │ ◄── SimpleMeta and *Metadata classes
+└──────────────┬─────────────────┘     (validation and compilation at definition time)
                ▼
 ┌────────────────────────────────┐
-│      Vytváření instance        │ ◄── atom/composite × mutable/immutable, mixin injection
-└──────────────┬─────────────────┘
+│      Instance creation         │ ◄── atom/composite × mutable/immutable, mixin injection
+└──────────────┬─────────────────┘     (dynamically creates a new class and instance)
                ▼
 ┌────────────────────────────────┐
-│            Mixiny              │ ◄── volitelné schopnosti - rozšiřitelnost bez zásahu do jádra
-└──────────────┬─────────────────┘
+│            Mixins              │ ◄── optional capabilities
+└──────────────┬─────────────────┘     (extensibility without touching the core)
                ▼
 ┌────────────────────────────────┐
-│     Nástroje & testování       │ ◄── automate_creators, randomize, a nástoje pro testování
-└────────────────────────────────┘
+│      Tools & testing           │ ◄── automate_creators, randomize, and testing utilities
+└────────────────────────────────┘     (makes life easier for developers)
 ```
 
-Každá vrstva má vlastní úlohu a lze ji podrobněji studovat samostatně.
+Each layer has its own responsibility and can be studied in more detail on its own.
 
 ---
-## 🧩 Definiční třídy
+## 🧩 Definition classes
 
-`SimpleBase` 
-je kořen hierarchie — čistě architektonický, nepoužívá se přímo. 
+`SimpleBase`
+is the root of the hierarchy — purely architectural, not used directly.
 
-`SimpleConstant` 
-definuje atom (`_type`, `_default`, volitelné `_validate`) 
-a veřejné API pro validaci a normalizaci. 
+`SimpleConstant`
+defines an atom (`_type`, `_default`, optional `_validate`) and the public API
+for validation and normalization.
 
 `SimpleObject`
-rozšiřuje `SimpleConstant` o kompozici (`_inners`, `_logic`, volitelné
-`_decompose`) — jeho `_default` se nikdy nepíše ručně, vždy se odvozuje
-automaticky z `_logic(defaulty _inners)`.
+extends `SimpleConstant` with composition (`_inners`, `_logic`, optional
+`_decompose`) — its `_default` is never written by hand; it's always derived
+automatically from `_logic(inners' defaults)`.
 
 ➡️ [README_SIMPLE_BASE](https://github.com/simplibs/simplibs-object/blob/main/docs/core/README_SIMPLE_BASE.md)  
 ➡️ [README_SIMPLE_CONSTANT](https://github.com/simplibs/simplibs-object/blob/main/docs/core/README_SIMPLE_CONSTANT.md)  
 ➡️ [README_SIMPLE_OBJECT](https://github.com/simplibs/simplibs-object/blob/main/docs/core/README_SIMPLE_OBJECT.md)  
 
-
 ---
 
-### Definice konstant
+### Defining constants
 
-Když vytvoříš například:
+When you write, for example:
 
 ```python
 class Age(SimpleConstant):
@@ -117,9 +119,10 @@ class Age(SimpleConstant):
     _default = 18
 ```
 
-nemusíš už ručně vytvářet konstruktor, ukládat hodnotu, kontrolovat její typ ani psát setter.
+you no longer need to write a constructor by hand, store the value, check its
+type, or write a setter.
 
-Knihovna z definice odvodí potřebné chování.
+The library derives the necessary behavior from the definition.
 
 ```python
 age = Age()
@@ -127,7 +130,7 @@ age = Age()
 age.value = 25
 ```
 
-Pokud je potřeba přidat vlastní pravidlo, lze ho jednoduše doplnit:
+If you need to add a custom rule, you can simply do so:
 
 ```python
 class Age(SimpleConstant):
@@ -139,27 +142,29 @@ class Age(SimpleConstant):
         if value < 0:
             return cls.bool_or_raise_validate_error(
                 value,
-                "Věk nemůže být záporný.",
+                "Age cannot be negative.",
                 return_bool=return_bool,
             )
         return True
 ```
 
-Tím vzniká objekt, který zná svůj typ, výchozí hodnotu i pravidla pro platné hodnoty.
+This gives you an object that knows its type, its default value, and the rules
+for what counts as a valid value.
 
 ---
 
-### Kompozice a reaktivita
+### Composition and reactivity
 
-Síla knihovny se začne výrazněji projevovat ve chvíli, kdy objekty začnou být složené z dalších objektů.
+The library's strength becomes much more apparent once objects start being
+composed of other objects.
 
-`SimpleObject` definuje:
+`SimpleObject` defines:
 
-* `_inners` — z jakých objektů se skládá,
-* `_logic` — jak z nich vzniká výsledná hodnota,
-* `_decompose` — jak lze výslednou hodnotu případně rozložit zpět.
+* `_inners` — what objects it's composed of,
+* `_logic` — how the resulting value is built from them,
+* `_decompose` — how the resulting value can optionally be decomposed back.
 
-Například:
+For example:
 
 ```python
 class FullName(SimpleObject):
@@ -171,64 +176,73 @@ class FullName(SimpleObject):
         return f"{first_name} {last_name}"
 ```
 
-Změna vnitřní hodnoty se automaticky promítne do kompozice:
+A change to an inner value is automatically propagated to the composition:
 
 ```python
-person.first_name = "Petr"
+person.first_name = "Peter"
 
-# person.value == "Petr Novák"
+# person.value == "Peter Smith"
 ```
 
-A pokud kompozice podporuje `_decompose`, může fungovat i opačný směr:
+And if the composition supports `_decompose`, the reverse direction also works:
 
 ```text
           ┌───────────────┐
           │   FullName    │
-          │ "Petr Novák"  │
+          │ "Peter Smith" │
           └───────┬───────┘
                   │
              _decompose
               ↙       ↘
        ┌──────────┐ ┌─────────┐
        │ FirstName│ │LastName │
-       │  "Petr"  │ │ "Novák" │
+       │  "Peter" │ │ "Smith" │
        └──────────┘ └─────────┘
 ```
 
-Knihovna tak vytváří **obousměrně reaktivní strom hodnot**:
+This makes the library build a **bidirectionally reactive tree of values**:
 
-* změna uvnitř se propaguje směrem ke kořeni,
-* změna kompozice se může rozložit směrem k jejím částem.
+* changes inside propagate up toward the root,
+* a composition's change can be decomposed down toward its parts.
 
-Důležitou vlastností je přitom determinismus — přepočet není založený na skrytém systému událostí nebo magických závislostech. Vztahy mezi částmi jsou určeny samotnou definicí objektu.
+An important property here is determinism — recalculation isn't based on a
+hidden event system or magic dependencies. The relationships between the parts
+are determined entirely by the object's own definition.
 
 ---
 
-## 🧠 Metadatový proces
+## 🧠 Metadata process
 
-Za deklarativní vrstvou stojí metaclass `SimpleMeta` a systém metadat.
+Behind the declarative layer sits the `SimpleMeta` metaclass and the metadata
+system.
 
-`SimpleMeta` 
-je metaclass která řídí celý životní cyklus třídy — vznik, write-once
-ochranu, vytváření instancí i reprezentaci. 
+`SimpleMeta`
+is the metaclass that governs a class's entire lifecycle — creation, write-once
+protection, instance creation, and representation.
 
-Při definici třídy se spočítají a natrvalo zafixují metadata:  
-`SimpleBaseMetadata` → `SimpleConstantMetadata` → `SimpleObjectMetadata`  
-A provede se dry-run a validace předaných atributů a metod.  
+When a class is defined, its metadata is computed and permanently fixed:
+`SimpleBaseMetadata` → `SimpleConstantMetadata` → `SimpleObjectMetadata`
+A dry run is performed, along with validation of the provided attributes and
+methods.
 
 
-Kontroluje se každý prvek:
+Every element is checked:
 
-* `_type` - zda odpovídá defaultní hodnotě,
-* `_default` - zda projde validací,
-* `_inners` - zda jsou složené s SimpleObject  SimpleCOnstant tříd a neobsahují konflitní jména,
-* `_validate` - zda dokáže správně validovat hodnotu,
-* `_logic` - zda dokáže na základě inners defaultních hodnot vypořčítat dvůj default,
-* `_decompose` - zda ze svého defaultu dokáže vypočítat defaultní hodnoty inners.
+* `_type` — whether it matches the default value,
+* `_default` — whether it passes validation,
+* `_inners` — whether they're composed of `SimpleObject`/`SimpleConstant`
+  classes and don't contain conflicting names,
+* `_validate` — whether it can correctly validate a value,
+* `_logic` — whether it can compute its own default from the inners' default
+  values,
+* `_decompose` — whether it can compute the inners' default values from its
+  own default.
 
-Chyby v definici se tak mohou objevit **už při vytváření třídy**, nikoliv až při pozdějším použití objektu.
+This means definition errors can surface **at class-creation time**, rather
+than later when the object is actually used.
 
-Metadata zároveň slouží jako pevný popis blueprintu, ze kterého se následně připravuje konkrétní runtime instance.
+The metadata also serves as a fixed description of the blueprint, from which a
+concrete runtime instance is later prepared.
 
 ➡️ [README_SIMPLE_META](https://github.com/simplibs/simplibs-object/blob/main/docs/metadata/README_SIMPLE_META.md)  
 ➡️ [README_SIMPLE_BASE_METADATA](https://github.com/simplibs/simplibs-object/blob/main/docs/metadata/README_SIMPLE_BASE_METADATA.md)  
@@ -236,31 +250,33 @@ Metadata zároveň slouží jako pevný popis blueprintu, ze kterého se násled
 ➡️ [README_SIMPLE_OBJECT_METADATA](https://github.com/simplibs/simplibs-object/blob/main/docs/metadata/README_SIMPLE_OBJECT_METADATA.md)  
 ➡️ [README_METHOD_PROCESSING](https://github.com/simplibs/simplibs-object/blob/main/docs/metadata/README_METHOD_PROCESSING.md)  
 
-
 ---
 
-## 🧱 Vytváření instance
+## 🧱 Instance creation
 
-Blueprint není samotná instance.
+A blueprint is not itself an instance.
 
-Skutečná runtime instance vzniká dynamickou kompilací — `make_atom_class`
-a `make_composite_class` sestaví konkrétní třídu se sloty, properties a
-(u kompozice) reaktivními hooky, `create_instance` k tomu bezpečně
-připojí mixiny přes namespace injection. Tím se předchází konfliktům se  `__slots__` a zároveň se udržuje ploché MRO nehledě na to kolik mixinů je použito.
+The actual runtime instance is created through dynamic compilation —
+`make_atom_class` and `make_composite_class` assemble a concrete class with
+slots, properties, and (for compositions) reactive hooks, and `create_instance`
+safely attaches mixins to it via namespace injection. This avoids `__slots__`
+conflicts while keeping a flat MRO regardless of how many mixins are used.
 
-Při vytvoření objektu knihovna podle definice sestaví konkrétní runtime třídu a připraví pro ni potřebné:
+When an object is created, the library assembles a concrete runtime class
+based on the definition and prepares everything it needs:
 
-* sloty,
+* slots,
 * properties,
-* validaci,
-* reaktivní mechanismy,
-* vnitřní objekty,
-* případné mixiny.
+* validation,
+* reactive mechanisms,
+* inner objects,
+* any mixins.
 
-Instance tak obsahuje pouze to, co skutečně potřebuje.
+The instance therefore contains only what it actually needs.
 
-Díky použití `__slots__` a dynamického sestavování runtime tříd není potřeba vytvářet obecnou instanční strukturu plnou funkcí, 
-které konkrétní objekt nikdy nepoužije.
+Thanks to the use of `__slots__` and dynamic runtime-class assembly, there's no
+need for a generic instance structure full of methods the given object will
+never use.
 
 ➡️ [README_ATOM_CLASS](https://github.com/simplibs/simplibs-object/blob/main/docs/metadata/instance/README_ATOM_CLASS.md)  
 ➡️ [README_COMPOSITE_CLASS](https://github.com/simplibs/simplibs-object/blob/main/docs/metadata/instance/README_COMPOSITE_CLASS.md)  
@@ -270,82 +286,85 @@ které konkrétní objekt nikdy nepoužije.
 
 ---
 
-## 🧩 Mixiny
+## 🧩 Mixins
 
-Mixiny jsou to, co dává instancím konkrétní schopnosti — serializaci,
-porovnávání, aritmetiku, historii změn, immutabilní update API a
-mnohem víc. 
+Mixins are what give instances their concrete capabilities — serialization,
+comparison, arithmetic, change history, an immutable update API, and much more.
 
-Knihovna přichází s bohatou sadou hotových mixinů, a zároveň nabízí SimpleMixin základní třídu díky které si **můžeš napsat
-vlastní logiku**. 
+The library ships with a rich set of ready-made mixins, and also offers the
+`SimpleMixin` base class so you **can write your own logic**.
 
-Mixin nikdy nedědí ze `SimpleObject` přímo — jen ze
-`SimpleMixin`, a při vytváření instance se z blueprintu (`SimpleObject`/
-`SimpleConstant`) přebere jen strukturální základ (typ, sloty, validace),
-na který se mixin nabalí. 
+A mixin never inherits from `SimpleObject` directly — only from `SimpleMixin`.
+When an instance is created, only the structural foundation (type, slots,
+validation) is taken from the blueprint (`SimpleObject`/`SimpleConstant`), and
+the mixin is layered on top of that.
 
-Vlastní mixin tak nemusí (a nesmí) nic vědět o
-konkrétní doménové logice třídy, na kterou bude použit — je to čistě
-oddělená, znovupoužitelná schopnost.
+A custom mixin therefore doesn't need to (and must not) know anything about the
+specific domain logic of the class it's applied to — it's a purely separate,
+reusable capability.
 
-Struktura objektu a jeho schopnosti jsou tak v knihovně záměrně oddělené:
+The library deliberately separates an object's structure from its capabilities:
 
-`SimpleObject` říká **co objekt je**.
+`SimpleObject` says **what an object is**.
 
-`SimpleMixin` říká **co objekt umí**.
+`SimpleMixin` says **what an object can do**.
 
-Díky tomu lze stejnou strukturu použít různými způsoby podle toho, jaké schopnosti k ní přidáš.
+This means the same structure can be used in different ways, depending on which
+capabilities you add to it.
 
 
-➡️ [README_SIMPLE_MIXIN](https://github.com/simplibs/simplibs-object/blob/main/docs/mixins/base_class/README_SIMPLE_MIXIN.md)
-
----
-
-### Přehled dostupných mixinů
-
-| Kategorie          | Co poskytují                                                              |
-| ------------------ | ------------------------------------------------------------------------- |
-| **Core**           | `NodesTuple`, `NodesDicts`, `Snapshot`, `Infrastructure`, `Serialization` |
-| **Collections**    | `CollectionBase`, `Iterable`, `Mapping`, `Collection`                     |
-| **Comparison**     | `Equality`, `Ordering`                                                    |
-| **Generics**       | `ClassGetItem`                                                            |
-| **Interfaces**     | `Call`, `ContextManager`                                                  |
-| **Lifecycles**     | `Copyable`, `PickleState`, `PicleReduce`, `Lifecycle`                     |
-| **Numeric**        | `Arithmetic`, `Unary`, `Bitwise`, `Inplace`, `Conversion`                 |
-| **Representation** | `ValueDisplay`, `ValueFormatting`                                         |
-| **Immutable**      | `ImmutableMethods`, `ImmutableWithInners`                                 |
-| **Numerical**      | `Volume`, `Equalizer`                                                     |
-| **Properties**     | `InnersProperty`, `MetaShortcuts`                                         |
-| **State**          | `DefaultState`, `DirtyTracking`, `History`, `Permission`                  |
-
-Plný popis každého jednotlivého mixinu (kompatibilní příznaky, sloty,
-metody, na čem staví) je k dispozici v samostatném přehledu:
-
-➡️ [README_MIXINS_OVERVIEW](https://github.com/simplibs/simplibs-object/blob/main/docs/mixins/README_MIXINS_OVERVIEW.md)
+➡️ [README_SIMPLE_MIXIN](https://github.com/simplibs/simplibs-object/blob/main/docs/mixins/base_class/README_SIMPLE_MIXIN.md)  
 
 ---
 
-## 🛠️ Nástroje & testování
+### Overview of available mixins
 
-Knihovna není omezena pouze na ruční definování tříd, součástí projektu jsou také nástroje pro:
+| Category        | What they provide                                                          |
+| ---------------- | --------------------------------------------------------------------------- |
+| **Core**          | `NodesTuple`, `NodesDicts`, `Snapshot`, `Infrastructure`, `Serialization`   |
+| **Collections**   | `CollectionBase`, `Iterable`, `Mapping`, `Collection`                       |
+| **Comparison**    | `Equality`, `Ordering`                                                      |
+| **Generics**      | `ClassGetItem`                                                              |
+| **Interfaces**    | `Call`, `ContextManager`                                                    |
+| **Lifecycles**    | `Copyable`, `PickleState`, `PickleReduce`, `Lifecycle`                      |
+| **Numeric**       | `Arithmetic`, `Unary`, `Bitwise`, `Inplace`, `Conversion`                   |
+| **Representation**| `ValueDisplay`, `ValueFormatting`                                           |
+| **Immutable**     | `ImmutableMethods`, `ImmutableWithInners`                                   |
+| **Numerical**     | `Volume`, `Equalizer`                                                       |
+| **Properties**    | `InnersProperty`, `MetaShortcuts`                                           |
+| **State**         | `DefaultState`, `DirtyTracking`, `History`, `Permission`                    |
+
+A full description of each individual mixin (compatibility flags, slots,
+methods, what it builds on) is available in a dedicated overview:
+
+➡️ [README_MIXINS_OVERVIEW](https://github.com/simplibs/simplibs-object/blob/main/docs/mixins/README_MIXINS_OVERVIEW.md)  
+
+---
+
+## 🛠️ Tools & testing
+
+The library isn't limited to manually defining classes by hand — the project
+also includes tools for:
 
 
-- `automate_creators` - Programové vytváření blueprintů bez nutnosti psát klasickou `class` definici.  
+- `automate_creators` — Programmatically creating blueprints without writing a
+  classic `class` definition.  
 ➡️ [README_AUTOMATE_CREATORS](https://github.com/simplibs/simplibs-object/blob/main/docs/tools/README_AUTOMATE_CREATORS.md)  
 
 
-- `bulk` - Hromadné vytváření blueprintů a instancí z různých vstupů, například JSON, YAML, CSV nebo Python struktur.  
+- `bulk` — Bulk creation of blueprints and instances from various inputs, such
+  as JSON, YAML, CSV, or Python structures.  
 ➡️ [README_BULK](https://github.com/simplibs/simplibs-object/blob/main/docs/tools/README_BULK.md)  
 
 
-- `randomize` - Vytváření náhodných hodnot pro objekty i celé kompoziční stromy. 
-Hodí se například pro fuzz testing nebo rychlé vytváření testovacích dat.  
-➡️ [README_RANDOMIZE](https://github.com/simplibs/simplibs-object/blob/main/docs/tools/README_RANDOMIZE.md)
+- `randomize` — Generating random values for objects and entire composition
+  trees. Useful for fuzz testing or quickly generating test data.  
+➡️ [README_RANDOMIZE](https://github.com/simplibs/simplibs-object/blob/main/docs/tools/README_RANDOMIZE.md)  
 
 
 
-- `testing` - Testovací nástroje umožňují ověřovat celé blueprinty nebo mixiny 
-bez nutnosti ručně psát desítky jednotlivých testů.  
+- `testing` — Testing utilities that let you verify whole blueprints or mixins
+  without having to write dozens of individual tests by hand.  
 ➡️ [README_TESTING_OVERVIEW](https://github.com/simplibs/simplibs-object/blob/main/docs/testing/README_TESTING_OVERVIEW.md)  
 ➡️ [README_BULK_TEST](https://github.com/simplibs/simplibs-object/blob/main/docs/testing/README_BULK_TEST.md)  
 ➡️ [README_MIXIN_TESTING](https://github.com/simplibs/simplibs-object/blob/main/docs/testing/README_MIXIN_TESTING.md)  
@@ -353,19 +372,19 @@ bez nutnosti ručně psát desítky jednotlivých testů.
 
 ---
 
-### ⚠️ Výjimky
+### ⚠️ Exceptions
 
-Všechny chyby, které knihovna vyhazuje, dědí ze společného kořene
-`SimpleObjectError` (postaveného na [`simplibs-exception`](https://github.com/simplibs/simplibs-exception) —
-strukturované, čitelné diagnostické karty místo holého tracebacku).
-Díky tomu jde zachytit **jakoukoliv** chybu z knihovny jedním
-`except SimpleObjectError`, nebo cíleně jen jednu konkrétní kategorii:
+Every error the library raises inherits from a common root,
+`SimpleObjectError` (built on top of [`simplibs-exception`](https://github.com/simplibs/simplibs-exception) —
+structured, readable diagnostic cards instead of a bare traceback).
+This means you can catch **any** error from the library with a single
+`except SimpleObjectError`, or target just one specific category:
 
-| Výjimka | Kdy nastane |
-|---|---|
-| `SimpleDefinitionError` | Chyba v **definici třídy** — špatně napsaný `_inners`, zakázaný `_default` na kompozici, neplatná signatura `_logic`. Nastává při importu/definici třídy. |
-| `SimpleInitializationError` | Chyba při **vytváření instance** — neplatné parametry `mixins`/`mutable`, nekompatibilní mixin, selhání sestavení vnitřních prvků. |
-| `SimpleRuntimeError` | Chyba v **datech nebo za běhu** — neplatná hodnota při zápisu, selhání `_validate`, pokus o zápis do immutable instance. Tohle je výjimka, na kterou nejčastěji narazíš při běžném používání. |
+| Exception                     | When it happens |
+|--------------------------------|------------------|
+| `SimpleDefinitionError`        | An error in a **class definition** — a malformed `_inners`, a disallowed `_default` on a composition, an invalid `_logic` signature. Raised at class import/definition time. |
+| `SimpleInitializationError`    | An error during **instance creation** — invalid `mixins`/`mutable` parameters, an incompatible mixin, failure to assemble inner elements. |
+| `SimpleRuntimeError`           | An error in **data or at runtime** — an invalid value on write, a failed `_validate`, an attempt to write to an immutable instance. This is the exception you'll run into most often during normal use. |
 
 ```python
 from simplibs.object.exceptions import SimpleObjectError
@@ -373,28 +392,28 @@ from simplibs.object.exceptions import SimpleObjectError
 try:
     age.value = -5
 except SimpleObjectError as e:
-    print(e)  # strukturovaná diagnostická karta: co, proč, jak opravit
+    print(e)  # a structured diagnostic card: what, why, how to fix it
 ```
 
-`SimpleObjectError` navíc filtruje interní snímky knihovny ze stopy
-chyby (`_skip_locations`) — chybová hláška ukazuje na **tvůj** kód, ne
-na vnitřní implementaci knihovny.
+`SimpleObjectError` also filters the library's own internal frames out of the
+error's traceback (`_skip_locations`) — the error message points to **your**
+code, not the library's internal implementation.
 
 ---
 
 ### ⚙️ Settings
 
-Knihovna má jedno konfigurovatelné místo — logování. Žádné automatické
-nastavování handlerů, žádný zásah do root loggeru; vše je opt-in a plně
-pod tvojí kontrolou.
+The library has one configurable point: logging. There's no automatic handler
+setup and no interference with the root logger — everything is opt-in and
+fully under your control.
 
 ```python
 import logging
 logging.getLogger("simple").setLevel(logging.DEBUG)
 ```
 
-Navíc lze zaregistrovat vlastní callback, který se spustí při každé
-změně hodnoty (`value = ...` na kořenové úrovni):
+You can also register a custom callback that runs on every value change
+(`value = ...` at the root level):
 
 ```python
 import simplibs.object.settings.logging as simple_logging
@@ -408,125 +427,131 @@ simple_logging.on_value_change = my_callback
 
 ---
 
-## 🧱 Výhody knihovny
+## 🧱 Benefits of the library
 
-Každý objekt má svůj typ a pravidla pro práci s hodnotou.
+Every object has its own type and rules for working with its value.
 
-Podle definice může mít:
+Depending on the definition, it can have:
 
-* výchozí hodnotu,
-* validaci,
-* normalizaci,
-* kompozici,
-* automatický přepočet,
-* mutable nebo immutable chování,
-* vlastní mixiny.
+* a default value,
+* validation,
+* normalization,
+* composition,
+* automatic recalculation,
+* mutable or immutable behavior,
+* custom mixins.
 
-To znamená, že stejný základ může být použit pro velmi jednoduché hodnoty i pro složitější datové modely.
+This means the same foundation can be used for very simple values as well as
+for more complex data models.
 
-### Deklarativní datové modely
+### Declarative data models
 
-Strukturu objektu lze popsat několika třídními atributy místo množství opakujícího se boilerplate.
+An object's structure can be described with a handful of class attributes
+instead of a pile of repetitive boilerplate.
 
-### Validace a normalizace
+### Validation and normalization
 
-Typová kontrola, výchozí hodnoty a vlastní validační pravidla jsou součástí samotné definice objektu.
+Type checking, default values, and custom validation rules are part of the
+object's own definition.
 
-### Reaktivní výpočty
+### Reactive calculations
 
-Když jedna část modelu ovlivňuje jinou, změna se automaticky promítne do odpovídající části stromu.
+When one part of the model affects another, the change automatically
+propagates to the corresponding part of the tree.
 
-To se může hodit například pro:
+This can be useful for things like:
 
-* konfigurace,
-* výpočty,
-* simulace,
-* stavové modely,
-* formuláře,
+* configuration,
+* calculations,
+* simulations,
+* state models,
+* forms,
 * API data,
-* nebo vlastní doménové modely.
+* or your own domain models.
 
-### Immutabilita
+### Immutability
 
-Immutable instance nemá setter pro změnu své hodnoty.
+An immutable instance has no setter for changing its value.
 
-Místo změny existující instance lze vytvořit novou pomocí immutable API:
+Instead of modifying an existing instance, you can create a new one via the
+immutable API:
 
 ```python
 new_age = age.with_value(25)
 ```
 
-Původní instance přitom zůstává nedotčená.
+The original instance remains untouched.
 
 ---
 
-## 🔭 O knihovně z pohledu autora
+## 🔭 About the library, from the author's point of view
 
-Knihovna vznikla z jednoduchého pozorování — opakujícího se vzorce
-"typ + default + validace + logika" — a z touhy dát mu jednou provždy
-deterministický, znovupoužitelný základ. Je to trochu jako vlastní malý
-jazyk pro domluvu s Pythonem: minimum logiky, maximum využitelnosti.
-Každý parametr funkce se stává vlastním objektem, a dohromady tvoří
-reaktivní systém.
+The library grew out of a simple observation — a recurring pattern of
+"type + default + validation + logic" — and a wish to give it a deterministic,
+reusable foundation once and for all. It's a bit like a small language of its
+own for talking to Python: minimal logic, maximum usefulness. Every function
+parameter becomes its own object, and together they form a reactive system.
 
-Sám ji plánuju použít jako základ pro připravovanou `simplibs-validate`
-— validační logika, kde je `SimpleConstant` s vlastní `_validate` přesně
-ten správný stavební kámen. Ale potenciál vidím širší: protože libovolnou
-konstantu lze přidáním `_inners` proměnit v kompozici a libovolnou
-kompozici naopak zjednodušit na konstantu (odebráním `_inners`, nebo
-vytvořením instance s `as_atom=True`), dá se knihovna použít i jako
-obecný **deklarativní stavební systém** — od nejmenších jednotek nahoru,
-oběma směry rozšiřitelný a specifikovatelný. Jedna z myšlenek, kterou
-bych rád časem vyzkoušel: použít konstanty jako elementární stavební
-prvky a přes kompozice z nich sestavovat popisy atomů a molekul —
-doslova, ne v přeneseném programátorském smyslu.
+I plan to use it myself as the foundation for the upcoming `simplibs-validate`
+— validation logic, where a `SimpleConstant` with its own `_validate` is
+exactly the right building block. But I see the potential as broader than
+that: since any constant can be turned into a composition by adding `_inners`,
+and any composition can conversely be simplified into a constant (by removing
+`_inners`, or by creating an instance with `as_atom=True`), the library can
+also be used as a general **declarative building system** — extensible and
+specifiable in both directions, starting from the smallest units and building
+up. One idea I'd like to try out at some point: using constants as elementary
+building blocks and composing descriptions of atoms and molecules out of them
+— literally, not in the metaphorical programming sense.
 
-Tohle je **první verze** — výsledek všech původních myšlenek, ale
-rozhodně ne uzavřené dílo. Je to spíš pevný základ a struktura, na které
-je radost dál stavět, než hotový produkt. Skutečné použití časem ukáže,
-co ještě potřebuje doladit, rozšířit, nebo úplně předělat.
+This is the **first version** — the result of all the original ideas, but
+definitely not a finished work. It's more of a solid foundation and structure
+that's a pleasure to keep building on, than a finished product. Real-world use
+will show, over time, what still needs tuning, extending, or rethinking
+entirely.
 
-
----
-
-## ☯️ O simplibs
-
-Všechny knihovny v ekosystému **simplibs** (Simple Libraries) sdílí společnou inženýrskou filozofii:
-
-* **Přívětivé k dyslektikům:** Aktivně minimalizujeme kognitivní zátěž.
-  Kód je atomizovaný do malých, samostatných jednotek, soubory jsou
-  pojmenované přímo podle úlohy, kterou plní, a vysvětlení popisují spíš
-  *proč* je něco navržené tak, jak je, ne jen *co* to dělá.
-* **Programátorský klid:** Nic by nemělo chybět a nic by nemělo přebývat.
-  Ceníme si čistých cest provedení a srozumitelné architektury před
-  uspěchanou, neuspořádanou sadou funkcí.
-* **Defenzivní styl:** Aktivně předjímáme okrajové případy a chybové
-  stavy, aby zůstaly jen bezpečné cesty provedení. Kód je stavěný na to,
-  aby elegantně degradoval, ne aby nečekaně spadl.
-* **Minimalismus:** Najít nejpřímější cestu k cíli v co nejméně krocích,
-  bez ústupků na bezpečnosti, čitelnosti nebo úplnosti.
-* **Kód jako řemeslo:** Kód by měl být příjemný na pohled, čitelný na
-  první pohled a vyvolávat strukturální harmonii. Bereme softwarové
-  inženýrství jako přesné řemeslo.
 
 ---
 
-### 🤝 Přispívání a komunita
+## ☯️ About simplibs
 
-Tohle je **open-source projekt**, dělaný s láskou a péčí. Velmi si
-vážíme spolupráce s komunitou a uvítáme jakoukoliv zpětnou vazbu, hlášení
-chyb, nebo nápady na nové funkce!
+All libraries in the **simplibs** (Simple Libraries) ecosystem share a common
+engineering philosophy:
 
-* **Chceš přispět?** Klidně otevři Issue nebo pošli Pull Request.
-* **Chceš se ozvat?** Pokud chceš projekt dál probrat, spolupracovat,
-  nebo se jen pozdravit, otevři GitHub Issue nebo založ Discussion.
+* **Dyslexia-friendly:** We actively minimize cognitive load. Code is atomized
+  into small, self-contained units, files are named directly after the job
+  they do, and explanations focus more on *why* something is designed the way
+  it is than just *what* it does.
+* **Programmer's peace of mind:** Nothing should be missing, and nothing
+  should be redundant. We value clean execution paths and understandable
+  architecture over a rushed, disorganized pile of features.
+* **Defensive style:** We actively anticipate edge cases and error states, so
+  that only safe execution paths remain. Code is built to degrade gracefully,
+  not to crash unexpectedly.
+* **Minimalism:** Find the most direct path to the goal in as few steps as
+  possible, without compromising on safety, readability, or completeness.
+* **Code as craft:** Code should be pleasant to look at, readable at a glance,
+  and evoke structural harmony. We treat software engineering as a precise
+  craft.
 
 ---
 
-### 📝 Licence
+### 🤝 Contributing and community
 
-Tahle knihovna je vydaná pod licencí **MIT**. Stavěj skvělé věci!
+This is an **open-source project**, made with care. We deeply value
+collaboration with the community and welcome any feedback, bug reports, or
+ideas for new features!
+
+* **Want to contribute?** Feel free to open an Issue or send a Pull Request.
+* **Want to reach out?** If you'd like to discuss the project further,
+  collaborate, or just say hi, open a GitHub Issue or start a Discussion.
 
 ---
 
-[▲ Zpět nahoru](#-simplibs-object)
+### 📝 License
+
+This library is released under the **MIT** license. Build great things!
+
+---
+
+[▲ Back to top](#-simplibs-object)

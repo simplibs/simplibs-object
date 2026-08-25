@@ -20,6 +20,8 @@ class ValueFormatting(SimpleMixin):
 * [`__bytes__`](#__bytes__)
 * [`__bool__`](#__bool__)
 
+[⬅️ Back to main Mixins Overview](../../README_MIXINS_OVERVIEW.md)
+
 ---
 
 ### `format`
@@ -134,5 +136,3 @@ def __bool__(self) -> bool:
 [▲ Back to top](#-table-of-contents)
 
 ---
-
-[⬅️ Back to Mixins Overview](../../../README_MIXINS_OVERVIEW.md)

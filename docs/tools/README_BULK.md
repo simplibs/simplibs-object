@@ -1,52 +1,54 @@
-# 📦 Bulk — Hromadné vytváření z různých zdrojů dat
+# 📦 Bulk — Batch creation from various data sources
 
-Bulk nástroje řeší situaci "mám seznam specifikací (z JSON, CSV, YAML,
-tabulky, nebo prostě Python objektů) a chci z nich najednou vyrobit sadu
-blueprintů/instancí" — nadstavba nad
-[`create_simple_object`](README_AUTOMATE_CREATORS.md#create_simple_object--univerzální-fasáda)
-pro hromadné zpracování.
+The bulk tools handle the situation "I have a list of specs (from JSON,
+CSV, YAML, a table, or plain Python objects) and I want to build a whole
+batch of blueprints/instances from them at once" — an extension on top of
+[`create_simple_object`](README_AUTOMATE_CREATORS.md#create_simple_object--the-universal-facade)
+for batch processing.
 
 ```
-create_simple_object_bulk          (univerzální fasáda — detekuje formát vstupu)
-└── create_simple_object_bulk_from_bulk_case_class  (společný jmenovatel všech cest)
+create_simple_object_bulk          (universal facade — detects the input format)
+└── create_simple_object_bulk_from_bulk_case_class  (the common denominator for every path)
     ├── ...from_dicts     ← ...from_json, ...from_yaml
     ├── ...from_table
     └── ...from_csv
 ```
 
-Všechny konkrétní varianty (`from_json`, `from_yaml`, `from_csv`,
-`from_table`, `from_dicts`) jsou veřejně dostupné, ale nemají vlastní
-README soubor — jsou dost malé a úzce propojené, aby dávalo smysl je
-popsat společně přímo tady.
+All the specific variants (`from_json`, `from_yaml`, `from_csv`,
+`from_table`, `from_dicts`) are publicly accessible, but don't have their
+own README file — they're small enough and closely enough related that it
+makes sense to cover them together, right here.
 
 ---
 
-## 🧭 Obsah
+## 🧭 Contents
 
-* [`BulkCase` — specifikace jedné položky](#bulkcase--specifikace-jedné-položky)
-* [`create_simple_object_bulk` — univerzální fasáda](#create_simple_object_bulk--univerzální-fasáda)
-* [`create_simple_object_bulk_from_bulk_case_class` — společný jmenovatel](#create_simple_object_bulk_from_bulk_case_class--společný-jmenovatel)
-* [Konkrétní zdrojové parsery](#konkrétní-zdrojové-parsery)
+* [`BulkCase` — the specification for one item](#bulkcase--the-specification-for-one-item)
+* [`create_simple_object_bulk` — the universal facade](#create_simple_object_bulk--the-universal-facade)
+* [`create_simple_object_bulk_from_bulk_case_class` — the common denominator](#create_simple_object_bulk_from_bulk_case_class--the-common-denominator)
+* [Concrete source parsers](#concrete-source-parsers)
   * [`..._from_dicts`](#_from_dicts)
   * [`..._from_json`](#_from_json)
   * [`..._from_yaml`](#_from_yaml)
   * [`..._from_table`](#_from_table)
   * [`..._from_csv`](#_from_csv)
 
+[⬅️ Back to main README](../../README.md)
+
 ---
 
-## `BulkCase` — specifikace jedné položky
+## `BulkCase` — the specification for one item
 
-`BulkCase` je `dataclass` reprezentující **jednu** položku pro hromadné
-vytváření — obsahuje stejné parametry jako `create_simple_object`, plus
-vlastní validaci ve `__post_init__` a metodu, která ji spustí.
+`BulkCase` is a `dataclass` representing **one** item for batch creation —
+it holds the same parameters as `create_simple_object`, plus its own
+validation in `__post_init__` and a method that runs it.
 
-**Pole:** `class_name`, `default`, `inners`, `value_type`, `validate`,
+**Fields:** `class_name`, `default`, `inners`, `value_type`, `validate`,
 `logic`, `decompose`, `return_instance`, `mixins`, `as_atom`, `mutable` —
-1:1 se signaturou `create_simple_object`.
+1:1 with `create_simple_object`'s signature.
 
-**Validace probíhá při vytvoření `BulkCase`, ne až při volání
-`create_simple_object`:**
+**Validation happens when the `BulkCase` is created, not when
+`create_simple_object` is called:**
 
 ```python
 def __post_init__(self):
@@ -62,18 +64,19 @@ def __post_init__(self):
         validate_composite_has_not_default(self.class_name, self.default)
 ```
 
-**Proč validovat dřív, než se cokoliv vytváří:** u hromadného zpracování
-(desítky až stovky položek najednou) je mnohem lepší UX odhalit chybnou
-specifikaci **hned při sestavení seznamu `BulkCase` objektů**, ne až
-uprostřed dávkového zpracování, kde by bylo nejasné, která položka a proč
-selhala. Všimni si i **symetrických** párů kontrol — `_default` je
-povinný pro konstantu a zakázaný pro kompozici, `_logic`/`inners` přesně
-naopak — stejné pravidlo, jaké zná `SimpleObjectMetadata` (viz
-[README_SIMPLE_OBJECT_METADATA.md](README_SIMPLE_OBJECT_METADATA.md#zakázaný-_default)),
-jen aplikované o úroveň dřív.
+**Why validate before anything is created:** for batch processing (dozens
+to hundreds of items at once), it's a much better user experience to catch
+an invalid spec **right when the list of `BulkCase` objects is built**,
+rather than in the middle of batch processing, where it would be unclear
+which item failed and why. Notice also the **symmetrical** pairs of checks
+— `_default` is required for a constant and forbidden for a composition,
+`_logic`/`inners` exactly the reverse — the same rule
+`SimpleObjectMetadata` already enforces (see
+[README_SIMPLE_OBJECT_METADATA](../metadata/README_SIMPLE_OBJECT_METADATA.md#the-forbidden-_default)),
+just applied one level earlier.
 
-**`create_simple_object()` metoda** je jen tenký runner — přeposílá
-uložené hodnoty do funkce se stejným jménem:
+**The `create_simple_object()` method** is just a thin runner — it
+forwards the stored values into the same-named function:
 
 ```python
 def create_simple_object(self):
@@ -85,65 +88,66 @@ def create_simple_object(self):
     )
 ```
 
-`BulkCase` tedy funguje jako **odložené volání** — nese v sobě všechny
-parametry i po validaci, a skutečné vytvoření třídy/instance se spustí až
-později, typicky ve smyčce přes celý seznam.
+`BulkCase` therefore works as a **deferred call** — it carries all its
+parameters even after validation, and the actual class/instance creation
+only runs later, typically in a loop over the whole list.
 
-[▲ Nahoru](#-obsah)
-
----
-
-## `create_simple_object_bulk` — univerzální fasáda
-
-**Parametry:** `source` (*Any*) — vstup libovolného podporovaného formátu.
-
-**Návratová hodnota:** `list` vytvořených blueprintů/instancí.
-
-**Detekční pravidla, v pořadí, v jakém se testují:**
-
-```
-source je list/tuple?
-├─ prázdný           → from_dicts([])
-├─ první prvek BulkCase  → from_bulk_case_class
-├─ první prvek dict      → from_dicts
-└─ první prvek list/tuple → from_table  (2D matice)
-
-source je str?
-├─ začíná "["                                → from_json
-├─ první řádek obsahuje "class_name" a "," nebo ";" → from_csv
-└─ jinak                                     → from_yaml (záložní pokus)
-```
-
-**Detekce podle prvního prvku, ne podle typové anotace.** Funkce
-nevyžaduje, aby uživatel řekl, jaký formát posílá — pozná to sama podle
-tvaru dat: `isinstance(first_item, BulkCase)`, `isinstance(first_item,
-dict)`, `isinstance(first_item, (list, tuple))`. Tohle je pohodlné pro
-uživatele (jedna funkce na cokoliv), ale znamená to, že u sekvenčních
-vstupů rozhoduje **jen první prvek** — směšovaný seznam (např. `dict` a
-pak `BulkCase` pohromadě) by fungoval nepředvídatelně, protože se prvky
-za tím prvním nekontrolují dopředu.
-
-**Detekce textového formátu je heuristická, s jasnou prioritou.** JSON má
-nejsilnější signál (`cleaned.startswith("[")` — spolehlivé, protože bulk
-vstup je vždy seznam). CSV se pozná podle přítomnosti hlavičky
-`class_name` **a zároveň** oddělovače (`,`/`;`) na prvním řádku — dvojitá
-podmínka snižuje riziko falešné shody. YAML je **záložní volba** — pokud
-nic z předchozího nesedí, zkusí se YAML, protože YAML nemá tak
-jednoznačný "podpis" jako JSON nebo CSV.
-
-**Prázdný seznam je speciální případ** (`if not source: return
-create_simple_object_bulk_from_dicts([])`) — bez tyhle výjimky by
-`first_item = source[0]` na prázdné sekvenci spadlo na `IndexError`.
-
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## `create_simple_object_bulk_from_bulk_case_class` — společný jmenovatel
+## `create_simple_object_bulk` — the universal facade
 
-**Parametry:** `bulk_dicts` (*Iterable[BulkCase]*).
+**Parameters:** `source` (*Any*) — input in any supported format.
 
-**Návratová hodnota:** `list` vytvořených blueprintů/instancí.
+**Return value:** a `list` of created blueprints/instances.
+
+**Detection rules, in the order they're tested:**
+
+```
+is source a list/tuple?
+├─ empty                    → from_dicts([])
+├─ first element is BulkCase  → from_bulk_case_class
+├─ first element is dict      → from_dicts
+└─ first element is list/tuple → from_table  (2D matrix)
+
+is source a str?
+├─ starts with "["                                  → from_json
+├─ the first line contains "class_name" and "," or ";" → from_csv
+└─ otherwise                                        → from_yaml (fallback attempt)
+```
+
+**Detection is based on the first element, not a type annotation.** The
+function doesn't require the user to state which format they're sending —
+it figures it out itself from the shape of the data:
+`isinstance(first_item, BulkCase)`, `isinstance(first_item, dict)`,
+`isinstance(first_item, (list, tuple))`. This is convenient for the user
+(one function for everything), but it means that for sequence inputs,
+**only the first element** decides the branch — a mixed list (e.g. a `dict`
+followed by a `BulkCase`) would behave unpredictably, since elements after
+the first aren't checked ahead of time.
+
+**Text-format detection is heuristic, with a clear priority order.** JSON
+has the strongest signal (`cleaned.startswith("[")` — reliable, since bulk
+input is always a list). CSV is recognized by the presence of a
+`class_name` header **and** a delimiter (`,`/`;`) on the first line at the
+same time — the double condition lowers the risk of a false match. YAML is
+the **fallback choice** — if none of the above matches, YAML is tried,
+since YAML doesn't have as clear-cut a "signature" as JSON or CSV.
+
+**An empty list is a special case** (`if not source: return
+create_simple_object_bulk_from_dicts([])`) — without this exception,
+`first_item = source[0]` on an empty sequence would raise `IndexError`.
+
+[▲ Back to Contents](#-contents)
+
+---
+
+## `create_simple_object_bulk_from_bulk_case_class` — the common denominator
+
+**Parameters:** `bulk_dicts` (*Iterable[BulkCase]*).
+
+**Return value:** a `list` of created blueprints/instances.
 
 ```python
 def create_simple_object_bulk_from_bulk_case_class(bulk_dicts):
@@ -155,26 +159,29 @@ def create_simple_object_bulk_from_bulk_case_class(bulk_dicts):
     return results
 ```
 
-**Tohle je místo, kam se sbíhají úplně všechny cesty** — bez ohledu na to,
-jestli vstup byl JSON, CSV, YAML, tabulka, nebo přímý seznam `dict`, na
-konci vždycky vznikne seznam `BulkCase` instancí a ten se zpracuje přesně
-touhle jedinou funkcí. Každý ze specifických parserů níže tedy dělá jen
-**jednu věc** — převede svůj specifický formát na `tuple[BulkCase, ...]` —
-a zbytek (validace + vytvoření) nechává na týhle sdílené funkci.
+**This is the point where absolutely every path converges** — regardless
+of whether the input was JSON, CSV, YAML, a table, or a plain list of
+`dict`, at the end there's always a list of `BulkCase` instances, and it's
+processed by this exact single function. So each of the specific parsers
+below does only **one thing** — convert its specific format into a
+`tuple[BulkCase, ...]` — and leaves the rest (validation + creation) to
+this shared function.
 
-`enumerate` s indexem v chybové hlášce (`raise_bulk_item_is_not_bulk_dict(item,
-index)`) je důležitý detail pro hromadné zpracování — uživatel se
-stovkami položek potřebuje vědět **která konkrétní** položka je
-problematická, ne jen že "něco" nesedí.
+`enumerate` with the index in the error message
+(`raise_bulk_item_is_not_bulk_dict(item, index)`) is an important detail
+for batch processing — a user with hundreds of items needs to know
+**exactly which** item is problematic, not just that "something" doesn't
+match.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## Konkrétní zdrojové parsery
+## Concrete source parsers
 
-Všechny níže sdílí stejný závěrečný krok: sestaví `tuple[BulkCase, ...]`
-a předají ho `create_simple_object_bulk_from_bulk_case_class`.
+All of the below share the same final step: they build a
+`tuple[BulkCase, ...]` and pass it to
+`create_simple_object_bulk_from_bulk_case_class`.
 
 ### `..._from_dicts`
 
@@ -186,13 +193,14 @@ def create_simple_object_bulk_from_dicts(dicts):
     return create_simple_object_bulk_from_bulk_case_class(bulk)
 ```
 
-Nejjednodušší a zároveň **základní stavební kámen** pro `from_json` a
-`from_yaml` (obě formáty se nejdřív dekódují do Python `list[dict]` a pak
-zavolají přesně tuhle funkci). Každý `dict` se rozbalí přímo jako
-kwargs do `BulkCase(**d)` — klíče slovníku tedy musí odpovídat polím
-`BulkCase` (`class_name`, `default`, `inners`, ...).
+The simplest, and also the **fundamental building block** for `from_json`
+and `from_yaml` (both formats are first decoded into a Python
+`list[dict]`, and then this exact function is called). Each `dict` is
+unpacked directly as kwargs into `BulkCase(**d)` — so the dictionary's
+keys have to match `BulkCase`'s fields (`class_name`, `default`,
+`inners`, ...).
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ### `..._from_json`
 
@@ -209,12 +217,13 @@ def create_simple_object_bulk_from_json(json_string):
     return create_simple_object_bulk_from_dicts(data)
 ```
 
-Tři úrovně validace před tím, než se předá dál: typ vstupu (musí být
-`str`), dekódovatelnost (`json.JSONDecodeError` se zachytí a přebalí do
-strukturované chyby), a tvar výsledku (musí být `list`, ne třeba jeden
-objekt). Teprve pak deleguje na `..._from_dicts`.
+Three levels of validation before it's passed along further: the input
+type (must be `str`), decodability (`json.JSONDecodeError` is caught and
+wrapped into a structured error), and the shape of the result (must be a
+`list`, not, say, a single object). Only then does it delegate to
+`..._from_dicts`.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ### `..._from_yaml`
 
@@ -235,16 +244,16 @@ def create_simple_object_bulk_from_yaml(yaml_string):
     return create_simple_object_bulk_from_dicts(data)
 ```
 
-Stejná struktura jako `..._from_json`, jen s jedním extra krokem:
-**volitelná závislost.** `import yaml` je uvnitř `try`, protože PyYAML
-není povinný balíček celé knihovny — pokud uživatel YAML vůbec nepoužívá,
-nemusí ho mít nainstalovaný. Pokud chybí a uživatel se pokusí o YAML
-vstup, dostane srozumitelnou chybu (`raise_bulk_yaml_import_failed`)
-místo suchého `ModuleNotFoundError`. `yaml.safe_load` (ne `yaml.load`) je
-záměrná bezpečnostní volba — bezpečný parser, který nespouští libovolný
-Python kód zakódovaný v YAML dokumentu.
+Same structure as `..._from_json`, just with one extra step: an
+**optional dependency.** `import yaml` sits inside a `try`, because PyYAML
+isn't a required package for the whole library — if the user never uses
+YAML, they don't need it installed. If it's missing and the user tries a
+YAML input, they get a clear error (`raise_bulk_yaml_import_failed`)
+instead of a dry `ModuleNotFoundError`. `yaml.safe_load` (not `yaml.load`)
+is a deliberate security choice — a safe parser that doesn't execute
+arbitrary Python code encoded in a YAML document.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ### `..._from_table`
 
@@ -270,16 +279,17 @@ def create_simple_object_bulk_from_table(table):
     return create_simple_object_bulk_from_bulk_case_class(tuple(bulk))
 ```
 
-Formát "2D matice" — každý řádek je pozičně mapovaný na pole `BulkCase`
-(`[0]` = `class_name`, `[1]` = `default`, atd.), bez pojmenovaných klíčů.
-Pomocná uzavřená funkce `_get(idx, default=UNSET)` řeší **řádky různé
-délky** — pokud řádek nemá dost prvků na všechny pozice, chybějící se
-doplní `UNSET` (nebo `False` pro `return_instance`), místo aby to
-spadlo na `IndexError`. Tenhle formát je nejúspornější zápis (žádné
-klíče, jen hodnoty), ale je nejcitlivější na pořadí — proto je vhodný
-hlavně pro programově generovaná data, ne pro ruční psaní.
+A "2D matrix" format — every row is positionally mapped to `BulkCase`'s
+fields (`[0]` = `class_name`, `[1]` = `default`, etc.), with no named
+keys. The helper closure `_get(idx, default=UNSET)` handles **rows of
+different lengths** — if a row doesn't have enough elements for every
+position, the missing ones are filled in with `UNSET` (or `False` for
+`return_instance`), instead of raising `IndexError`. This format is the
+most compact notation (no keys, just values), but it's the most
+order-sensitive — so it's best suited for programmatically generated
+data, not for hand-written input.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ### `..._from_csv`
 
@@ -303,29 +313,31 @@ def create_simple_object_bulk_from_csv(csv_string):
     return create_simple_object_bulk_from_bulk_case_class(tuple(bulk))
 ```
 
-Nejsložitější parser, protože CSV je **čistě textový formát** — každá
-hodnota musí projít explicitní konverzí z řetězce na skutečný Python typ:
+The most complex parser, because CSV is a **purely textual format** —
+every value has to go through explicit conversion from a string into an
+actual Python type:
 
-* **`_convert_value`** — postupně zkusí `int`, pak `float`, pak nechá jako
-  `str`; prázdný řetězec se stane `UNSET` (ne `None` — `None` má v systému
-  jiný, striktně definovaný význam, viz
-  [README_SIMPLE_CONSTANT.md](README_SIMPLE_CONSTANT.md#normalize)).
-* **`_convert_type`** — mapuje textové jméno typu (`"int"`, `"str"`,
-  `"float"`, `"bool"`) na skutečný typový objekt; neznámé jméno se
-  ztlumí na `Any`, ne na chybu.
-* **`_convert_bool`** — rozpozná `"true"`, `"1"`, `"yes"` (case-insensitive)
-  jako `True`, cokoliv jiného jako `False`.
-* **`_convert_callable`** — CSV **neumí přenést funkce/lambdy jako text**
-  bezpečně (byl by to `exec` na cizím vstupu), takže pokud sloupec
-  `validate`/`logic`/`decompose` obsahuje cokoliv, funkce rovnou vyhodí
-  `raise_bulk_csv_callable_not_supported` — jasná, explicitní hranice
-  toho, co CSV formát podporuje, místo tichého selhání nebo
-  bezpečnostního rizika.
+* **`_convert_value`** — tries `int`, then `float`, in order, and finally
+  falls back to `str`; an empty string becomes `UNSET` (not `None` — `None`
+  has a different, strictly defined meaning in the system, see
+  [README_SIMPLE_CONSTANT](../core/README_SIMPLE_CONSTANT.md#normalize)).
+* **`_convert_type`** — maps a type's text name (`"int"`, `"str"`,
+  `"float"`, `"bool"`) to the actual type object; an unknown name falls
+  back to `Any`, not an error.
+* **`_convert_bool`** — recognizes `"true"`, `"1"`, `"yes"`
+  (case-insensitive) as `True`, anything else as `False`.
+* **`_convert_callable`** — CSV **can't safely carry functions/lambdas as
+  text** (that would mean `exec`-ing untrusted input), so if the
+  `validate`/`logic`/`decompose` column contains anything at all, the
+  function immediately raises
+  `raise_bulk_csv_callable_not_supported` — a clear, explicit boundary of
+  what the CSV format supports, instead of a silent failure or a security
+  risk.
 
-CSV je tedy vhodné hlavně pro **jednoduché konstanty** (kde stačí
-`class_name`, `default`, `value_type`) — jakmile potřebuješ vlastní
-validaci nebo logiku, je potřeba sáhnout po JSON/YAML (kde by ale funkce
-musely existovat jako importovatelné objekty, ne jako text) nebo po
-přímém `BulkCase`/Python API.
+CSV is therefore mainly suited for **simple constants** (where
+`class_name`, `default`, `value_type` are enough) — as soon as you need
+custom validation or logic, you have to reach for JSON/YAML (where,
+though, the functions would need to exist as importable objects, not as
+text) or for `BulkCase`/the direct Python API.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)

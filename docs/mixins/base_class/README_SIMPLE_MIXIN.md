@@ -1,32 +1,35 @@
-# 🧱 `SimpleMixin` — Základ pro tvorbu vlastních mixinů
+# 🧱 `SimpleMixin` — The foundation for building your own mixins
 
-`SimpleMixin` je kořenová třída, ze které musí dědit **úplně každý**
-mixin v Simple systému. Sama o sobě nedělá nic funkčního — jejím úkolem
-je dát mixinům společnou identitu, deklarativní kompatibilní příznaky a
-hlavně **přísnou strukturální validaci při definici**, protože mixiny se
-(narozdíl od běžné Pythoní dědičnosti) injektují přímo do `class_dict`
-dynamicky vytvářených instančních tříd (viz
-[README_CREATE_INSTANCE.md](README_CREATE_INSTANCE.md#_build_instance_class_dict--namespace-injection)) —
-jakákoliv strukturální chyba by se tam propsala nebezpečně a nečitelně.
+`SimpleMixin` is the root class that **absolutely every** mixin in the
+Simple system has to inherit from. It doesn't do anything functional on
+its own — its job is to give mixins a shared identity, declarative
+compatibility flags, and, above all, **strict structural validation at
+definition time**, because mixins (unlike regular Python inheritance) get
+injected directly into the `class_dict` of dynamically created instance
+classes (see
+[README_CREATE_INSTANCE](../../metadata/instance/README_CREATE_INSTANCE.md#_build_instance_class_dict--namespace-injection))
+— any structural error there would propagate dangerously and illegibly.
 
 ```
 SimpleMixin (metaclass=SimpleMixinMeta)
 ├── NodesTuple, NodesDicts, Snapshot, ...   (core_mixins)
-└── tvůj vlastní mixin
+└── your own mixin
 ```
 
 ---
 
-## 🧭 Obsah
+## 🧭 Contents
 
-* [Deklarativní kompatibilní příznaky](#deklarativní-kompatibilní-příznaky)
-* [`__slots__` a `init_mixins`](#__slots__-a-init_mixins)
-* [`SimpleMixinMeta` — validace při definici, identita za běhu](#simplemixinmeta--validace-při-definici-identita-za-běhu)
-* [`_verify_mixin_definition` — co všechno se kontroluje](#_verify_mixin_definition--co-všechno-se-kontroluje)
+* [Declarative compatibility flags](#declarative-compatibility-flags)
+* [`__slots__` and `init_mixins`](#__slots__-and-init_mixins)
+* [`SimpleMixinMeta` — validation at definition time, identity at runtime](#simplemixinmeta--validation-at-definition-time-identity-at-runtime)
+* [`_verify_mixin_definition` — everything that's checked](#_verify_mixin_definition--everything-thats-checked)
+
+[⬅️ Back to main README](../../../README.md)
 
 ---
 
-## Deklarativní kompatibilní příznaky
+## Declarative compatibility flags
 
 ```python
 class SimpleMixin(metaclass=SimpleMixinMeta):
@@ -42,59 +45,60 @@ class SimpleMixin(metaclass=SimpleMixinMeta):
         pass
 ```
 
-Pět příznaků, které vlastní mixin může přepsat, aby deklaroval, na jaké
-instance se smí připojit — přesně ty, které `_verify_mixin_compatibility`
-skutečně vynucuje při každém vytváření instance (viz
-[README_CREATE_INSTANCE.md](README_CREATE_INSTANCE.md#_verify_mixin_compatibility--kompatibilní-matice)):
+Five flags a custom mixin can override to declare which instances it's
+allowed to attach to — exactly the ones `_verify_mixin_compatibility`
+actually enforces on every instance creation (see
+[README_CREATE_INSTANCE](../../metadata/instance/README_CREATE_INSTANCE.md#_verify_mixin_compatibility--the-compatibility-matrix)):
 
-| Příznak | Omezuje na |
-|---|---|
-| `_constant_only` | jen atomické instance |
-| `_composite_only` | jen kompozitní instance |
-| `_mutable_only` | jen mutable instance |
-| `_immutable_only` | jen immutable instance |
-| `_only_types` | jen instance, jejichž `meta.default` odpovídá danému typu/union |
+| Flag              | Restricts to                                                     |
+|:------------------|:-----------------------------------------------------------------|
+| `_constant_only`  | atomic instances only                                            |
+| `_composite_only` | composite instances only                                         |
+| `_mutable_only`   | mutable instances only                                           |
+| `_immutable_only` | immutable instances only                                         |
+| `_only_types`     | only instances whose `meta.default` matches the given type/union |
 
-**Výchozí hodnoty jsou vždy "bez omezení"** (`False`/`UNSET`) — mixin,
-který žádný příznak nepřepíše, jde připojit kamkoliv. To je přesně důvod,
-proč `TestMixin` (viz
-[README_BULK_TEST.md](README_BULK_TEST.md#testmixin--syntetický-testovací-dvojník))
-nechává všechny příznaky na výchozích hodnotách — potřebuje fungovat
-univerzálně.
+**The default values are always "no restriction"** (`False`/`UNSET`) — a
+mixin that doesn't override any flag can be attached anywhere. That's
+exactly why `TestMixin` (see
+[README_BULK_TEST](../../testing/README_BULK_TEST.md#testmixin--a-synthetic-test-double))
+leaves every flag at its default — it needs to work universally.
 
-[▲ Nahoru](#-obsah)
-
----
-
-## `__slots__` a `init_mixins`
-
-**`__slots__ = ()`** na `SimpleMixin` samotné je jen výchozí hodnota — ve
-skutečnosti musí **každý konkrétní mixin** definovat svoje vlastní
-`__slots__` explicitně, i kdyby byly prázdné. Tohle není jen konvence,
-je to **vynucené** validací (viz
-[`_verify_mixin_definition`](#_verify_mixin_definition--co-všechno-se-kontroluje)
-níže) — bez explicitního `__slots__` mixin vůbec neprojde definicí.
-
-**`init_mixins` je izolovaný hook, ne řetězec přes `super()`.** Docstring
-na metodě to říká přímo: mixin, který `init_mixins` přepíše, **nesmí**
-volat `super().init_mixins()`. Důvod je architektonický — mixiny se
-neskládají přes MRO, takže `super()` řetězení by tu nedávalo smysl (a ani
-by fungovat nemohlo spolehlivě). Místo toho instance builder sesbírá
-`init_mixins` ze všech mixinů zvlášť a sám je zřetězí do jedné funkce
-(`_build_combined_init_mixins`, viz
-[README_CREATE_INSTANCE.md](README_CREATE_INSTANCE.md#_build_combined_init_mixins--řetězení-inicializace)).
-Tvůj mixin tedy má psát `init_mixins` tak, jako by byl **jediný** mixin na
-světě — nastavit jen svoje vlastní sloty, nic víc.
-
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## `SimpleMixinMeta` — validace při definici, identita za běhu
+## `__slots__` and `init_mixins`
 
-Metaclass `SimpleMixin` řeší dvě nezávislé věci.
+**`__slots__ = ()`** on `SimpleMixin` itself is just the default value —
+in reality, **every specific mixin** has to define its own `__slots__`
+explicitly, even if it's empty. This isn't just a convention, it's
+**enforced** by validation (see
+[`_verify_mixin_definition`](#_verify_mixin_definition--everything-thats-checked)
+below) — without an explicit `__slots__`, a mixin doesn't even pass
+definition.
 
-### 1. Validace při definici (`__init__`)
+**`init_mixins` is an isolated hook, not a chain through `super()`.** The
+method's docstring says this directly: a mixin that overrides
+`init_mixins` **must not** call `super().init_mixins()`. The reason is
+architectural — mixins aren't composed via the MRO, so `super()` chaining
+wouldn't make sense here (and couldn't work reliably either). Instead, the
+instance builder collects `init_mixins` from every mixin separately and
+chains them together itself into a single function
+(`_build_combined_init_mixins`, see
+[README_CREATE_INSTANCE](../../metadata/instance/README_CREATE_INSTANCE.md#_build_combined_init_mixins--chaining-initialization)).
+So your mixin should write `init_mixins` as if it were the **only** mixin
+in the world — set only its own slots, nothing more.
+
+[▲ Back to Contents](#-contents)
+
+---
+
+## `SimpleMixinMeta` — validation at definition time, identity at runtime
+
+The `SimpleMixin` metaclass handles two independent things.
+
+### 1. Validation at definition time (`__init__`)
 
 ```python
 def __init__(cls, name, bases, dct, **kwargs):
@@ -103,16 +107,16 @@ def __init__(cls, name, bases, dct, **kwargs):
         _verify_mixin_definition(cls)
 ```
 
-**`if bases:`** — jednořádková, ale důležitá podmínka. `SimpleMixin`
-samotná má prázdný `bases` tuple (nedědí z ničeho kromě `object`), takže
-by na sobě samotné validaci spustit nešlo (a ani nemá smysl — je to
-kořen, ne konkrétní mixin). Každá **odvozená** třída (`bases` není
-prázdný) projde validací okamžitě při definici — **fail-fast** princip:
-chybně definovaný mixin nikdy nedostane šanci proniknout hlouběji do
-systému a selhat až později, nečitelně, uprostřed kompilace nějaké
-konkrétní instance.
+**`if bases:`** — a one-line but important condition. `SimpleMixin`
+itself has an empty `bases` tuple (it doesn't inherit from anything except
+`object`), so validation couldn't be run on it (and it wouldn't make sense
+anyway — it's the root, not a concrete mixin). Every **derived** class
+(where `bases` isn't empty) is validated immediately at definition time —
+a **fail-fast** principle: an incorrectly defined mixin never gets a
+chance to slip deeper into the system and fail later, illegibly, in the
+middle of compiling some specific instance.
 
-### 2. Identita za běhu (`__instancecheck__`)
+### 2. Identity at runtime (`__instancecheck__`)
 
 ```python
 def __instancecheck__(cls, instance):
@@ -122,66 +126,69 @@ def __instancecheck__(cls, instance):
     return any(issubclass(m, cls) for m in mixins)
 ```
 
-Tohle řeší konkrétní problém: protože mixiny **nejsou** v MRO výsledné
-instanční třídy (jsou zploštěné do `class_dict`, viz
-[README_CREATE_INSTANCE.md](README_CREATE_INSTANCE.md#create_instance_class--kompilace-finální-třídy)),
-běžné `isinstance(obj, MyMixin)` by bez tohohle přepsání **vždy vrátilo
-`False`** — Python by hledal `MyMixin` v MRO a nenašel by ji tam.
+This solves a specific problem: because mixins are **not** in the MRO of
+the resulting instance class (they're flattened into `class_dict`, see
+[README_CREATE_INSTANCE](../../metadata/instance/README_CREATE_INSTANCE.md#create_instance_class--compiling-the-final-class)),
+a plain `isinstance(obj, MyMixin)` would **always return `False`** without
+this override — Python would look for `MyMixin` in the MRO and wouldn't
+find it there.
 
-Řešení je dvoukrokové: napřed zkusit standardní MRO kontrolu (`super()...`,
-pro jistotu, kdyby někdy mixin byl přece jen přímo v MRO), a pokud
-neuspěje, sáhnout na `instance.__mixins__` — plochý tuple všech mixinů,
-který `_build_instance_class_dict` uložil na třídu (viz
-[README_CREATE_INSTANCE.md](README_CREATE_INSTANCE.md#_build_instance_class_dict--namespace-injection)) —
-a zkontrolovat, jestli je tam `cls` sama, nebo některá její podtřída
-(`issubclass(m, cls)`). Díky tomu `isinstance(instance, Snapshot)` funguje
-přesně tak, jak by uživatel intuitivně čekal, i když je to technicky
-"podvod" oproti standardnímu Pythoní mechanismu.
+The solution is two-step: first try the standard MRO check (`super()...`,
+just in case a mixin ever does end up directly in the MRO), and if that
+doesn't succeed, reach for `instance.__mixins__` — the flat tuple of every
+mixin that `_build_instance_class_dict` stored on the class (see
+[README_CREATE_INSTANCE](../../metadata/instance/README_CREATE_INSTANCE.md#_build_instance_class_dict--namespace-injection))
+— and check whether `cls` itself, or one of its subclasses, is in there
+(`issubclass(m, cls)`). Thanks to this, `isinstance(instance, Snapshot)`
+works exactly the way a user would intuitively expect, even though it's
+technically a "trick" compared to the standard Python mechanism.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## `_verify_mixin_definition` — co všechno se kontroluje
+## `_verify_mixin_definition` — everything that's checked
 
-Devět kroků, spuštěných jednou při definici každého konkrétního mixinu:
+Nine steps, run once when each specific mixin is defined:
 
 ```
-1. __slots__ MUSÍ být v cls.__dict__ (explicitně definované, ne zděděné)
-2. slots MUSÍ být tuple nebo str
-3. všechny položky slots MUSÍ být str
-4. slots NESMÍ obsahovat zakázaná jména (FORBIDDEN_NAMES)
-5. class-level namespace NESMÍ obsahovat zakázaná jména
-6. kompatibilní příznaky (RESTRICTION_FLAGS) MUSÍ být bool, pokud jsou definované
-7. _only_types MUSÍ mít jednu z podporovaných forem (UNSET / type / tuple[type] / Union)
-8. init_mixins NESMÍ volat super() (kontrola přes bytecode co_names)
+1. __slots__ MUST be in cls.__dict__ (explicitly defined, not inherited)
+2. slots MUST be a tuple or str
+3. every item in slots MUST be a str
+4. slots MUST NOT contain forbidden names (FORBIDDEN_NAMES)
+5. the class-level namespace MUST NOT contain forbidden names
+6. the compatibility flags (RESTRICTION_FLAGS) MUST be bool, if defined
+7. _only_types MUST have one of the supported forms (UNSET / type / tuple[type] / Union)
+8. init_mixins MUST NOT call super() (checked via co_names bytecode inspection)
 ```
 
-**Krok 1 je nejpřísnější a nejdůležitější** — bez explicitního `__slots__`
-mixin vůbec neprojde. Tohle vynucuje to, co bylo zmíněno výše: každý
-mixin musí sám deklarovat svůj paměťový layout, jinak by hrozilo, že se
-mixinu omylem vytvoří `__dict__` (a tím i neomezené, nekontrolované
-přidávání atributů, které by rozbilo garance zbytku systému o
-předvídatelném layoutu instance).
+**Step 1 is the strictest and most important** — without an explicit
+`__slots__`, a mixin doesn't pass at all. This enforces what was mentioned
+above: every mixin has to declare its own memory layout, otherwise there'd
+be a risk of a mixin accidentally getting a `__dict__` (and, with it,
+unlimited, uncontrolled attribute additions that would break the rest of
+the system's guarantees about a predictable instance layout).
 
-**Kroky 4–5 (zakázaná jména) chrání interní API systému.** `FORBIDDEN_NAMES`
-obsahuje jména, která už mají v systému svůj vlastní, pevně daný význam
-(např. `_value`, `_owner`, `value`, `meta`, `init_mixins` jako override
-by tu byl výjimkou z výjimky — pozor, `init_mixins` je legitimní
-přepsatelný hook, `FORBIDDEN_NAMES` chrání spíš interní strukturální
-atributy jako `_value`/`_owner`/`_locked`). Kdyby mixin definoval slot
-nebo atribut se stejným jménem, došlo by k **tiché kolizi** — mixinův
-atribut by buď přepsal, nebo byl přepsán systémovým, bez jakéhokoliv
-varování za běhu. Validace to odhalí hned, srozumitelně, při definici.
+**Steps 4–5 (forbidden names) protect the system's internal API.**
+`FORBIDDEN_NAMES` contains names that already have their own, fixed
+meaning in the system (e.g. `_value`, `_owner`, `value`, `meta` —
+overriding `init_mixins` would be the exception to this exception: note
+that `init_mixins` is a legitimate, overridable hook, whereas
+`FORBIDDEN_NAMES` guards more against internal structural attributes like
+`_value`/`_owner`/`_locked`). If a mixin defined a slot or attribute with
+the same name, a **silent collision** would occur — the mixin's attribute
+would either overwrite, or be overwritten by, the system's own, with no
+warning at runtime at all. Validation catches this immediately and
+clearly, at definition time.
 
-**Krok 8 je jediná kontrola, která čte přímo bytecode** (`func.__code__.co_names`)
-místo AST nebo stringového hledání — rychlá, spolehlivá detekce, jestli
-funkce `init_mixins` **kdekoliv** uvnitř sebe odkazuje na jméno `super`.
-Tahle kontrola je přímým vynucením pravidla popsaného výše ("bez
-`super()` řetězení") — bez ní by chybné volání `super().init_mixins()`
-mohlo vést k matoucímu `AttributeError` až za běhu, hluboko v instance
-builderu, místo jasné chyby hned při definici mixinu.
+**Step 8 is the only check that reads bytecode directly**
+(`func.__code__.co_names`) instead of using AST or string searching — a
+fast, reliable way to detect whether the `init_mixins` function references
+the name `super` **anywhere** inside itself. This check is a direct
+enforcement of the rule described above ("no `super()` chaining") —
+without it, an incorrect call to `super().init_mixins()` could lead to a
+confusing `AttributeError` only at runtime, deep inside the instance
+builder, instead of a clear error right at the mixin's definition.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
-➡️ Pokračování: [README_WITH_CONSTANT.md](README_WITH_CONSTANT.md)

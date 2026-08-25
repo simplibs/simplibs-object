@@ -21,9 +21,9 @@ def create_value_property(
 
     # 2. Build docstring (getter part)
     doc_string = (
-        f"Hodnota typu `{meta.value_type_name}`.\n\n"
-        f"Getter vrací hodnotu "
-        f"{'tohoto prvku' if path is None else 'vnitřního prvku'}.\n"
+        f"Value of type `{meta.value_type_name}`.\n\n"
+        f"Getter returns the value "
+        f"{'of this element' if path is None else 'of the inner element'}.\n"
     )
 
     # 3. Immutable → getter only

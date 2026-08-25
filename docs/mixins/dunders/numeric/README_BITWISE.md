@@ -25,6 +25,9 @@ integral values.
 * [`__lshift__` / `__rlshift__`](#__lshift__--__rlshift__)
 * [`__rshift__` / `__rrshift__`](#__rshift__--__rrshift__)
 * [`__invert__`](#__invert__)
+* [`execute_bitwise_op`](#execute_bitwise_op)
+
+[⬅️ Back to main Mixins Overview](../../README_MIXINS_OVERVIEW.md)
 
 ---
 
@@ -182,4 +185,54 @@ def __invert__(self):
 
 ---
 
-[⬅️ Back to Mixins Overview](../../../README_MIXINS_OVERVIEW.md)
+### `execute_bitwise_op`
+
+Executes a standard or right-hand bitwise operation and returns a new
+instance with the calculated value. If the operation fails because of an
+unsupported operand type, it returns `NotImplemented`.
+
+**Parameters:**
+
+* `self` — the current instance.
+* `operator` — the bitwise operator to execute.
+* `other` — the second operand.
+* `is_reversed` — whether the operation uses reversed operand order.
+
+**Returns:**
+
+* a new instance with the calculated value.
+* `NotImplemented` if the operation cannot be performed.
+
+**Example usage:**
+
+```python
+flags & mask
+```
+
+**Under the hood:**
+
+```python
+def execute_bitwise_op(
+    self: "BitwiseProtocol",
+    operator: "Operator",
+    other: Any,
+    is_reversed: bool = False
+) -> Any:
+    other_value = getattr(other, "value", other)
+
+    try:
+        value = (
+            operator(other_value, self.value)
+            if is_reversed
+            else operator(self.value, other_value)
+        )
+        return with_constant(self, self.meta.name_snake, value)
+
+    except TypeError:
+        return NotImplemented
+```
+
+[▲ Back to top](#-table-of-contents)
+
+---
+

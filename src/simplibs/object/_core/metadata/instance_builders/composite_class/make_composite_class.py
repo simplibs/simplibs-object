@@ -53,11 +53,6 @@ def make_composite_class(
     # noinspection PyTypeChecker
     composite_class = type(base_class_name, class_parents, class_dict)
 
-    # 7. Cleanup declarative attributes
-    for name in ("inners", "_logic", "_decompose"):
-        if name in composite_class.__dict__:
-            delattr(composite_class, name)
-
     composite_class: "CompositeInstanceProtocol"
     return composite_class
 
@@ -81,8 +76,6 @@ initialization, and reactive hooks.
 4. Merges properties for all immediate inners via `create_properties_for_inners`.
 5. For mutable variants, injects `_recalculate_self` and `_recalculate_inners`.
 6. Creates the type using `type(name, bases, dict)`.
-7. Removes declarative attributes (`inners`, `_logic`, `_decompose`) from the
-   runtime class namespace.
 
 ## Notes
 - Using `type(...)` keeps compilation safe and explicit, without `exec`.
@@ -92,5 +85,9 @@ initialization, and reactive hooks.
   memory layout without per-instance `__dict__`.
 - Reactive hooks exist only on mutable composites; immutable ones are structurally
   frozen after initialization.
-- Namespace cleanup prevents leaking schema internals into the public runtime API.
+- `class_dict` passed to `type(...)` only ever contains the members listed above — declarative
+  attributes such as `inners`, `_logic`, and `_decompose` are never placed there, so they are
+  never present on the compiled class's own `__dict__` in the first place. They remain reachable
+  through the MRO via the atom base class / `meta.owner_class`, since `type(...)` only controls
+  the new class's own namespace, not what its parents already expose.
 """

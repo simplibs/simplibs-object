@@ -22,6 +22,8 @@ class MetaShortcuts(SimpleMixin):
 * [`is_composite`](#is_composite)
 * [`is_decomposeable`](#is_decomposeable)
 
+[⬅️ Back to main Mixins Overview](../../README_MIXINS_OVERVIEW.md)
+
 ---
 
 ### `name_snake`
@@ -145,5 +147,3 @@ def is_decomposeable(self) -> bool:
 [▲ Back to top](#-table-of-contents)
 
 ---
-
-[⬅️ Back to Mixins Overview](../../../README_MIXINS_OVERVIEW.md)

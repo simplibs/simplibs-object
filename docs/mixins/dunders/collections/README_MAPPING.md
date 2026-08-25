@@ -24,6 +24,8 @@ class Mapping(CollectionBase, SimpleMixin):
 * [`get`](#get)
 * [`__setitem__`](#__setitem__)
 
+[⬅️ Back to main Mixins Overview](../../README_MIXINS_OVERVIEW.md)
+
 ---
 
 ### `__len__`
@@ -190,4 +192,3 @@ def __setitem__(self, key: str, value) -> None:
 
 ---
 
-[⬅️ Back to Mixins Overview](../../../README_MIXINS_OVERVIEW.md)

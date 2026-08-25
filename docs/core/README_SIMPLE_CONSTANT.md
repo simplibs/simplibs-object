@@ -1,38 +1,40 @@
-# ⚛️ `SimpleConstant` — Deklarativní atom
+# ⚛️ `SimpleConstant` — Declarative atom
 
-`SimpleConstant` je základní stavební kámen celého systému — reprezentuje
-jednu typovanou hodnotu ("atom"), která umí sama sebe zvalidovat a
-normalizovat. Atomy se používají jak samostatně (např. jako typované,
-sebe-validující hodnoty v jiné knihovně), tak jako vnitřní prvky (`_inners`)
-kompozitních objektů `SimpleObject`.
+`SimpleConstant` is the fundamental building block of the whole system — it
+represents a single typed value (an "atom") that can validate and normalize
+itself. Atoms are used both on their own (e.g. as typed, self-validating
+values in another library) and as inner elements (`_inners`) of `SimpleObject`
+composite objects.
 
 ```
 SimpleBase
-└── SimpleConstant     ← jsi tady
+└── SimpleConstant     ← you are here
     └── SimpleObject
 ```
 
 ---
 
-## 🧭 Obsah
+## 🧭 Contents
 
-* [Deklarativní rozhraní](#deklarativní-rozhraní)
+* [Declarative interface](#declarative-interface)
   * [`_type`](#_type)
   * [`_default`](#_default)
   * [`_validate`](#_validate)
-* [Veřejné API](#veřejné-api)
+* [Public API](#public-api)
   * [`validate_type`](#validate_type)
   * [`validate`](#validate)
   * [`is_valid`](#is_valid)
   * [`normalize`](#normalize)
   * [`bool_or_raise_validate_error`](#bool_or_raise_validate_error)
-* [Validační pipeline jako celek](#validační-pipeline-jako-celek)
+* [The validation pipeline as a whole](#the-validation-pipeline-as-a-whole)
+
+[⬅️ Back to main README](../../README.md)
 
 ---
 
-## Deklarativní rozhraní
+## Declarative interface
 
-Tohle je vše, co uživatel při definici konstanty píše sám:
+This is everything the user writes by hand when defining a constant:
 
 ```python
 class Age(SimpleConstant):
@@ -43,64 +45,65 @@ class Age(SimpleConstant):
     def _validate(cls, value, *, return_bool=False):
         if value < 0:
             return cls.bool_or_raise_validate_error(
-                value, "Věk nemůže být záporný.", return_bool=return_bool
+                value, "Age cannot be negative.", return_bool=return_bool
             )
         return True
 ```
 
 ### `_type`
 
-Povinná typová anotace. Metadata (`SimpleConstantMetadata`) ji při definici
-třídy zpracují a zpřístupní jako `cls.meta.value_type` — z tohoto místa
-vychází veškerá typová validace v systému.
+A required type annotation. The metadata (`SimpleConstantMetadata`) processes
+it at class-definition time and exposes it as `cls.meta.value_type` — this is
+the single source that all type validation in the system is based on.
 
 ### `_default`
 
-Povinná výchozí hodnota. Musí projít typovou validací proti `_type` už
-v okamžiku definice třídy — takže neplatný default se odhalí okamžitě, ne
-až za běhu při první instanci.
+A required default value. It must pass type validation against `_type`
+already at class-definition time — so an invalid default is caught
+immediately, not later at runtime on the first instance.
 
 ### `_validate`
 
-Volitelný hook pro rozšířenou validaci nad rámec pouhé kontroly typu. Pokud
-ho uživatel nepřepíše, výchozí implementace vrací `True` — tedy "žádná
-další pravidla, stačí typová shoda". Metoda může:
+An optional hook for extended validation beyond a plain type check. If the
+user doesn't override it, the default implementation returns `True` — i.e.
+"no further rules, a type match is enough." The method can:
 
-* vrátit `True`/`False`,
-* vyhodit vlastní výjimku,
-* použít pomocnou [`bool_or_raise_validate_error`](#bool_or_raise_validate_error)
-  pro strukturované hlášení chyby.
+* return `True`/`False`,
+* raise a custom exception,
+* use the helper
+  [`bool_or_raise_validate_error`](#bool_or_raise_validate_error) for a
+  structured error report.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## Veřejné API
+## Public API
 
-Všechny metody níže jsou na `SimpleConstant` jen tenké wrappery — obsahují
-minimum logiky a delegují na interní funkce v
-`_core/logic/constant_methods/`. Tenhle vzor (tenký veřejný obal + interní
-funkce s `_DESIGN_NOTES`) se opakuje napříč celou knihovnou.
+All the methods below are just thin wrappers on `SimpleConstant` — they
+contain minimal logic and delegate to internal functions in
+`_core/logic/constant_methods/`. This pattern (thin public wrapper + internal
+function with `_DESIGN_NOTES`) repeats throughout the whole library.
 
 ### `validate_type`
 
-Deterministická typová validace, čistě na základě metadat — bez zapojení
-uživatelské `_validate` logiky.
+Deterministic type validation, based purely on metadata — without involving
+the user's `_validate` logic.
 
-**Parametry:**
-* `value` (*Any*): hodnota k ověření.
-* `return_bool` (*bool*, výchozí `False`): pokud `True`, vrátí `False`
-  místo vyhození výjimky.
+**Parameters:**
+* `value` (*Any*): the value to check.
+* `return_bool` (*bool*, default `False`): if `True`, returns `False`
+  instead of raising an exception.
 
-**Návratová hodnota:**
-* `True`, pokud hodnota odpovídá typu.
-* `False`, pokud `return_bool=True` a typ nesedí.
-* `None`, pokud `return_bool=False` a validace projde (implicitní návrat).
+**Return value:**
+* `True`, if the value matches the type.
+* `False`, if `return_bool=True` and the type doesn't match.
+* `None`, if `return_bool=False` and validation passes (implicit return).
 
-**Výjimky:**
-* `SimpleRuntimeError`, pokud `return_bool=False` a typ nesedí.
+**Exceptions:**
+* `SimpleRuntimeError`, if `return_bool=False` and the type doesn't match.
 
-**Pod kapotou:**
+**Under the hood:**
 ```python
 def validate_type(cls, value, *, return_bool=False):
     if isinstance(value, cls.meta.value_type):
@@ -110,31 +113,31 @@ def validate_type(cls, value, *, return_bool=False):
     raise_type_error(cls, value)
 ```
 
-Celá funkce je záměrně minimální — jediné, co dělá navíc oproti holému
-`isinstance`, je rozhodnutí "vrátit bool, nebo vyhodit strukturovanou
-chybu". Veškerá diagnostika (co přesně nesedí, jak to opravit) je
-delegovaná do `raise_type_error`.
+The whole function is deliberately minimal — the only thing it does beyond a
+plain `isinstance` check is decide whether to "return a bool, or raise a
+structured error." All the diagnostics (what exactly doesn't match, how to
+fix it) are delegated to `raise_type_error`.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
 ### `validate`
 
-Spustí kompletní validační pipeline: typová validace **+** uživatelská
-`_validate` logika.
+Runs the full validation pipeline: type validation **plus** the user's
+`_validate` logic.
 
-**Parametry:**
-* `value` (*Any*): hodnota k ověření.
-* `return_bool` (*bool*, výchozí `False`).
+**Parameters:**
+* `value` (*Any*): the value to check.
+* `return_bool` (*bool*, default `False`).
 
-**Návratová hodnota:**
-* `True`/`False`/`None` podle stejné konvence jako `validate_type`.
+**Return value:**
+* `True`/`False`/`None`, following the same convention as `validate_type`.
 
-**Výjimky:**
-* `SimpleRuntimeError`, pokud `return_bool=False` a validace selže.
+**Exceptions:**
+* `SimpleRuntimeError`, if `return_bool=False` and validation fails.
 
-**Pod kapotou:**
+**Under the hood:**
 ```python
 def validate(cls, value, *, return_bool=False):
     try:
@@ -155,66 +158,67 @@ def validate(cls, value, *, return_bool=False):
     return result
 ```
 
-Tři věci, které stojí za povšimnutí:
+Three things worth noting here:
 
-1. **Krátké vyhodnocení (`and`).** Uživatelská `_validate` se vůbec
-   nespustí, pokud typová validace selže — nemá smysl validovat hodnotu
-   špatného typu proti doménovým pravidlům.
-2. **Rozlišení očekávaných a neočekávaných výjimek.** Pokud uživatelská
-   `_validate` vyhodí `SimpleObjectError`, je to považováno za "očekávanou"
-   strukturovanou chybu a jde dál beze změny. Cokoliv jiného (typicky bug
-   v uživatelském kódu) se zabalí přes `raise_unexpected_validation_error`,
-   aby chybová hláška zůstala konzistentní napříč celým systémem.
-3. **`return_bool=True` znamená úplné potlačení výjimek** — i těch
-   neočekávaných. To je vědomý kompromis: v boolean módu chce volající
-   jednoduchou odpověď ano/ne, ne traceback.
+1. **Short-circuit evaluation (`and`).** The user's `_validate` doesn't run
+   at all if type validation fails — there's no point validating a value of
+   the wrong type against domain rules.
+2. **Distinguishing expected from unexpected exceptions.** If the user's
+   `_validate` raises a `SimpleObjectError`, it's treated as an "expected"
+   structured error and simply propagates unchanged. Anything else
+   (typically a bug in user code) gets wrapped via
+   `raise_unexpected_validation_error`, so the error message stays
+   consistent across the whole system.
+3. **`return_bool=True` means exceptions are fully suppressed** — even
+   unexpected ones. This is a deliberate trade-off: in boolean mode, the
+   caller wants a simple yes/no answer, not a traceback.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
 ### `is_valid`
 
-Pohodlný wrapper nad `validate(..., return_bool=True)`.
+A convenience wrapper around `validate(..., return_bool=True)`.
 
-**Parametry:**
-* `value` (*Any*): hodnota k ověření.
+**Parameters:**
+* `value` (*Any*): the value to check.
 
-**Návratová hodnota:**
-* `bool` — `True`, pokud je hodnota platná, jinak `False`. Nikdy nevyhazuje
-  výjimku.
+**Return value:**
+* `bool` — `True` if the value is valid, `False` otherwise. Never raises an
+  exception.
 
-**Příklad použití:**
+**Usage example:**
 ```python
 if Age.is_valid(-5):
     ...
 else:
-    print("Neplatný věk")
+    print("Invalid age")
 ```
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
 ### `normalize`
 
-Normalizuje vstupní hodnotu podle metadat — řeší `None`, optimalizaci
-identity defaultu a validaci v jednom kroku.
+Normalizes an input value according to the metadata — handling `None`,
+default-identity optimization, and validation in a single step.
 
-**Parametry:**
-* `value` (*Any*): hodnota k normalizaci.
-* `process_none` (*bool*, výchozí `False`): pokud `True`, `None` je nahrazen
-  výchozí hodnotou místo vyhození chyby.
+**Parameters:**
+* `value` (*Any*): the value to normalize.
+* `process_none` (*bool*, default `False`): if `True`, `None` is replaced
+  with the default value instead of raising an error.
 
-**Návratová hodnota:**
-* `Any`: normalizovaná hodnota (buď výchozí instance, nebo validovaná
-  vstupní hodnota).
+**Return value:**
+* `Any`: the normalized value (either the default instance, or the
+  validated input value).
 
-**Výjimky:**
-* `SimpleRuntimeError`, pokud hodnota je `None` a `process_none=False`,
-  nebo pokud validace selže.
+**Exceptions:**
+* `SimpleRuntimeError`, if the value is `None` and `process_none=False`, or
+  if validation fails.
 
-**Pod kapotou:**
+**Under the hood:**
 ```python
 def normalize(cls, value, *, process_none=False):
     if value is None:
@@ -232,80 +236,81 @@ def normalize(cls, value, *, process_none=False):
     return value
 ```
 
-**Proč je `None` v celém systému zakázané:** kompozitní objekty počítají
-svou hodnotu z vnitřních prvků (`_inners`) — kdyby některý z nich mohl být
-`None`, nedal by se z něj spočítat výsledek. Metadata to už hlídají na
-úrovni definice třídy (`_default` nesmí být `None`); `normalize` totéž
-vynucuje za běhu u hodnot, které přicházejí od uživatele.
+**Why `None` is forbidden throughout the system:** composite objects compute
+their value from their inner elements (`_inners`) — if any of them could be
+`None`, there'd be no way to compute a result from it. The metadata already
+enforces this at class-definition time (`_default` must not be `None`);
+`normalize` enforces the same thing at runtime for values coming from the
+user.
 
-**Optimalizace identity defaultu:** pokud se vstupní hodnota rovná
-defaultu, vrátí se přímo instance `cls.meta.default` místo nové validace.
-To šetří zbytečnou práci a udržuje stabilní identitu pro opakovaně
-používanou výchozí hodnotu. Porovnání je obalené v `try/except`, protože ne
-každá hodnota musí být vůbec porovnatelná s defaultem (`==` může u
-libovolného typu vyhodit výjimku) — v tom případě se prostě pokračuje rovnou
-k plné validaci.
+**Default-identity optimization:** if the input value equals the default, the
+`cls.meta.default` instance itself is returned directly instead of running a
+fresh validation. This saves unnecessary work and keeps a stable identity for
+a repeatedly used default value. The comparison is wrapped in `try/except`
+because not every value is necessarily comparable to the default at all
+(`==` can raise an exception for an arbitrary type) — in that case, it simply
+falls through to full validation.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
 ### `bool_or_raise_validate_error`
 
-Pomocná metoda určená **výhradně** pro použití uvnitř uživatelské
-`_validate` — umožňuje psát stručná validační pravidla bez ručního skládání
-strukturovaných výjimek.
+A helper method intended **exclusively** for use inside the user's
+`_validate` — it lets you write concise validation rules without manually
+assembling structured exceptions.
 
-**Parametry:**
-* `value` (*Any*): validovaná hodnota.
-* `problem` (*str*): lidsky čitelný popis, co je špatně.
-* `return_bool` (*bool*, výchozí `False`): pokud `True`, vrátí `False`
-  místo vyhození výjimky.
+**Parameters:**
+* `value` (*Any*): the value being validated.
+* `problem` (*str*): a human-readable description of what's wrong.
+* `return_bool` (*bool*, default `False`): if `True`, returns `False`
+  instead of raising an exception.
 
-**Návratová hodnota:**
-* `False`, pokud `return_bool=True`.
+**Return value:**
+* `False`, if `return_bool=True`.
 
-**Výjimky:**
-* `SimpleRuntimeError` (`ValueError` jako podkladová výjimka), pokud
+**Exceptions:**
+* `SimpleRuntimeError` (with `ValueError` as the underlying exception), if
   `return_bool=False`.
 
-**Příklad použití:**
+**Usage example:**
 ```python
 @classmethod
 def _validate(cls, value, *, return_bool=False):
     if value < 0:
         return cls.bool_or_raise_validate_error(
-            value, "Hodnota musí být nezáporná.", return_bool=return_bool
+            value, "Value must be non-negative.", return_bool=return_bool
         )
     return True
 ```
 
-Díky tomu, že metoda sama respektuje `return_bool`, stačí ji v `_validate`
-jen `return`-out — nemusíš v uživatelském kódu psát vlastní `if/else` pro
-boolean vs. exception mód.
+Because the method itself respects `return_bool`, all you need to do inside
+`_validate` is `return` its result — there's no need to write your own
+`if/else` for boolean-vs-exception mode in user code.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## Validační pipeline jako celek
+## The validation pipeline as a whole
 
-Tři metody na sebe navazují v jasném pořadí:
+The three methods chain together in a clear order:
 
 ```
-validate_type  →  _validate (uživatelský hook, přes cls.meta.validate)  →  normalize
+validate_type  →  _validate (user hook, via cls.meta.validate)  →  normalize
 ```
 
-* `validate_type` — nejrychlejší, nejlevnější kontrola: sedí typ?
-* `validate` — nadstavba nad `validate_type`, zapojuje doménová pravidla
-  z `_validate`.
-* `normalize` — nejvyšší úroveň, používaná při skutečném přiřazení hodnoty:
-  řeší `None`, identitu defaultu, a nakonec zavolá `validate`.
+* `validate_type` — the fastest, cheapest check: does the type match?
+* `validate` — builds on `validate_type`, bringing in domain rules from
+  `_validate`.
+* `normalize` — the highest level, used for actual value assignment: handles
+  `None`, default identity, and finally calls `validate`.
 
-Tahle vrstvená stavba znamená, že si můžeš vybrat přesně tu úroveň přísnosti
-a chování, kterou zrovna potřebuješ — od surové typové kontroly až po plnou
-normalizaci s fallbackem na default.
+This layered structure means you can pick exactly the level of strictness and
+behavior you need at any given moment — from a raw type check all the way up
+to full normalization with a fallback to the default.
 
-➡️ Pokračování: [README_SIMPLE_OBJECT.md](README_SIMPLE_OBJECT.md)
+➡️ Next: [README_SIMPLE_OBJECT](README_SIMPLE_OBJECT.md)
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)

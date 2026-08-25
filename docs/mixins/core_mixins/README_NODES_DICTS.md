@@ -18,6 +18,8 @@ class NodesDicts(NodesTuple, SimpleMixin):
 
 * [`init_mixins`](#init_mixins)
 
+[⬅️ Back to main Mixins Overview](../README_MIXINS_OVERVIEW.md)
+
 ---
 
 ### `init_mixins`
@@ -68,4 +70,3 @@ def init_mixins(self) -> None:
 
 ---
 
-[⬅️ Back to Mixins Overview](../../README_MIXINS_OVERVIEW.md)

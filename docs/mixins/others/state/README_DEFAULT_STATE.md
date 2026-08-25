@@ -23,6 +23,8 @@ class DefaultState(Snapshot, NodesTuple, SimpleMixin):
 * [`reset_to_default_values`](#reset_to_default_values)
 * [`create_new_default_instance`](#create_new_default_instance)
 
+[⬅️ Back to main Mixins Overview](../../README_MIXINS_OVERVIEW.md)
+
 ---
 
 ### `init_mixins`
@@ -132,4 +134,3 @@ def create_new_default_instance(self):
 
 ---
 
-[⬅️ Back to Mixins Overview](../../../README_MIXINS_OVERVIEW.md)

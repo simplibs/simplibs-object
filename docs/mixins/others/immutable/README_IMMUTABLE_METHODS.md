@@ -18,12 +18,44 @@ class ImmutableMethods(Snapshot, NodesDicts, NodesTuple, SimpleMixin):
 
 ## 🧭 Table of Contents
 
-* [`with_constants`](#with_constants)
 * [`with_constant`](#with_constant)
+* [`with_constants`](#with_constants)
 * [`with_composite`](#with_composite)
 * [`with_changes`](#with_changes)
 * [`with_value`](#with_value)
 * [`duplicate`](#duplicate)
+
+[⬅️ Back to main Mixins Overview](../../README_MIXINS_OVERVIEW.md)
+
+---
+
+### `with_constant`
+
+Creates a new instance by changing a single constant.
+
+**Parameters:**
+* `name` (*str*): the constant's name.
+* `new_value` (*Any*): the new value.
+
+**Returns:**
+* a new instance.
+
+**Example usage:**
+```python
+person.with_constant("first_name", "Bob")
+```
+
+**Under the hood:**
+```python
+def with_constant(self, name, new_value):
+    return with_constant(self, name, new_value)
+```
+
+More info about the with_constant process:  
+➡️ [README_WITH_CONSTANT](immutable_logic/README_WITH_CONSTANT.md)  
+
+[▲ Back to top](#-table-of-contents)
+
 
 ---
 
@@ -49,31 +81,8 @@ def with_constants(self, changes_tuple=None):
     return with_constants(self, changes_tuple)
 ```
 
-[▲ Back to top](#-table-of-contents)
-
----
-
-### `with_constant`
-
-Creates a new instance by changing a single constant.
-
-**Parameters:**
-* `name` (*str*): the constant's name.
-* `new_value` (*Any*): the new value.
-
-**Returns:**
-* a new instance.
-
-**Example usage:**
-```python
-person.with_constant("first_name", "Bob")
-```
-
-**Under the hood:**
-```python
-def with_constant(self, name, new_value):
-    return with_constant(self, name, new_value)
-```
+More info about the with_constants process:  
+➡️ [README_WITH_CONSTANTS](immutable_logic/README_WITH_CONSTANTS.md)  
 
 [▲ Back to top](#-table-of-contents)
 
@@ -102,6 +111,10 @@ def with_composite(self, name, new_value):
     return with_composite(self, name, new_value)
 ```
 
+More info about the with_composite process:  
+➡️ [README_WITH_COMPOSITE](immutable_logic/README_WITH_COMPOSITE.md)  
+
+
 [▲ Back to top](#-table-of-contents)
 
 ---
@@ -128,6 +141,9 @@ def with_changes(self, changes_dict):
         raise_with_changes_input_not_dict(self, changes_dict)
     return with_any(self, tuple(changes_dict.items()))
 ```
+
+More information about the with_any process:  
+➡️ [README_WITH_ANY](immutable_logic/README_WITH_ANY.md)  
 
 [▲ Back to top](#-table-of-contents)
 
@@ -179,8 +195,10 @@ def duplicate(self):
     return create_new_instance(self, self._build_snapshot())
 ```
 
+More information about create_new_instance can be found here:  
+➡️ [README_WITH_CONSTANT](immutable_logic/README_WITH_CONSTANT.md)  
+
 [▲ Back to top](#-table-of-contents)
 
 ---
 
-[⬅️ Back to Mixins Overview](../../../README_MIXINS_OVERVIEW.md)

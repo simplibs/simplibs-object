@@ -26,6 +26,8 @@ class DirtyTracking(Snapshot, NodesTuple, SimpleMixin):
 * [`reset_to_clean`](#reset_to_clean)
 * [`mark_clean`](#mark_clean)
 
+[⬅️ Back to main Mixins Overview](../../README_MIXINS_OVERVIEW.md)
+
 ---
 
 ### `init_mixins`
@@ -195,4 +197,3 @@ def mark_clean(self) -> None:
 
 ---
 
-[⬅️ Back to Mixins Overview](../../../README_MIXINS_OVERVIEW.md)

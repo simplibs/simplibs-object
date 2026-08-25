@@ -22,6 +22,8 @@ Requires the class to provide `from_dict()` (from `MutableSerialization` or
 * [`__getstate__`](#__getstate__)
 * [`__setstate__`](#__setstate__)
 
+[⬅️ Back to main Mixins Overview](../../README_MIXINS_OVERVIEW.md)
+
 ---
 
 ### `__getstate__`
@@ -79,4 +81,3 @@ def __setstate__(self, state: dict) -> None:
 
 ---
 
-[⬅️ Back to Mixins Overview](../../../README_MIXINS_OVERVIEW.md)

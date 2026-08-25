@@ -25,6 +25,8 @@ class Serialization(Snapshot, NodesDicts, NodesTuple, SimpleMixin):
 * [`from_json`](#from_json)
 * [`update_constants`](#update_constants)
 
+[⬅️ Back to main Mixins Overview](../README_MIXINS_OVERVIEW.md)
+
 ---
 
 ### `to_dict`
@@ -307,4 +309,3 @@ def update_constants(self, user_dict: dict) -> "Serialization":
 
 ---
 
-[⬅️ Back to Mixins Overview](../../README_MIXINS_OVERVIEW.md)

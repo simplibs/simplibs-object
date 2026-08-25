@@ -21,6 +21,8 @@ class Snapshot(NodesTuple, SimpleMixin):
 * [`_restore_snapshot`](#_restore_snapshot)
 * [`_compare_snapshots`](#_compare_snapshots)
 
+[⬅️ Back to main Mixins Overview](../README_MIXINS_OVERVIEW.md)
+
 ---
 
 ### `_build_snapshot`
@@ -134,4 +136,3 @@ def _compare_snapshots(self, snapshot1, snapshot2, *, constants_only=False):
 
 ---
 
-[⬅️ Back to Mixins Overview](../../README_MIXINS_OVERVIEW.md)

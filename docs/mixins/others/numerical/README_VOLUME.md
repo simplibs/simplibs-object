@@ -5,7 +5,6 @@ limit enforcement — directly to an instance's own value.
 
 ```python
 from src.simplibs.object.mixins.base_class import SimpleMixin
-from ._stepper_class import Stepper
 
 class Volume(SimpleMixin):
     ...
@@ -19,6 +18,8 @@ class Volume(SimpleMixin):
 
 * [`init_mixins`](#init_mixins)
 * [`value_stepper`](#value_stepper)
+
+[⬅️ Back to main Mixins Overview](../../README_MIXINS_OVERVIEW.md)
 
 ---
 
@@ -43,6 +44,9 @@ volume.value_stepper.up(10)
 def init_mixins(self):
     self._value_stepper = Stepper(self)
 ```
+
+A closer look at the Stepper class:  
+➡️ [README_STEPPER](stepper_class/README_STEPPER.md)    
 
 [▲ Back to top](#-table-of-contents)
 
@@ -75,4 +79,3 @@ def value_stepper(self):
 
 ---
 
-[⬅️ Back to Mixins Overview](../../../README_MIXINS_OVERVIEW.md)

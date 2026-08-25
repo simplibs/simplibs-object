@@ -1,75 +1,79 @@
-# 🏗️ `create_instance` — Orchestrace a mixin pipeline
+# 🏗️ `create_instance` — Orchestration and the mixin pipeline
 
-Tenhle dokument popisuje nejvyšší úroveň vytváření instance — to, co se
-skutečně spustí, když zavoláš `MyClass(mixins=(...), mutable=False)`, tedy
-přesně to, na co deleguje `SimpleMeta.__call__` (viz
-[README_SIMPLE_META.md](README_SIMPLE_META.md#__call__--vytváření-instancí)).
-Zatímco [README_ATOM_CLASS.md](README_ATOM_CLASS.md) a
-[README_COMPOSITE_CLASS.md](README_COMPOSITE_CLASS.md) popisují strukturální
-základ (atom/kompozice), tenhle dokument popisuje, jak se na ten základ
-**bezpečně nalepí mixiny**.
+This document describes the top level of instance creation — what actually
+runs when you call `MyClass(mixins=(...), mutable=False)`, i.e. exactly
+what `SimpleMeta.__call__` delegates to (see
+[README_SIMPLE_META](../README_SIMPLE_META.md)). While
+[README_ATOM_CLASS](README_ATOM_CLASS.md) and
+[README_COMPOSITE_CLASS](README_COMPOSITE_CLASS.md) describe the
+structural foundation (atom/composition), this document describes how
+mixins get **safely attached** on top of that foundation.
 
 ---
 
-## 🧭 Obsah
+## 🧭 Contents
 
-* [`create_instance` — hlavní orchestrátor](#create_instance--hlavní-orchestrátor)
-* [`get_base_class` — výběr strukturálního základu](#get_base_class--výběr-strukturálního-základu)
-* [`create_instance_class` — kompilace finální třídy](#create_instance_class--kompilace-finální-třídy)
-* [`_resolve_flat_mixins` — zploštění hierarchie mixinů](#_resolve_flat_mixins--zploštění-hierarchie-mixinů)
-* [`_verify_mixin_compatibility` — kompatibilní matice](#_verify_mixin_compatibility--kompatibilní-matice)
+* [`create_instance` — the main orchestrator](#create_instance--the-main-orchestrator)
+* [`get_base_class` — selecting the structural foundation](#get_base_class--selecting-the-structural-foundation)
+* [`create_instance_class` — compiling the final class](#create_instance_class--compiling-the-final-class)
+* [`_resolve_flat_mixins` — flattening the mixin hierarchy](#_resolve_flat_mixins--flattening-the-mixin-hierarchy)
+* [`_verify_mixin_compatibility` — the compatibility matrix](#_verify_mixin_compatibility--the-compatibility-matrix)
 * [`_build_instance_class_dict` — namespace injection](#_build_instance_class_dict--namespace-injection)
-* [`_build_combined_init_mixins` — řetězení inicializace](#_build_combined_init_mixins--řetězení-inicializace)
-* [`_extend_instance_class` — post-kompilační hooky](#_extend_instance_class--post-kompilační-hooky)
+* [`_build_combined_init_mixins` — chaining initialization](#_build_combined_init_mixins--chaining-initialization)
+* [`_extend_instance_class`— post-compilation hooks](#_extend_instance_class--post-compilation-hooks)
+
+[⬅️ Back to main README](../../../README.md)
 
 ---
 
-## `create_instance` — hlavní orchestrátor
+## `create_instance` — the main orchestrator
 
-**Parametry:** `cls`, `mixins` (tuple), `as_atom` (bool), `mutable` (bool, výchozí `True`).
+**Parameters:** `cls`, `mixins` (tuple), `as_atom` (bool), `mutable` (bool,
+default `True`).
 
-**Návratová hodnota:** hotová, inicializovaná instance.
+**Return value:** a finished, initialized instance.
 
-**Osm kroků pipeline:**
+**The eight-step pipeline:**
 
 ```
-1. Validace vstupu (cls není base class, as_atom/mutable jsou bool)
+1. Input validation (cls is not a base class, as_atom/mutable are bool)
 2. is_atom = cls.meta.is_constant or as_atom
-3. Kontrola hashovatelnosti (jen pro immutable)
-4. get_base_class  ──► vybere strukturální základ
-5. create_instance_class  ──► zkompiluje finální třídu s mixiny
-6. object.__new__  ──► alokace syrové paměti
-7. instance.__init__()  ──► inicializace
+3. Hashability check (only for immutable)
+4. get_base_class  ──► selects the structural foundation
+5. create_instance_class  ──► compiles the final class with mixins
+6. object.__new__  ──► raw memory allocation
+7. instance.__init__()  ──► initialization
 8. return instance
 ```
 
-**Krok 2 je jednořádkové, ale důležité pravidlo:** `is_atom = cls.meta.is_constant
-or as_atom` — konstanta je **vždy** atom, bez ohledu na `as_atom`; kompozici
-lze naopak vynutit do atomického chování (`as_atom=True`), pokud by pro
-nějaký účel dávalo smysl zacházet s ní jako s jedním kusem hodnoty místo
-strukturovaného stromu.
+**Step 2 is a one-liner, but an important rule:** `is_atom =
+cls.meta.is_constant or as_atom` — a constant is **always** an atom,
+regardless of `as_atom`; a composition, on the other hand, can be forced
+into atomic behavior (`as_atom=True`) if it makes sense for some purpose
+to treat it as a single chunk of value instead of a structured tree.
 
-**Krok 3 — immutable musí být hashovatelná.** Dává smysl: pokud je hodnota
-neměnná, měla by fungovat jako klíč v `dict`/prvek v `set`, což vyžaduje
-hashovatelnost. Tahle kontrola proběhne dřív, než se vůbec začne
-cokoliv kompilovat.
+**Step 3 — an immutable value must be hashable.** This makes sense: if the
+value is immutable, it should work as a `dict` key / `set` element, which
+requires hashability. This check runs before any compilation even starts.
 
-**Dvoufázová konstrukce (kroky 5 vs. 6–7)** je klíčový architektonický
-princip: napřed se **jednou** zkompiluje runtime třída (drahá operace —
-sestavení `class_dict`, validace mixinů...), teprve pak se z ní alokuje
-instance (levná operace — `object.__new__` + `__init__`). Kdyby šlo o
-opakované vytváření instancí se **stejnou** kombinací `mixins`/`mutable`,
-kompilace třídy by se dala v budoucnu cachovat na úrovni volajícího kódu.
+**Two-phase construction (steps 5 vs. 6–7)** is a key architectural
+principle: first the runtime class is compiled **once** (an expensive
+operation — building `class_dict`, validating mixins...), and only then is
+an instance allocated from it (a cheap operation — `object.__new__` +
+`__init__`). If the same combination of `mixins`/`mutable` were used to
+create instances repeatedly, the class compilation could, in the future,
+be cached at the level of the calling code.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## `get_base_class` — výběr strukturálního základu
+## `get_base_class` — selecting the structural foundation
 
-**Parametry:** `cls`, `is_atom`, `mutable`.
+**Parameters:** `cls`, `is_atom`, `mutable`.
 
-**Návratová hodnota:** jedna ze čtyř již zkompilovaných tříd z metadat.
+**Return value:** one of the four already-compiled classes from the
+metadata.
 
 ```python
 def get_base_class(cls, is_atom, mutable):
@@ -78,22 +82,22 @@ def get_base_class(cls, is_atom, mutable):
     return cls.meta.composite_class_mutable if mutable else cls.meta.composite_class_immutable
 ```
 
-Čistě směrovací brána přes dvě nezávislé osy — **topologie** (atom vs.
-kompozice) a **mutabilita** (mutable vs. immutable). Veškerá složitost
-(líné vytváření, cachování) je delegovaná do metadat — tahle funkce sama
-o sobě nic nekompiluje, jen vybírá.
+A pure routing gate across two independent axes — **topology** (atom vs.
+composition) and **mutability** (mutable vs. immutable). All the
+complexity (lazy creation, caching) is delegated to the metadata — this
+function itself doesn't compile anything, it just selects.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## `create_instance_class` — kompilace finální třídy
+## `create_instance_class` — compiling the final class
 
-**Parametry:** `cls`, `mixins`, `base_class`, `is_atom`, `mutable`.
+**Parameters:** `cls`, `mixins`, `base_class`, `is_atom`, `mutable`.
 
-**Návratová hodnota:** zkompilovaná runtime třída, připravená k alokaci instance.
+**Return value:** a compiled runtime class, ready for instance allocation.
 
-**Pod kapotou:**
+**Under the hood:**
 ```python
 def create_instance_class(cls, mixins, base_class, is_atom, mutable):
     class_name = f"{cls.meta.class_name}Instance"
@@ -107,43 +111,44 @@ def create_instance_class(cls, mixins, base_class, is_atom, mutable):
     return _instance_cls
 ```
 
-**Klíčové architektonické rozhodnutí: `(base_class,)` — jediný rodič.**
-Mixiny se **nedávají** do `class_parents`, jak by se dalo čekat u
-klasického multiple inheritance vzoru. Místo toho jsou zploštěné,
-zvalidované a vmíchané přímo do `class_dict` (viz
-`_build_instance_class_dict` níže) — tzv. **Namespace Injection Pattern**.
+**A key architectural decision: `(base_class,)` — a single parent.**
+Mixins are **not** placed into `class_parents`, as you might expect from a
+classic multiple-inheritance pattern. Instead, they're flattened,
+validated, and mixed directly into `class_dict` (see
+`_build_instance_class_dict` below) — the so-called **Namespace Injection
+Pattern**.
 
-**Proč ne standardní multiple inheritance?** Tři důvody, přímo
-z `_DESIGN_NOTES`:
+**Why not standard multiple inheritance?** Three reasons, straight from
+`_DESIGN_NOTES`:
 
-1. **Konflikty rozvržení slotů.** Python nedovolí kombinovat víc tříd s
-   neprázdnými `__slots__` v běžné vícenásobné dědičnosti (`TypeError`).
-   Injektování slotů mixinů přímo do `class_dict` tenhle limit úplně
-   obchází.
-2. **Explicitní evidence členství.** Které mixiny instance má, se
-   netestuje přes MRO, ale přes explicitní `class_dict["__mixins__"]`
-   (tuple zploštěných mixin tříd) — `isinstance(obj, Mixin)` pak funguje
-   spolehlivě přes vlastní `__instancecheck__` na `SimpleMixinMeta`, bez
-   ohledu na MRO komplikace.
-3. **Předvídatelné řešení konfliktů.** Kolize atributů se řeší
-   deterministicky už při sestavování `class_dict` (viz níže), ne
-   spoléháním na složité MRO pořadí.
+1. **Slot layout conflicts.** Python doesn't allow combining multiple
+   classes with non-empty `__slots__` in regular multiple inheritance
+   (`TypeError`). Injecting mixin slots directly into `class_dict`
+   sidesteps this limit entirely.
+2. **Explicit membership tracking.** Which mixins an instance has isn't
+   tested via the MRO, but via the explicit `class_dict["__mixins__"]` (a
+   tuple of flattened mixin classes) — `isinstance(obj, Mixin)` then works
+   reliably via a custom `__instancecheck__` on `SimpleMixinMeta`,
+   regardless of any MRO complications.
+3. **Predictable conflict resolution.** Attribute collisions are resolved
+   deterministically already while `class_dict` is being built (see
+   below), rather than relying on a complex MRO order.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## `_resolve_flat_mixins` — zploštění hierarchie mixinů
+## `_resolve_flat_mixins` — flattening the mixin hierarchy
 
-**Parametry:** `cls`, `mixins`, `is_atom`, `mutable`.
+**Parameters:** `cls`, `mixins`, `is_atom`, `mutable`.
 
-**Návratová hodnota:** `tuple` — zploštěný, deduplikovaný seznam všech
-mixinů (včetně jejich celé MRO ancestry), v pořadí zachovávajícím vložení.
+**Return value:** a `tuple` — a flattened, deduplicated list of every mixin
+(including their full MRO ancestry), in insertion-preserving order.
 
-**Pod kapotou (princip):**
+**Under the hood (the principle):**
 ```python
 def _resolve_flat_mixins(cls, mixins, is_atom, mutable):
-    flat_mixins = {}  # dict jako O(1) insertion-ordered set
+    flat_mixins = {}  # a dict used as an O(1) insertion-ordered set
 
     for mixin in mixins:
         for mro_mixin in mixin.__mro__:
@@ -155,34 +160,35 @@ def _resolve_flat_mixins(cls, mixins, is_atom, mutable):
     return tuple(flat_mixins.keys())
 ```
 
-**Proč projíždět celé `__mro__` každého mixinu, ne jen mixin samotný?**
-Protože uživatel může předat mixin, který sám dědí z jiných mixinů — funkce
-"rozbalí" celý jeho dědičný strom, aby se do finální instance dostalo
-kompletně vše, co mixin (a jeho předci) definují.
+**Why walk each mixin's whole `__mro__`, not just the mixin itself?**
+Because the user might pass in a mixin that itself inherits from other
+mixins — the function "unpacks" its whole inheritance tree, so the final
+instance gets absolutely everything the mixin (and its ancestors) define.
 
-**`dict` jako množina se zachovaným pořadím vložení** — `mro_mixin not in
-flat_mixins` je O(1) kontrola, ale narozdíl od `set` si `dict` (od Pythonu
-3.7) pamatuje pořadí, ve kterém byly klíče vloženy. Tohle pořadí je
-důležité — `_build_instance_class_dict` ho později prochází **obráceně**,
-aby platilo přirozené pravidlo "první v uživatelem zadaném tuple vyhrává"
-(viz níže).
+**A `dict` used as an insertion-ordered set** — `mro_mixin not in
+flat_mixins` is an O(1) check, but unlike a `set`, a `dict` (since Python
+3.7) remembers the order its keys were inserted in. This order matters —
+`_build_instance_class_dict` later walks it **in reverse**, so that the
+natural rule "the first one in the user-supplied tuple wins" holds true
+(see below).
 
-**Validace proběhne "za letu"** (`_verify_mixin_compatibility` se volá
-hned při objevení nového mixinu, ne až po zploštění celého seznamu) —
-takže i nekompatibilní mixin skrytý hluboko v cizí MRO ancestry se odhalí
-hned, dřív než se vůbec začne sestavovat finální třída.
+**Validation happens "on the fly"** (`_verify_mixin_compatibility` is
+called right when a new mixin is discovered, not only after the whole list
+has been flattened) — so even an incompatible mixin hidden deep in a
+foreign MRO ancestry is caught immediately, before the final class even
+starts being assembled.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## `_verify_mixin_compatibility` — kompatibilní matice
+## `_verify_mixin_compatibility` — the compatibility matrix
 
-**Parametry:** `cls`, `mixin`, `is_atom`, `mutable` (výchozí `True`).
+**Parameters:** `cls`, `mixin`, `is_atom`, `mutable` (default `True`).
 
-**Návratová hodnota:** `None` (vyhazuje výjimku při nekompatibilitě).
+**Return value:** `None` (raises an exception on incompatibility).
 
-**Pod kapotou:**
+**Under the hood:**
 ```python
 def _verify_mixin_compatibility(cls, mixin, is_atom, mutable=True):
     if not isinstance(mixin, type) or not issubclass(mixin, SimpleMixin):
@@ -201,80 +207,84 @@ def _verify_mixin_compatibility(cls, mixin, is_atom, mutable=True):
         raise_mixin_not_support_default_value_type(cls, mixin)
 ```
 
-Pět nezávislých kontrol, každý mixin deklaruje svoje omezení přes
-příznaky (`_constant_only`, `_composite_only`, `_mutable_only`,
-`_immutable_only`, `_only_types`) — přesně ty, které jsi zmiňoval v historii
-knihovny jako "mixin compatibility flags". Tahle funkce je místo, kde se
-ty příznaky **reálně vynucují**, při každém vytváření instance s daným
-mixinem.
+Five independent checks — every mixin declares its constraints through
+flags (`_constant_only`, `_composite_only`, `_mutable_only`,
+`_immutable_only`, `_only_types`) — exactly the ones mentioned earlier in
+the library's history as "mixin compatibility flags." This function is
+where those flags are **actually enforced**, on every instance creation
+involving that mixin.
 
-Poslední kontrola (`_only_types`) je typová — pokud mixin dává smysl jen
-pro určité datové typy (např. numerické mixiny jako `Stepper`/`Volume`
-z historie knihovny), ověří se, že `cls.meta.default` je instancí
-očekávaného typu, dřív než se mixin vůbec připojí.
+The last check (`_only_types`) is type-based — if a mixin only makes sense
+for certain data types (e.g. numeric mixins like `Stepper`/`Volume` from
+the library's history), it verifies that `cls.meta.default` is an instance
+of the expected type before the mixin is even attached.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
 ## `_build_instance_class_dict` — namespace injection
 
-**Parametry:** `cls`, `mixins`, `is_atom`, `mutable`.
+**Parameters:** `cls`, `mixins`, `is_atom`, `mutable`.
 
-**Návratová hodnota:** kompletní `class_dict`, připravený pro `type(...)`.
+**Return value:** the complete `class_dict`, ready for `type(...)`.
 
-**Sedm kroků:**
+**Seven steps:**
 
-1. **Zploštění mixinů** přes `_resolve_flat_mixins`.
-2. **Základní namespace** — `__is_constant__`, `__is_mutable__`, `__mixins__`.
-3. **Příprava akumulátorů** — `init_mixins` (list hooků), `mixin_slots`
-   (dict), a `class_slots` — množina všech slotů zděděných z `cls.__mro__`
-   (tedy ze strukturálního základu, atomu/kompozice).
-4. **Iterace mixinů v obráceném pořadí** (`reversed(all_unique_mixins)`) —
-   tohle je jádro mechanismu přepisování atributů.
-5. Pro každý mixin: kontrola kolize slotů (proti base class i proti dřív
-   zpracovaným mixinům) a extrakce namespace (metody, atributy).
-6. Sloučení sesbíraných `init_mixins` hooků do jednoho (viz níže).
-7. Finalizace `__slots__` z `mixin_slots`.
+1. **Flattening the mixins** via `_resolve_flat_mixins`.
+2. **Base namespace** — `__is_constant__`, `__is_mutable__`, `__mixins__`.
+3. **Preparing accumulators** — `init_mixins` (a list of hooks),
+   `mixin_slots` (a dict), and `class_slots` — the set of every slot
+   inherited from `cls.__mro__` (i.e. from the structural foundation, the
+   atom/composition).
+4. **Iterating the mixins in reverse order** (`reversed(all_unique_mixins)`)
+   — this is the core of the attribute-override mechanism.
+5. For each mixin: checking for slot collisions (against both the base
+   class and previously processed mixins) and extracting its namespace
+   (methods, attributes).
+6. Merging the collected `init_mixins` hooks into one (see below).
+7. Finalizing `__slots__` from `mixin_slots`.
 
-**Proč `reversed(...)`?** Tohle je klíčový detail pro pochopení priority
-mixinů. Uživatel zadává `mixins=(MixinA, MixinB)` s očekáváním, že
-`MixinA` (napsaný **první**) má přednost, pokud oba definují stejný
-atribut. Ale `class_dict[key] = value` v cyklu **přepisuje** předchozí
-hodnotu — takže aby `MixinA` "vyhrál", musí se zpracovat **jako poslední**.
-Iterace v obráceném pořadí přesně tohle zařizuje.
+**Why `reversed(...)`?** This is the key detail for understanding mixin
+priority. The user writes `mixins=(MixinA, MixinB)` expecting `MixinA`
+(written **first**) to take precedence if both define the same attribute.
+But `class_dict[key] = value` in a loop **overwrites** the previous
+value — so for `MixinA` to "win", it has to be processed **last**.
+Iterating in reverse order is exactly what makes that happen.
 
-**Kolize slotů jsou fatální, ne tiše přepsané.** Narozdíl od běžných
-atributů/metod (kde přepsání je záměrné a v pořádku), kolize **jména
-slotu** je vždy chyba — buď proti základní strukturální třídě
-(`raise_mixin_slot_collision_with_base_class`), nebo mezi dvěma mixiny
-navzájem (`raise_mixin_slot_collision`). Dva mixiny se stejným slotem by
-si navzájem přepisovaly paměťové místo — to by byl těžko odhalitelný,
-tichý bug, proto se to řeší jako tvrdá chyba hned při kompilaci.
+**Slot collisions are fatal, not silently overwritten.** Unlike ordinary
+attributes/methods (where an override is intentional and fine), a
+**slot-name** collision is always an error — either against the base
+structural class (`raise_mixin_slot_collision_with_base_class`), or
+between two mixins (`raise_mixin_slot_collision`). Two mixins sharing the
+same slot would overwrite each other's memory location — a hard-to-spot,
+silent bug — which is why it's treated as a hard error right at
+compilation time.
 
-**`IGNORED_DICT_KEYS`** — sada klíčů, které se z namespace mixinu nikdy
-nekopírují (`__dict__`, `__weakref__`, `__slots__` samo o sobě, `__doc__`,
-`__module__`, `__init_subclass__`, `__extend_instance_class__`). Buď jde o
-framework "boilerplate", který by znečistil cílovou třídu, nebo (u
-`__extend_instance_class__`) o hook, který se zpracovává samostatně, **po**
-kompilaci třídy (viz `_extend_instance_class` níže).
+**`IGNORED_DICT_KEYS`** — a set of keys that are never copied from a
+mixin's namespace (`__dict__`, `__weakref__`, `__slots__` itself,
+`__doc__`, `__module__`, `__init_subclass__`, `__extend_instance_class__`).
+Either it's framework "boilerplate" that would clutter the target class,
+or (in the case of `__extend_instance_class__`) it's a hook that's
+processed separately, **after** the class is compiled (see
+`_extend_instance_class` below).
 
-**`init_mixins` se nekopíruje jako obyčejný atribut** — pokud klíč je
-přesně `"init_mixins"`, funkce se místo přímého zápisu do `class_dict`
-přidá do seznamu `init_mixins` (kroku 3), aby ji `_build_combined_init_mixins`
-mohla zřetězit se všemi ostatními.
+**`init_mixins` isn't copied like a plain attribute** — if the key is
+exactly `"init_mixins"`, instead of being written directly into
+`class_dict`, the function is added to the `init_mixins` list (step 3), so
+`_build_combined_init_mixins` can chain it together with all the others.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## `_build_combined_init_mixins` — řetězení inicializace
+## `_build_combined_init_mixins` — chaining initialization
 
-**Parametry:** `init_mixins_hooks` (list funkcí).
+**Parameters:** `init_mixins_hooks` (a list of functions).
 
-**Návratová hodnota:** jedna sloučená funkce `combined_init_mixins`.
+**Return value:** a single merged function, `combined_init_mixins`.
 
-**Pod kapotou:**
+**Under the hood:**
 ```python
 def _build_combined_init_mixins(init_mixins_hooks):
     def combined_init_mixins(self):
@@ -283,27 +293,27 @@ def _build_combined_init_mixins(init_mixins_hooks):
     return combined_init_mixins
 ```
 
-Triviální na pohled, ale architektonicky důležité: místo řetězu
-`super().init_mixins()` volání (což by v dynamicky skládané hierarchii
-znamenalo spoléhat na MRO) se všechny nasbírané `init_mixins` hooky
-zavolají **explicitně a sekvenčně** v jedné uzavřené funkci. Stejný
-princip jako "bez `super()`" u `create_composite_init` (viz
-[README_COMPOSITE_CLASS.md](README_COMPOSITE_CLASS.md#create_composite_init--konstruktor)) —
-konzistentní preference explicitního, deterministického pořadí před
-implicitním MRO řešením.
+Trivial at a glance, but architecturally important: instead of a chain of
+`super().init_mixins()` calls (which, in a dynamically assembled
+hierarchy, would mean relying on the MRO), all the collected `init_mixins`
+hooks are called **explicitly and sequentially** in a single closed-over
+function. The same principle as "no `super()`" in `create_composite_init`
+(see [README_COMPOSITE_CLASS](README_COMPOSITE_CLASS.md#create_composite_init--the-constructor)) — a consistent
+preference for explicit, deterministic ordering over an implicit MRO-based
+resolution.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## `_extend_instance_class` — post-kompilační hooky
+## `_extend_instance_class` — post-compilation hooks
 
-**Parametry:** `mixins` (zploštěný tuple), `instance_class` (už
-zkompilovaná třída).
+**Parameters:** `mixins` (the flattened tuple), `instance_class` (the
+already-compiled class).
 
-**Návratová hodnota:** `None` — mutuje `instance_class` **na místě**.
+**Return value:** `None` — mutates `instance_class` **in place**.
 
-**Pod kapotou:**
+**Under the hood:**
 ```python
 def _extend_instance_class(mixins, instance_class):
     for mixin in mixins:
@@ -314,23 +324,25 @@ def _extend_instance_class(mixins, instance_class):
             mixin.__extend_instance_class__(instance_class)
 ```
 
-Tenhle hook je **únikový ventil** pro mixiny, které potřebují víc než jen
-statický `class_dict` merge — typicky mixiny jako `InnersProperty` nebo
-`Equalizer`, které musí dynamicky generovat properties/settery **až po
-tom**, co je finální třída hotová (protože třeba potřebují znát kompletní
-`__mixins__` sadu, nebo jiné informace dostupné až na zkompilované
-třídě).
+This hook is an **escape hatch** for mixins that need more than just a
+static `class_dict` merge — typically mixins like `InnersProperty` or
+`Equalizer`, which need to dynamically generate properties/setters **only
+after** the final class is done (because, for example, they need to know
+the complete `__mixins__` set, or other information that's only available
+on the compiled class).
 
-**Přímá kontrola `mixin.__dict__`, ne `getattr`** — záměrně se čte přímo ze
-slovníku třídy, aby se předešlo předčasnému vyhodnocení deskriptoru
-(`getattr` by mohl spustit `__get__` a nechtěně zavolat metodu).
+**Reading `mixin.__dict__` directly, not `getattr`** — this is
+deliberately read straight from the class dictionary, to avoid triggering
+premature descriptor evaluation (`getattr` could invoke `__get__` and
+accidentally call the method).
 
-**Vynucený `@staticmethod`/`@classmethod`.** Obyčejná instanční metoda by
-tu nedávala smysl — hook se volá na úrovni **třídy**, ne instance
-(instance ještě ani neexistuje, jen kompilovaná třída).
+**`@staticmethod`/`@classmethod` is enforced.** A plain instance method
+wouldn't make sense here — the hook is called at the **class** level, not
+the instance level (the instance doesn't even exist yet, only the
+compiled class).
 
-**Vrací `None`, mutuje na místě** — stejná konvence jako `list.sort()`
-v Pythonu: signalizuje, že `instance_class` byla změněna přímo v paměti,
-ne že se vrací nová třída.
+**Returns `None`, mutates in place** — the same convention as
+`list.sort()` in Python: it signals that `instance_class` was changed
+directly in memory, not that a new class is returned.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)

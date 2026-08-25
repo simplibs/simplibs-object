@@ -21,6 +21,8 @@ class ValueDisplay(SimpleMixin):
 * [`__repr__`](#__repr__)
 * [`__str__`](#__str__)
 
+[⬅️ Back to main Mixins Overview](../../README_MIXINS_OVERVIEW.md)
+
 ---
 
 ### `__repr__`
@@ -74,4 +76,3 @@ def __str__(self) -> str:
 
 ---
 
-[⬅️ Back to Mixins Overview](../../../README_MIXINS_OVERVIEW.md)

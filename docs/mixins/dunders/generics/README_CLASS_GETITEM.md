@@ -17,6 +17,8 @@ class ClassGetItem(SimpleMixin):
 
 * [`__class_getitem__`](#__class_getitem__)
 
+[⬅️ Back to main Mixins Overview](../../README_MIXINS_OVERVIEW.md)
+
 ---
 
 ### `__class_getitem__`
@@ -48,4 +50,3 @@ def __class_getitem__(cls, item):
 
 ---
 
-[⬅️ Back to Mixins Overview](../../../README_MIXINS_OVERVIEW.md)

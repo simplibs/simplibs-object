@@ -1,38 +1,40 @@
-# 🧩 Kompozitní instance — `make_composite_class` a reaktivní jádro
+# 🧩 Composite instance — `make_composite_class` and the reactive core
 
-Kompozitní instance staví přímo na atomické (viz
-[README_ATOM_CLASS.md](README_ATOM_CLASS.md)) — dědí od ní, ne od
-`InstanceBase` znovu. Tenhle dokument popisuje, jak se kompozice sestaví
-a jak funguje obousměrná reaktivita, o které mluví úvodní koncept
-knihovny.
+A composite instance builds directly on the atomic one (see
+[README_ATOM_CLASS](README_ATOM_CLASS.md)) — it inherits from it, not from
+`InstanceBase` again. This document describes how a composition is
+assembled and how the bidirectional reactivity mentioned in the library's
+introductory concept actually works.
 
 ```
 InstanceBase
-└── {Meta.owner_class}AtomBase           (atomický základ)
-    └── {Meta.owner_class}CompositeBase  ← vytváří make_composite_class
+└── {Meta.owner_class}AtomBase           (atomic base)
+    └── {Meta.owner_class}CompositeBase  ← created by make_composite_class
 ```
 
 ---
 
-## 🧭 Obsah
+## 🧭 Contents
 
-* [`make_composite_class` — kompilace kompozitní třídy](#make_composite_class--kompilace-kompozitní-třídy)
-* [`_get_inner_instance_class` — výběr třídy pro vnitřní prvek](#_get_inner_instance_class--výběr-třídy-pro-vnitřní-prvek)
-* [`create_composite_init` — konstruktor](#create_composite_init--konstruktor)
-* [`create_properties_for_inners` — přístup k vnitřním prvkům](#create_properties_for_inners--přístup-k-vnitřním-prvkům)
-* [`create_recalculate_self` — tok hodnot nahoru](#create_recalculate_self--tok-hodnot-nahoru)
-* [`create_recalculate_inners` — tok hodnot dolů](#create_recalculate_inners--tok-hodnot-dolů)
-* [Reaktivita jako celek](#reaktivita-jako-celek)
+* [make_composite_class — compiling the composite class](#make_composite_class--compiling-the-composite-class)
+* [_get_inner_instance_class — selecting the class for an inner element](#_get_inner_instance_class--selecting-the-class-for-an-inner-element)
+* [create_composite_init — the constructor](#create_composite_init--the-constructor)
+* [create_properties_for_inners — accessing inner elements](#create_properties_for_inners--accessing-inner-elements)
+* [create_recalculate_self — value flow upward](#create_recalculate_self--value-flow-upward)
+* [create_recalculate_inners — value flow downward](#create_recalculate_inners--value-flow-downward)
+* [Reactivity as a whole](#reactivity-as-a-whole)
+
+[⬅️ Back to main README](../../../README.md)
 
 ---
 
-## `make_composite_class` — kompilace kompozitní třídy
+## `make_composite_class` — compiling the composite class
 
-**Parametry:** `meta`, `mutable` (výchozí `True`).
+**Parameters:** `meta`, `mutable` (default `True`).
 
-**Návratová hodnota:** dynamicky vytvořená třída (`CompositeInstanceProtocol`).
+**Return value:** a dynamically created class (`CompositeInstanceProtocol`).
 
-**Pod kapotou (zkráceně):**
+**Under the hood (abridged):**
 ```python
 def make_composite_class(meta, *, mutable=True):
     base_class_name = f"{meta.class_name}Composite{'Mutable' if mutable else 'Immutable'}Base"
@@ -53,46 +55,47 @@ def make_composite_class(meta, *, mutable=True):
 
     composite_class = type(base_class_name, class_parents, class_dict)
 
-    for name in ("inners", "_logic", "_decompose"):
-        if name in composite_class.__dict__:
-            delattr(composite_class, name)
-
     return composite_class
 ```
 
-**Jediný rodič — atomická třída.** `class_parents = (base_class,)`, kde
-`base_class` je právě zkompilovaná `atom_class_mutable`/`_immutable`.
-Kompozice tedy **je** atom (dědí `_value`, `_owner`, `_locked`,
-`_root_value_setter`, `init_mixins`, `meta`...) a navrch přidává vlastní
-strukturu. Tohle je přesně ten mechanismus, díky kterému může mít
-kompozice i vlastní `value` (přepsané níže na kompozitní chování) a
-zároveň zůstat kompatibilní se vším, co počítá s atomickým rozhraním
-(např. `_root_value_setter` volané z `_recalculate_inners` rodiče).
+**A single parent — the atomic class.** `class_parents = (base_class,)`,
+where `base_class` is precisely the already-compiled
+`atom_class_mutable`/`_immutable`. So a composition **is** an atom (it
+inherits `_value`, `_owner`, `_locked`, `_root_value_setter`,
+`init_mixins`, `meta`...) and adds its own structure on top. This is
+exactly the mechanism that lets a composition have its own `value`
+(overridden below with composite behavior) while staying compatible with
+everything that relies on the atomic interface (e.g. `_root_value_setter`
+called from the parent's `_recalculate_inners`).
 
-**Sloty jsou odvozené přímo z `_inners`** —
-`tuple(inner.meta.name_private for inner in meta.inners)` — každý vnitřní
-prvek dostane vlastní privátní slot (např. `_engine`, `_wheels`), do
-kterého se uloží jeho **instance** (ne hodnota — instance).
+**Slots are derived directly from `_inners`** —
+`tuple(inner.meta.name_private for inner in meta.inners)` — each inner
+element gets its own private slot (e.g. `_engine`, `_wheels`), which
+stores its **instance** (not the value — the instance).
 
-**Reaktivní hooky jen pro mutable.** `_recalculate_self` a
-`_recalculate_inners` (viz níže) dávají smysl jen tam, kde se hodnoty
-vůbec mohou měnit — immutable kompozice je po inicializaci strukturálně
-zamrzlá.
+**Reactive hooks only for mutable.** `_recalculate_self` and
+`_recalculate_inners` (below) only make sense where values can actually
+change at all — an immutable composition is structurally frozen once
+initialized.
 
-**Cleanup na konci** stejně jako u atomů — odstraní se `inners`, `_logic`,
-`_decompose`, aby instance nevystavovala schéma blueprintu.
+**The same note on declarative attributes applies here as for atoms** (see
+[README_ATOM_CLASS](README_ATOM_CLASS.md#make_atom_class--compiling-the-atomic-class))
+— `inners`, `_logic`, and `_decompose` are never placed into `class_dict`,
+so they never appear in `composite_class`'s own `__dict__`, but they
+remain reachable through the MRO via the atom base class /
+`meta.owner_class`.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## `_get_inner_instance_class` — výběr třídy pro vnitřní prvek
+## `_get_inner_instance_class` — selecting the class for an inner element
 
-**Parametry:** `inner_meta`, `mutable`.
+**Parameters:** `inner_meta`, `mutable`.
 
-**Návratová hodnota:** správná instanční třída pro daný vnitřní prvek.
+**Return value:** the correct instance class for the given inner element.
 
-**Pod kapotou:**
+**Under the hood:**
 ```python
 def _get_inner_instance_class(inner_meta, mutable):
     if mutable:
@@ -100,27 +103,27 @@ def _get_inner_instance_class(inner_meta, mutable):
     return inner_meta.atom_class_immutable if inner_meta.is_constant else inner_meta.composite_class_immutable
 ```
 
-Malá, ale důležitá rozhodovací matice 2×2 (mutable/immutable ×
-constant/composite) — vnitřní prvek kompozice může sám být buď atom, nebo
-další kompozice (rekurzivní vnořování do libovolné hloubky), a tahle
-funkce zajišťuje, že se pro něj vybere přesně ta správná ze čtyř
-variant. Přístup přes `inner_meta.atom_class_mutable` atd. zároveň
-**spouští líné vytvoření** té třídy, pokud ještě neexistuje (viz
-[README_SIMPLE_CONSTANT_METADATA.md](README_SIMPLE_CONSTANT_METADATA.md#líné-vytváření-atomických-tříd)) —
-takže i hluboko zanořené stromy kompozic se kompilují efektivně, jen na
-vyžádání.
+A small but important 2×2 decision matrix (mutable/immutable ×
+constant/composite) — an inner element of a composition can itself be
+either an atom or another composition (recursive nesting to any depth),
+and this function makes sure the correct one of the four variants is
+picked for it. Accessing it via `inner_meta.atom_class_mutable` etc. also
+**triggers lazy creation** of that class if it doesn't exist yet (see
+[README_SIMPLE_CONSTANT_METADATA](../README_SIMPLE_CONSTANT_METADATA.md))
+— so even deeply nested composition trees compile efficiently, only on
+demand.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## `create_composite_init` — konstruktor
+## `create_composite_init` — the constructor
 
-**Parametry:** `meta`, `base_class_name`, `mutable` (výchozí `True`).
+**Parameters:** `meta`, `base_class_name`, `mutable` (default `True`).
 
-**Návratová hodnota:** funkce `__init__` jako closure.
+**Return value:** the `__init__` function as a closure.
 
-**Pod kapotou:**
+**Under the hood:**
 ```python
 def create_composite_init(meta, base_class_name, *, mutable=True):
     def __init__(self):
@@ -141,44 +144,48 @@ def create_composite_init(meta, base_class_name, *, mutable=True):
     return __init__
 ```
 
-**Přísně dané pořadí kroků — a není náhodné.** Nejdřív se vytvoří a
-napojí **všechny vnitřní prvky**, teprve pak se zavolá inicializace
-atomické vrstvy (`meta.atom_class_mutable.__init__(self)`, což mimo jiné
-spustí `init_mixins`). Důvod: mixiny inicializované v atomické fázi
-(typicky strukturální, jako `NodesTuple`/`NodesDicts` — viz sekce mixinů)
-očekávají, že strom vnitřních prvků je **už kompletní**, když se
-spustí. Kdyby se pořadí prohodilo, tyhle mixiny by narazily na chybějící
-sloty.
+**A strictly fixed order of steps — and it's not accidental.** First
+**all** inner elements are created and wired up, and only then is the
+atomic layer's initialization called
+(`meta.atom_class_mutable.__init__(self)`, which among other things runs
+`init_mixins`). Reason: mixins initialized during the atomic phase
+(typically structural ones, like `NodesTuple`/`NodesDicts` — see the
+mixins section) expect the tree of inner elements to be **already
+complete** by the time they run. If the order were reversed, these mixins
+would run into missing slots.
 
-**Vytváření vnitřních instancí obchází `SimpleMeta.__call__` úplně
-záměrně** — `object.__new__(inner_cls)` + ruční `inner_instance.__init__()`
-místo prostého zavolání `inner_cls()`. Kdyby se totiž zavolalo
-`inner_cls()`, prošlo by to metaclassou (protože `inner_cls` je pořád
-třída se `SimpleMeta`) a `SimpleMeta.__call__` by spustilo **celou**
-`create_instance` pipeline znovu — zbytečně a nesprávně, protože `inner_cls`
-už je hotová, zkompilovaná runtime třída, ne blueprint.
+**Creating inner instances deliberately bypasses `SimpleMeta.__call__`
+entirely** — `object.__new__(inner_cls)` plus a manual
+`inner_instance.__init__()` instead of simply calling `inner_cls()`. If
+`inner_cls()` were called, it would go through the metaclass (since
+`inner_cls` is still a class with `SimpleMeta`), and `SimpleMeta.__call__`
+would run the **entire** `create_instance` pipeline again — needlessly and
+incorrectly, since `inner_cls` is already a finished, compiled runtime
+class, not a blueprint.
 
-**`_owner` propojení je obousměrný vztah** — `inner_instance._owner = self`
-dává vnitřnímu prvku odkaz na rodiče, což je přesně to, co `_root_value_setter`
-potřebuje pro bublání změn nahoru (viz
-[README_ATOM_CLASS.md](README_ATOM_CLASS.md#create_root_value_setter--reaktivní-zápis-hodnoty)).
+**The `_owner` link is a bidirectional relationship** —
+`inner_instance._owner = self` gives the inner element a reference to its
+parent, which is exactly what `_root_value_setter` needs for bubbling
+changes upward (see
+[README_ATOM_CLASS](README_ATOM_CLASS.md)).
 
-**Bez `super()`.** Komentář v `_DESIGN_NOTES` zdrojáku to zdůvodňuje jasně:
-explicitní volání (`meta.atom_class_mutable.__init__(self)`) je
-deterministické a nezávislé na MRO, zatímco `super()` by v dynamicky
-skládané hierarchii tříd mohl vést k nejasnému pořadí volání.
+**No `super()`.** The comment in the `_DESIGN_NOTES` source explains this
+clearly: an explicit call
+(`meta.atom_class_mutable.__init__(self)`) is deterministic and independent
+of the MRO, whereas `super()` could lead to an unclear call order in a
+dynamically assembled class hierarchy.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## `create_properties_for_inners` — přístup k vnitřním prvkům
+## `create_properties_for_inners` — accessing inner elements
 
-**Parametry:** `meta`, `mutable` (výchozí `True`).
+**Parameters:** `meta`, `mutable` (default `True`).
 
-**Návratová hodnota:** `dict` — properties pro sloučení do `class_dict`.
+**Return value:** a `dict` — properties to be merged into `class_dict`.
 
-**Pod kapotou:**
+**Under the hood:**
 ```python
 def create_properties_for_inners(meta, *, mutable=True):
     return {
@@ -188,26 +195,27 @@ def create_properties_for_inners(meta, *, mutable=True):
     }
 ```
 
-Pro každý přímý vnitřní prvek vygeneruje **dvě** properties (detailní popis
-mechaniky je v [README_VALUE_PROPERTIES.md](README_VALUE_PROPERTIES.md)):
-`<jméno>` pro přístup k hodnotě a `<jméno>_instance` pro přístup k samotné
-instanci. Výsledek se do `class_dict` sloučí přes `|=` — properties tedy
-vznikají **při kompilaci třídy**, ne za běhu přes `setattr` smyčku, což je
-rychlejší a umožňuje to statickou introspekci (`dir(instance)` ukáže
-všechny properties hned).
+For every direct inner element, this generates **two** properties (a
+detailed description of the mechanics is in
+[README_VALUE_PROPERTIES](README_VALUE_PROPERTIES.md)): `<name>` for
+accessing the value, and `<name>_instance` for accessing the instance
+itself. The result is merged into `class_dict` via `|=` — so the
+properties are created **at class-compilation time**, not at runtime
+through a `setattr` loop, which is faster and allows static introspection
+(`dir(instance)` shows every property right away).
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## `create_recalculate_self` — tok hodnot nahoru
+## `create_recalculate_self` — value flow upward
 
-**Parametry:** `meta`, `base_class_name`.
+**Parameters:** `meta`, `base_class_name`.
 
-**Návratová hodnota:** funkce `_recalculate_self` jako closure. Jen pro
-mutable varianty.
+**Return value:** the `_recalculate_self` function as a closure. Only for
+mutable variants.
 
-**Pod kapotou:**
+**Under the hood:**
 ```python
 def create_recalculate_self(meta, base_class_name):
     def _recalculate_self(self):
@@ -232,34 +240,35 @@ def create_recalculate_self(meta, base_class_name):
     return _recalculate_self
 ```
 
-Tohle je odpověď na otázku "co se stane, když se změní hodnota **uvnitř**
-kompozice" (🔼 z úvodního konceptu):
+This answers the question "what happens when a value **inside** the
+composition changes" (🔼 from the introductory concept):
 
-1. **Sesbírej aktuální hodnoty všech přímých dětí** do `{jméno: hodnota}`
-   mapy — přesně formát, který `calculate_value` (respektive
-   `_process_calculate_value_params`) očekává jako kwargs.
-2. **Přepočítej** — zavolá se veřejné `self.calculate_value(**current_values)`,
-   tedy stejná metoda, kterou by zavolal i uživatel ručně (viz
-   [README_SIMPLE_OBJECT.md](README_SIMPLE_OBJECT.md#calculate_value)).
-3. **Short-circuit při shodě** — stejný vzor jako u `_root_value_setter`,
-   tady navíc obalený v `try/except`, protože porovnání (`==`) nemusí být
-   u libovolného typu bezpečné.
-4. **Zápis a bublání dál nahoru** — pokud se hodnota změnila, uloží se a
-   (pokud existuje vlastník) zavolá se `_recalculate_self` na **rodiči
-   téhle kompozice** — řetězec se táhne až k nejvyššímu kořeni stromu.
+1. **Collect the current values of all direct children** into a
+   `{name: value}` map — exactly the format `calculate_value` (or rather
+   `_process_calculate_value_params`) expects as kwargs.
+2. **Recalculate** — the public `self.calculate_value(**current_values)` is
+   called, the very same method a user would call by hand (see
+   [README_SIMPLE_OBJECT](../../core/README_SIMPLE_OBJECT.md)).
+3. **Short-circuit on a match** — the same pattern as in
+   `_root_value_setter`, here additionally wrapped in `try/except`, since
+   comparison (`==`) isn't necessarily safe for an arbitrary type.
+4. **Write and bubble further upward** — if the value changed, it's stored
+   and (if an owner exists) `_recalculate_self` is called on **this
+   composition's parent** — the chain runs all the way up to the topmost
+   root of the tree.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## `create_recalculate_inners` — tok hodnot dolů
+## `create_recalculate_inners` — value flow downward
 
-**Parametry:** `meta`, `base_class_name`.
+**Parameters:** `meta`, `base_class_name`.
 
-**Návratová hodnota:** funkce `_recalculate_inners` jako closure. Jen pro
-mutable varianty.
+**Return value:** the `_recalculate_inners` function as a closure. Only
+for mutable variants.
 
-**Pod kapotou:**
+**Under the hood:**
 ```python
 def create_recalculate_inners(meta, base_class_name):
     def _recalculate_inners(self):
@@ -276,55 +285,55 @@ def create_recalculate_inners(meta, base_class_name):
     return _recalculate_inners
 ```
 
-Opačný směr (🔽 z úvodního konceptu) — "co se stane, když se změní hodnota
-**celé** kompozice":
+The reverse direction (🔽 from the introductory concept) — "what happens
+when the value of the **whole** composition changes":
 
-1. **Dekompoň** — `self.decompose_value(self._value)` rozloží aktuální
-   hodnotu na díly pro jednotlivé `_inners` (viz
-   [README_SIMPLE_OBJECT.md](README_SIMPLE_OBJECT.md#decompose_value)).
-2. **Rozešli díly dětem** — pro každý vnitřní prvek se zavolá jeho
-   `_root_value_setter` s **`recalculate_up=False`** — tohle je klíčové:
-   bez toho by zápis do dítěte okamžitě spustil `_recalculate_self`
-   zpátky na rodiči, což by vytvořilo nekonečnou smyčku (dolů → nahoru →
-   dolů → ...).
-3. **Kaskáda do vnořených kompozic** — pokud je vnitřní prvek sám další
-   kompozice (`not inner.meta.is_constant`), zavolá se na něm rekurzivně
-   `_recalculate_inners()`, aby se rozklad propagoval do libovolné
-   hloubky stromu.
+1. **Decompose** — `self.decompose_value(self._value)` breaks the current
+   value into pieces for the individual `_inners` (see
+   [README_SIMPLE_OBJECT](../../core/README_SIMPLE_OBJECT.md)).
+2. **Distribute the pieces to the children** — for each inner element, its
+   `_root_value_setter` is called with **`recalculate_up=False`** — this
+   is crucial: without it, writing to a child would immediately trigger
+   `_recalculate_self` back on the parent, creating an infinite loop
+   (down → up → down → ...).
+3. **Cascade into nested compositions** — if the inner element is itself
+   another composition (`not inner.meta.is_constant`), its own
+   `_recalculate_inners()` is called recursively, so the decomposition
+   propagates to any depth of the tree.
 
-**`zip(meta.inners, decomposed)` vynucuje striktní poziční shodu** — proto
-`verify_decompose_outcome` (viz
-[README_METHOD_PROCESSING.md](README_METHOD_PROCESSING.md#verify_decompose_outcome--speciální-pravidla-pro-_decompose))
-kontroluje, že `_decompose` vrací tuple přesně stejné délky a pořadí jako
+**`zip(meta.inners, decomposed)` enforces a strict positional match** —
+which is why `verify_decompose_outcome` (see
+[README_METHOD_PROCESSING](../README_METHOD_PROCESSING.md)) checks that
+`_decompose` returns a tuple of exactly the same length and order as
 `_inners`.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## Reaktivita jako celek
+## Reactivity as a whole
 
-Obě reaktivní metody dohromady tvoří uzavřený, bezpečný cyklus:
+The two reactive methods together form a closed, safe cycle:
 
 ```
-zápis do vnitřního prvku (_root_value_setter, recalculate_up=True)
+write to an inner element (_root_value_setter, recalculate_up=True)
         │
         ▼
-  _recalculate_self  (na rodiči, může bublat dál nahoru)
+  _recalculate_self  (on the parent, may bubble further upward)
         │
-zápis do kompozice (value = ..., přes create_value_setter)
+write to the composition (value = ..., via create_value_setter)
         │
         ▼
-  _recalculate_inners  (rozešle recalculate_up=False dětem)
+  _recalculate_inners  (distributes to children with recalculate_up=False)
 ```
 
-Klíčový bezpečnostní mechanismus proti nekonečným smyčkám je vždy stejný:
-**směr, kterým se změna právě šíří, si nese `recalculate_up=False`**, aby
-se nemohla "odrazit" zpátky. Kombinace se short-circuit kontrolami
-(hodnota se nezměnila → žádné další šíření) navíc zaručuje, že i rozsáhlý
-strom kompozic reaguje na jedinou změnu jen minimálním nutným počtem
-přepočtů.
+The key safety mechanism against infinite loops is always the same: **the
+direction a change is currently propagating in carries
+`recalculate_up=False`**, so it can never "bounce back". Combined with the
+short-circuit checks (value didn't change → no further propagation), this
+also guarantees that even a large composition tree reacts to a single
+change with only the minimum necessary number of recalculations.
 
-➡️ Pokračování: [README_CREATE_INSTANCE.md](README_CREATE_INSTANCE.md)
+➡️ Next: [README_CREATE_INSTANCE](README_CREATE_INSTANCE.md)
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)

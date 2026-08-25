@@ -1,140 +1,147 @@
-# 🧪 Testování mixinů — `assert_simple_mixin` a jeho stavební bloky
+# 🧪 Testing mixins — `assert_simple_mixin` and its building blocks
 
-Tenhle dokument popisuje testovací sadu určenou speciálně pro ověřování
-mixinů — jestli správně dědí ze `SimpleMixin`, jestli se dají bez chyby
-připojit k blueprintu přes `mixins=(...)`, a jestli po připojení skutečně
-poskytují sloty, atributy a metody, které slibují. Je to konkrétní
-naplnění principu zmíněného v historii projektu: `assert_simple_mixin` je
-hlavní vstupní bod, `assert_simple_object`/`assert_simple_mixin` používají
-stejný vzor "orchestrátor + izolované dílčí asserty".
+This document describes a testing suite built specifically for verifying
+mixins — whether they correctly inherit from `SimpleMixin`, whether they
+can be attached to a blueprint via `mixins=(...)` without error, and
+whether, once attached, they actually provide the slots, attributes, and
+methods they promise. It's a concrete implementation of the principle
+mentioned in the library's history: `assert_simple_mixin` is the main
+entry point, and `assert_simple_object`/`assert_simple_mixin` use the same
+"orchestrator + isolated sub-asserts" pattern.
 
 ```
-assert_simple_mixin                    (hlavní orchestrátor)
-├── assert_mixin_inheritance            (dědí mixin ze SimpleMixin?)
-├── assert_mixin_instance_creation      (dá se připojit a vytvořit instance?)
-├── assert_instance_hasattr             (existují očekávané sloty/atributy/metody?)
-└── assert_mixins_slots_values          (mají sloty očekávané hodnoty?)
+assert_simple_mixin                    (main orchestrator)
+├── assert_mixin_inheritance            (does the mixin inherit from SimpleMixin?)
+├── assert_mixin_instance_creation      (can it be attached and an instance created?)
+├── assert_instance_hasattr             (do the expected slots/attributes/methods exist?)
+└── assert_mixins_slots_values          (do the slots have the expected values?)
 ```
 
 ---
 
-## 🧭 Obsah
+## 🧭 Contents
 
-* [`assert_simple_mixin` — hlavní orchestrátor](#assert_simple_mixin--hlavní-orchestrátor)
-* [`assert_mixin_inheritance` — kontrola dědičnosti](#assert_mixin_inheritance--kontrola-dědičnosti)
-* [`assert_mixin_instance_creation` — vytvoření a injekce](#assert_mixin_instance_creation--vytvoření-a-injekce)
-* [`assert_instance_hasattr` — obecná brána přítomnosti](#assert_instance_hasattr--obecná-brána-přítomnosti)
-* [`assert_mixins_slots_values` — kontrola hodnot slotů](#assert_mixins_slots_values--kontrola-hodnot-slotů)
-* [Jak to všechno zapadá dohromady](#jak-to-všechno-zapadá-dohromady)
+* [`assert_simple_mixin` — the main orchestrator](#assert_simple_mixin--the-main-orchestrator)
+* [`assert_mixin_inheritance` — the inheritance check](#assert_mixin_inheritance--the-inheritance-check)
+* [`assert_mixin_instance_creation` — creation and injection](#assert_mixin_instance_creation--creation-and-injection)
+* [`assert_instance_hasattr` — the generic presence gate](#assert_instance_hasattr--the-generic-presence-gate)
+* [`assert_mixins_slots_values` — checking slot values](#assert_mixins_slots_values--checking-slot-values)
+* [How it all fits together](#how-it-all-fits-together)
+
+[⬅️ Back to main README](../../README.md)
 
 ---
 
-## `assert_simple_mixin` — hlavní orchestrátor
+## `assert_simple_mixin` — the main orchestrator
 
-**Parametry:**
-* `subtests` (*Any*): nativní pytest `subtests` fixture.
-* `mixin_class` (*SimpleMixinType*): testovaný mixin.
-* `test_class` (*SimpleClassType*): blueprint třída, na kterou se mixin připojí.
-* `mutable` (*bool*, výchozí `True`).
+**Parameters:**
+* `subtests` (*Any*): the native pytest `subtests` fixture.
+* `mixin_class` (*SimpleMixinType*): the mixin under test.
+* `test_class` (*SimpleClassType*): the blueprint class the mixin gets
+  attached to.
+* `mutable` (*bool*, default `True`).
 * `slots_names`, `slots_values`, `attribute_names`, `method_names`
-  (volitelné, výchozí `UNSET`): co všechno se má na výsledné instanci ověřit.
-* `verbose` (*bool*, výchozí `True`).
-* `intro` (*str*, výchozí `""`): prefix pro jména subtestů.
+  (optional, default `UNSET`): what to verify on the resulting instance.
+* `verbose` (*bool*, default `True`).
+* `intro` (*str*, default `""`): a prefix for the subtest names.
 
-**Návratová hodnota:** vytvořená instance s připojeným mixinem (pro
-případné další, uživatelsky specifické testy), nebo `None`, pokud selhala
-už samotná tvorba instance.
+**Return value:** the created instance with the mixin attached (for any
+further, user-specific tests), or `None`, if the instance creation itself
+already failed.
 
-**Dvě fáze, v tomhle pořadí:**
+**Two phases, in this order:**
 
 ```
-1. SHALLOW TESTS (základní smlouva)
+1. SHALLOW TESTS (the basic contract)
    ├─ assert_mixin_inheritance
-   └─ assert_mixin_instance_creation  ──► vrací instanci (nebo None)
+   └─ assert_mixin_instance_creation  ──► returns the instance (or None)
 
-   guard: pokud instance is None → return None, dál se nepokračuje
+   guard: if instance is None → return None, no further processing
 
-2. PARAMETER TESTS (volitelné, jen pokud parametr není UNSET)
+2. PARAMETER TESTS (optional, only if the parameter isn't UNSET)
    ├─ slots_names      → assert_instance_hasattr(kind="slot")
    ├─ slots_values     → assert_mixins_slots_values
    ├─ attribute_names  → assert_instance_hasattr(kind="attribute")
    └─ method_names     → assert_instance_hasattr(kind="method")
 ```
 
-**Proč dvě oddělené fáze.** První fáze ("shallow") ověřuje **základní
-smlouvu** — bez ní nemá smysl pokračovat vůbec (mixin, který nedědí ze
-`SimpleMixin`, nebo se ho vůbec nepodaří připojit, nemůže mít žádné
-smysluplné sloty/atributy k ověření). Druhá fáze je **opt-in** — každý ze
-čtyř parametrů se testuje jen tehdy, pokud ho volající skutečně předal
-(`is not UNSET`), takže testovací kód není nucený vypisovat všechny čtyři
-kategorie, i když ho zajímá jen jedna.
+**Why two separate phases.** The first phase ("shallow") verifies the
+**basic contract** — without it, there's no point continuing at all (a
+mixin that doesn't inherit from `SimpleMixin`, or can't even be attached,
+can't have any meaningful slots/attributes to verify). The second phase is
+**opt-in** — each of the four parameters is only tested if the caller
+actually supplied it (`is not UNSET`), so the test code isn't forced to
+list all four categories even if it only cares about one.
 
-**Guard clause po první fázi** (`if instance is None: return None`) —
-pokud se instance nepodařilo vytvořit, nemá smysl pokoušet se sáhnout na
-její sloty/atributy v druhé fázi — to by jen vyvolalo zavádějící
-"navazující" chyby (`AttributeError` na `None`) místo jedné jasné,
-původní příčiny.
+**A guard clause after the first phase** (`if instance is None: return
+None`) — if the instance couldn't be created, there's no point trying to
+reach its slots/attributes in the second phase — that would only produce
+misleading "downstream" errors (`AttributeError` on `None`) instead of one
+clear, original cause.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## `assert_mixin_inheritance` — kontrola dědičnosti
+## `assert_mixin_inheritance` — the inheritance check
 
-**Parametry:** `subtests`, `mixin_class`, `verbose`, `intro`.
+**Parameters:** `subtests`, `mixin_class`, `verbose`, `intro`.
 
-**Návratová hodnota:** `None` (selhání se hlásí přes `pytest.fail`).
+**Return value:** `None` (failures are reported via `pytest.fail`).
 
-**Dvě kontroly, obě uvnitř jednoho `maybe_subtest` bloku:**
+**Two checks, both inside a single `maybe_subtest` block:**
 
 ```python
 if not isinstance(mixin_class, type):
-    pytest.fail("...není třída...")
+    pytest.fail("...is not a class...")
 
 if not issubclass(mixin_class, SimpleMixin):
-    pytest.fail("...nedědí ze SimpleMixin...")
+    pytest.fail("...doesn't inherit from SimpleMixin...")
 ```
 
-Nejjednodušší a zároveň nejzákladnější "fail-fast" hranice v celé sadě —
-kontroluje jen to, co musí platit **předtím**, než se o mixinu dá vůbec
-uvažovat jako o platném stavebním bloku systému: musí to být třída (ne
-instance, ne funkce) a musí dědit ze `SimpleMixin`, aby byla kompatibilní
-s `_resolve_flat_mixins`/`_verify_mixin_compatibility` (viz
-[README_CREATE_INSTANCE.md](README_CREATE_INSTANCE.md#_verify_mixin_compatibility--kompatibilní-matice)).
+The simplest, and also the most fundamental, "fail-fast" boundary in the
+whole suite — it only checks what must hold **before** a mixin can even be
+considered a valid building block of the system at all: it has to be a
+class (not an instance, not a function), and it has to inherit from
+`SimpleMixin`, to be compatible with
+`_resolve_flat_mixins`/`_verify_mixin_compatibility` (see
+[README_CREATE_INSTANCE](../metadata/instance/README_CREATE_INSTANCE.md#_verify_mixin_compatibility--the-compatibility-matrix)).
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## `assert_mixin_instance_creation` — vytvoření a injekce
+## `assert_mixin_instance_creation` — creation and injection
 
-**Parametry:** `subtests`, `mixin_class`, `test_class`, `mutable`
-(výchozí `True`), `verbose`, `intro`.
+**Parameters:** `subtests`, `mixin_class`, `test_class`, `mutable`
+(default `True`), `verbose`, `intro`.
 
-**Návratová hodnota:** vytvořená instance, nebo `None` při selhání.
+**Return value:** the created instance, or `None` on failure.
 
-**Čtyři kroky, každý ve vlastním `maybe_subtest`:**
+**Four steps, each in its own `maybe_subtest`:**
 
-1. **`test_class` musí dědit ze `SimpleConstant`** (což pokrývá i
-   `SimpleObject`, protože ten sám dědí ze `SimpleConstant` — viz
-   [README_SIMPLE_OBJECT.md](README_SIMPLE_OBJECT.md)) — kontrola, že
-   volající poslal platný blueprint, ne libovolnou třídu.
-2. **`mixin_class` musí dědit ze `SimpleMixin`** — duplicitní s
-   `assert_mixin_inheritance`, ale tady je to lokální, samostatná
-   kontrola, takže tahle funkce funguje i sama o sobě, ne jen jako
-   součást `assert_simple_mixin`.
-3. **Skutečná instanciace** — `test_class(mixins=(mixin_class,),
-   mutable=mutable)`, obalená v `try/except`. Tohle je moment, kdy se
-   reálně spustí celá pipeline z
-   [README_CREATE_INSTANCE.md](README_CREATE_INSTANCE.md) (zploštění
-   mixinů, validace kompatibility, `class_dict` sestavení, kompilace).
-   Jakákoliv výjimka se převede na čitelné `pytest.fail` s uvedeným
-   originálním chybovým textem — testovací kód tak nikdy neuvidí syrový
-   traceback z hloubky instance builderu, ale rovnou srozumitelnou zprávu.
-4. **Kontrola injekce členů** — ověří, že se mixin skutečně "projevil" na
-   výsledné instanci (viz níže).
+1. **`test_class` must inherit from `SimpleConstant`** (which also covers
+   `SimpleObject`, since it itself inherits from `SimpleConstant` — see
+   [README_SIMPLE_OBJECT](../core/README_SIMPLE_OBJECT.md)) — checking that
+   the caller passed a valid blueprint, not an arbitrary class.
+2. **`mixin_class` must inherit from `SimpleMixin`** — duplicates
+   `assert_mixin_inheritance`, but here it's a local, standalone check, so
+   this function also works on its own, not only as part of
+   `assert_simple_mixin`.
+3. **The actual instantiation** — `test_class(mixins=(mixin_class,),
+   mutable=mutable)`, wrapped in `try/except`. This is the moment the
+   entire pipeline from
+   [README_CREATE_INSTANCE](../metadata/instance/README_CREATE_INSTANCE.md) actually runs
+   (flattening the mixins, compatibility validation, building
+   `class_dict`, compilation). Any exception is converted into a readable
+   `pytest.fail` with the original error text included — the test code
+   therefore never sees a raw traceback from deep inside the instance
+   builder, just a clear, understandable message.
+4. **Checking member injection** — verifies that the mixin actually
+   "showed up" on the resulting instance (see below).
 
-**Krok 4 je nejzajímavější — jak se pozná, co konkrétně mixin přidal:**
+**Step 4 is the most interesting — how it figures out exactly what the
+mixin added:**
 
 ```python
 base_mixin_attrs = set(dir(SimpleMixin))
@@ -148,38 +155,39 @@ mixin_members = {
 missing_members = [name for name in mixin_members if not hasattr(instance, name)]
 ```
 
-**Odečtení množin** (`dir(mixin_class)` minus `dir(SimpleMixin)`) je
-elegantní trik — místo aby test musel předem vědět, co konkrétně mixin
-definuje, prostě porovná "co má mixin navíc oproti holé `SimpleMixin`
-základně" a ověří, že přesně tahle množina jmen existuje i na výsledné
-instanci. Filtr na dunder metody (`startswith("__") and endswith("__")`)
-navíc vyřadí systémové Pythoní věci (`__class__`, `__init__` apod.), které
-by jinak falešně vypadaly jako "chybějící člen" kvůli tomu, jak dynamické
-třídy fungují.
+**Set subtraction** (`dir(mixin_class)` minus `dir(SimpleMixin)`) is an
+elegant trick — instead of the test needing to know in advance exactly
+what the mixin defines, it simply compares "what the mixin has on top of
+the plain `SimpleMixin` base" and verifies that exactly that set of names
+also exists on the resulting instance. The dunder-method filter
+(`startswith("__") and endswith("__")`) additionally excludes standard
+Python machinery (`__class__`, `__init__`, etc.), which would otherwise
+falsely look like a "missing member" due to how dynamic classes work.
 
-**Tenhle mechanismus je do jisté míry samotestující** — nemusíš do
-`assert_simple_mixin` ručně vypisovat `method_names=(...)` pro každou
-metodu, kterou mixin definuje; krok 4 to odhalí automaticky pro **cokoliv**
-netriviálního, co mixin přidává. Parametry `slots_names`/`attribute_names`/
-`method_names` z `assert_simple_mixin` slouží spíš k **explicitní,
-cílené** kontrole konkrétních jmen (a hlavně hodnot u `slots_values`), ne
-k základní detekci přítomnosti.
+**This mechanism is, to some extent, self-testing** — you don't have to
+manually list `method_names=(...)` in `assert_simple_mixin` for every
+method a mixin defines; step 4 catches this automatically for
+**anything** non-trivial the mixin adds. The `slots_names`/
+`attribute_names`/`method_names` parameters of `assert_simple_mixin` are
+more for **explicit, targeted** checking of specific names (and,
+critically, specific values via `slots_values`), not for basic presence
+detection.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## `assert_instance_hasattr` — obecná brána přítomnosti
+## `assert_instance_hasattr` — the generic presence gate
 
-**Parametry:** `subtests`, `instance`, `names` (tuple str), `kind` (str —
-pro popisky v chybové hlášce), `verbose`, `intro`.
+**Parameters:** `subtests`, `instance`, `names` (a tuple of str), `kind`
+(str — for labels in the error message), `verbose`, `intro`.
 
-**Návratová hodnota:** `None`.
+**Return value:** `None`.
 
-**Dvoustupňová validace se guard clause mezi kroky:**
+**Two-stage validation with a guard clause between the steps:**
 
 ```python
-# 1. Validace vstupu — names musí být tuple stringů
+# 1. Input validation — names must be a tuple of strings
 if not isinstance(names, tuple): pytest.fail(...); is_valid_input = False
 for name in names:
     if not isinstance(name, str): pytest.fail(...); is_valid_input = False
@@ -187,119 +195,124 @@ for name in names:
 if not is_valid_input:
     return  # guard clause
 
-# 2. Kontrola přítomnosti — teprve teď
+# 2. Presence check — only now
 for name in names:
     if not hasattr(instance, name):
         pytest.fail(f"...Available attributes: {dir(instance)}")
 ```
 
-Tahle funkce je **znovupoužitelný, obecný stavební blok** — nekontroluje
-jen sloty, jen atributy, nebo jen metody; parametr `kind` je čistě
-kosmetický (mění text v chybové hlášce: "slot", "attribute", "method"),
-ale mechanismus kontroly (`hasattr`) je pro všechny tři případy identický.
-Díky tomu `assert_simple_mixin` volá tuhle **jedinou** funkci třikrát (pro
-`slots_names`, `attribute_names`, `method_names`), místo aby měla tři
-téměř identické, duplicitní implementace.
+This function is a **reusable, general-purpose building block** — it
+doesn't just check slots, or just attributes, or just methods; the `kind`
+parameter is purely cosmetic (it changes the text of the error message:
+"slot", "attribute", "method"), but the checking mechanism (`hasattr`) is
+identical for all three cases. Thanks to this, `assert_simple_mixin` calls
+this **single** function three times (for `slots_names`, `attribute_names`,
+`method_names`), instead of having three nearly identical, duplicated
+implementations.
 
-**Guard clause mezi validací vstupu a kontrolou přítomnosti** je stejný
-vzor, jaký znáš z `assert_simple_mixin` samotného — pokud `names` není
-platný tuple stringů, nemá smysl iterovat přes něj a volat `hasattr` s
-neplatnými jmény, což by generovalo zavádějící navazující chyby.
+**The guard clause between input validation and the presence check** is
+the same pattern you know from `assert_simple_mixin` itself — if `names`
+isn't a valid tuple of strings, there's no point iterating over it and
+calling `hasattr` with invalid names, which would produce misleading
+downstream errors.
 
-**`dir(instance)` v chybové hlášce** — když test spadne na chybějící
-atribut, hláška rovnou vypíše **kompletní seznam toho, co instance
-skutečně má** — šetří čas při debugování, protože není potřeba spouštět
-`dir()` ručně v debuggeru.
+**`dir(instance)` in the error message** — when the test fails on a
+missing attribute, the message directly lists the **complete set of what
+the instance actually has** — saving debugging time, since there's no
+need to run `dir()` manually in a debugger.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## `assert_mixins_slots_values` — kontrola hodnot slotů
+## `assert_mixins_slots_values` — checking slot values
 
-**Parametry:** `subtests`, `instance`, `slots_values` (flexibilní formát —
-viz níže), `verbose`, `intro`.
+**Parameters:** `subtests`, `instance`, `slots_values` (a flexible format
+— see below), `verbose`, `intro`.
 
-**Návratová hodnota:** `None`.
+**Return value:** `None`.
 
-**Tři kroky, každý s vlastní guard clause:**
+**Three steps, each with its own guard clause:**
 
 ```python
-# 1. Normalizace vstupu — dva podporované tvary
+# 1. Input normalization — two supported shapes
 if isinstance(slots_values, tuple) and len(slots_values) == 2 and isinstance(slots_values[0], str):
-    normalized = (slots_values,)          # jediný pár: ("slot", hodnota)
+    normalized = (slots_values,)          # a single pair: ("slot", value)
 elif isinstance(slots_values, tuple):
-    normalized = slots_values             # sekvence párů: (("s1", v1), ("s2", v2))
+    normalized = slots_values             # a sequence of pairs: (("s1", v1), ("s2", v2))
 else:
     pytest.fail(...); normalized = None
 
 if normalized is None:
     return  # guard clause
 
-# 2. Validace struktury každého páru
+# 2. Validating the structure of each pair
 for pair in normalized:
     if not (isinstance(pair, tuple) and len(pair) == 2): pytest.fail(...); return
     name, _ = pair
     if not isinstance(name, str): pytest.fail(...); return
 
-# 3. Skutečná kontrola — přítomnost i hodnota
+# 3. The actual check — presence and value
 for name, expected_value in normalized:
     if not hasattr(instance, name): pytest.fail(...)
     actual_value = getattr(instance, name)
     if actual_value != expected_value: pytest.fail(...)
 ```
 
-**Flexibilní vstupní formát řeší běžný zdroj tření v testech.** Když
-mixin definuje jen **jeden** slot, je otravné psát `slots_values=(("moje_slot",
-hodnota),)` — vnořený tuple jen kvůli konzistenci s víceprvkovým
-případem. Krok 1 tuhle nepohodlnost odstraňuje: pozná podle tvaru
-(`len == 2` a první prvek je `str`), jestli jde o jeden pár, nebo o
-sekvenci párů, a normalizuje oboje na stejnou vnitřní reprezentaci
-(`tuple` tuplů). Tenhle vzor "přijmi obě rozumné podoby vstupu, sjednoť
-je hned na začátku" je stejná filozofie jako `_class_name_splitter` →
-`create_names` ("split first, normalize later"), jen aplikovaná na
-testovací parametr místo na jméno třídy.
+**A flexible input format solves a common source of test friction.** When
+a mixin defines only **one** slot, it's annoying to write
+`slots_values=(("my_slot", value),)` — a nested tuple just for consistency
+with the multi-element case. Step 1 removes this inconvenience: it
+recognizes, based on shape (`len == 2` and the first element is `str`),
+whether it's a single pair or a sequence of pairs, and normalizes both to
+the same internal representation (a `tuple` of tuples). This "accept both
+reasonable input shapes, unify them right at the start" pattern is the
+same philosophy as `_class_name_splitter` → `create_names` ("split first,
+normalize later"), just applied to a test parameter instead of a class
+name.
 
-**Kontrola hodnoty je až poslední krok, po dvou vrstvách validace
-struktury** — nejdřív se musí ověřit, že `slots_values` má vůbec smysluplný
-tvar (krok 1), pak že každý pár je skutečně dvouprvkový tuple se string
-jménem (krok 2), a teprve pak (krok 3) se zjišťuje, jestli slot **existuje**
-a **má správnou hodnotu**. Tohle postupné zužování zajišťuje, že chybová
-hláška vždy ukáže na **první, nejzákladnější** problém, ne na matoucí
-následek špatně strukturovaného vstupu.
+**Checking the value is the very last step, after two layers of structural
+validation** — first it has to be confirmed that `slots_values` even has a
+sensible shape (step 1), then that every pair really is a two-element
+tuple with a string name (step 2), and only then (step 3) does it check
+whether the slot **exists** and **has the correct value**. This gradual
+narrowing ensures the error message always points to the **first, most
+fundamental** problem, not to a confusing downstream consequence of
+badly-structured input.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## Jak to všechno zapadá dohromady
+## How it all fits together
 
 ```
 assert_simple_mixin(subtests, MyMixin, test_class=MyConstant, slots_values=(("_counter", 0),))
 │
 ├─ assert_mixin_inheritance(MyMixin)
-│     → MyMixin musí dědit ze SimpleMixin
+│     → MyMixin must inherit from SimpleMixin
 │
 ├─ assert_mixin_instance_creation(MyMixin, MyConstant)
-│     → MyConstant(mixins=(MyMixin,)) se skutečně podaří vytvořit
-│     → všechny ne-dunder, ne-SimpleMixin členy MyMixin jsou na instanci přítomné
-│     → vrací hotovou instanci
+│     → MyConstant(mixins=(MyMixin,)) is actually created successfully
+│     → all non-dunder, non-SimpleMixin members of MyMixin are present on the instance
+│     → returns the finished instance
 │
-└─ (protože slots_values není UNSET)
+└─ (since slots_values isn't UNSET)
       assert_mixins_slots_values(instance, (("_counter", 0),))
-         → instance._counter existuje a rovná se 0
+         → instance._counter exists and equals 0
 ```
 
-Návratová hodnota `assert_simple_mixin` (hotová instance s mixinem) je
-záměrně užitečná i **po** doběhnutí všech vestavěných kontrol — testovací
-funkce ji může dál použít pro vlastní, doménově specifické asserty
-(zavolat metodu mixinu, zkontrolovat chování po mutaci apod.), aniž by
-musela znovu ručně opakovat celou instanciační proceduru.
+The return value of `assert_simple_mixin` (the finished instance with the
+mixin) is deliberately useful even **after** all the built-in checks have
+run — the test function can keep using it for its own, domain-specific
+asserts (calling a mixin method, checking behavior after a mutation, and
+so on), without having to manually repeat the whole instantiation
+procedure.
 
-Celá sada dohromady tvoří **jeden, znovupoužitelný nástroj**, kterým se dá
-otestovat kterýkoliv z mixinů zmíněných v historii projektu (`NodesTuple`,
-`Snapshot`, `NodesDicts`, `Infrastructure`, `Serialization`, a všechny
-`others`/`dunders` podkategorie) — stejným jednotným vzorem, bez ohledu na
-to, co konkrétní mixin dělá uvnitř.
+Together, the whole suite forms **one, reusable tool** that can test any
+of the mixins mentioned in the library's history (`NodesTuple`,
+`Snapshot`, `NodesDicts`, `Infrastructure`, `Serialization`, and all the
+`others`/`dunders` subcategories) — with the same unified pattern,
+regardless of what the specific mixin does internally.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)

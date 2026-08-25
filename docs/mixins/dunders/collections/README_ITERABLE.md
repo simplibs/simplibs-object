@@ -22,6 +22,8 @@ class Iterable(CollectionBase, SimpleMixin):
 * [`__reversed__`](#__reversed__)
 * [`__dir__`](#__dir__)
 
+[⬅️ Back to main Mixins Overview](../../README_MIXINS_OVERVIEW.md)
+
 ---
 
 ### `__iter__`
@@ -103,4 +105,3 @@ def __dir__(self):
 
 ---
 
-[⬅️ Back to Mixins Overview](../../../README_MIXINS_OVERVIEW.md)

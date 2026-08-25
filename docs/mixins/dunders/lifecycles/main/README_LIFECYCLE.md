@@ -20,6 +20,8 @@ class Lifecycle(PickleState, PicleReduce, Copyable, Snapshot, NodesDicts, NodesT
 
 * [Composition](#composition)
 
+[⬅️ Back to main Mixins Overview](../../../README_MIXINS_OVERVIEW.md)
+
 ---
 
 ### Composition
@@ -50,4 +52,3 @@ class Lifecycle(Copyable, PicleReduce):
 
 ---
 
-[⬅️ Back to Mixins Overview](../../../../README_MIXINS_OVERVIEW.md)

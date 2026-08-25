@@ -21,6 +21,9 @@ class Unary(Snapshot, NodesDicts, NodesTuple, SimpleMixin):
 * [`__neg__`](#__neg__)
 * [`__pos__`](#__pos__)
 * [`__abs__`](#__abs__)
+* [`execute_unary_op`](#execute_unary_op)
+
+[⬅️ Back to main Mixins Overview](../../README_MIXINS_OVERVIEW.md)
 
 ---
 
@@ -99,4 +102,53 @@ def __abs__(self):
 
 ---
 
-[⬅️ Back to Mixins Overview](../../../README_MIXINS_OVERVIEW.md)
+### `execute_unary_op`
+
+Executes a unary numeric operation and returns a new instance with the
+calculated value. If the operation initially fails due to an operand type
+mismatch, it attempts safe type alignment before returning `NotImplemented`.
+
+**Parameters:**
+
+* `self` — the current instance.
+* `operator` — the unary operator to execute.
+
+**Returns:**
+
+* a new instance with the calculated value.
+* `NotImplemented` if the operation cannot be performed.
+
+**Example usage:**
+
+```python
+-price
+```
+
+**Under the hood:**
+
+```python
+def execute_unary_op(
+    self: "UnaryProtocol",
+    operator: "UnaryOperator"
+) -> Any:
+    try:
+        return with_composite(self, self.meta.name_snake, operator(self.value))
+
+    except TypeError:
+        coerced = _align_operand_type(self, self.value)
+
+        try:
+            return with_composite(
+                self,
+                self.meta.name_snake,
+                operator(coerced)
+            )
+
+        except TypeError:
+            return NotImplemented
+```
+
+[▲ Back to top](#-table-of-contents)
+
+---
+

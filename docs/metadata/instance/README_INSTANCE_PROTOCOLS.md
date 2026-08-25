@@ -1,158 +1,166 @@
-# 📋 Instanční protokoly — Co instance umí v základu
+# 📋 Instance protocols — What an instance can do out of the box
 
-Tenhle dokument je referenční přehled toho, co má **čerstvě vytvořená
-instance k dispozici, ještě než se k ní připojí jediný mixin**. Je to
-"prázdný stůl" — základní rozhraní, na které mixiny teprve nabalují další
-schopnosti (viz sekce Mixiny).
+This document is a reference overview of what a **freshly created instance
+has available, before a single mixin is attached to it**. It's the "empty
+table" — the base interface that mixins then build additional capabilities
+on top of (see the Mixins section).
 
-Existují čtyři varianty, podle dvou nezávislých os popsaných v
-[README_CREATE_INSTANCE.md](README_CREATE_INSTANCE.md#get_base_class--výběr-strukturálního-základu):
+There are four variants, along two independent axes described in
+[README_CREATE_INSTANCE](README_CREATE_INSTANCE.md):
 
 |  | **Mutable** | **Immutable** |
 |---|---|---|
-| **Atomická** (`SimpleConstant`) | [Atomická mutable](#1-atomická-mutable-instance) | [Atomická immutable](#2-atomická-immutable-instance) |
-| **Kompozitní** (`SimpleObject`) | [Kompozitní mutable](#3-kompozitní-mutable-instance) | [Kompozitní immutable](#4-kompozitní-immutable-instance) |
+| **Atomic** (`SimpleConstant`) | [Atomic mutable](#1-atomic-mutable-instance) | [Atomic immutable](#2-atomic-immutable-instance) |
+| **Composite** (`SimpleObject`) | [Composite mutable](#3-composite-mutable-instance) | [Composite immutable](#4-composite-immutable-instance) |
 
-Kompozitní varianty **dědí vše** z odpovídající atomické varianty (mutable
-z mutable, immutable z immutable) — viz
-[README_COMPOSITE_CLASS.md](README_COMPOSITE_CLASS.md) — takže se to
-v tabulkách níže neopakuje, jen odkazuje.
-
----
-
-## 🧭 Obsah
-
-* [1. Atomická mutable instance](#1-atomická-mutable-instance)
-* [2. Atomická immutable instance](#2-atomická-immutable-instance)
-* [3. Kompozitní mutable instance](#3-kompozitní-mutable-instance)
-* [4. Kompozitní immutable instance](#4-kompozitní-immutable-instance)
+The composite variants **inherit everything** from the corresponding
+atomic variant (mutable from mutable, immutable from immutable) — see
+[README_COMPOSITE_CLASS](README_COMPOSITE_CLASS.md) — so this isn't
+repeated in the tables below, only referenced.
 
 ---
 
-## 1. Atomická mutable instance
+## 🧭 Contents
 
-Vytvoří se voláním `MyConstant()` (výchozí — `mutable=True`).
+* [1. Atomic mutable instance](#1-atomic-mutable-instance)
+* [2. Atomic immutable instance](#2-atomic-immutable-instance)
+* [3. Composite mutable instance](#3-composite-mutable-instance)
+* [4. Composite immutable instance](#4-composite-immutable-instance)
 
-### Sloty (interní stav)
+[⬅️ Back to main README](../../../README.md)
 
-| Slot | Popis |
+---
+
+## 1. Atomic mutable instance
+
+Created by calling `MyConstant()` (the default — `mutable=True`).
+
+### Slots (internal state)
+
+| Slot | Description |
 |---|---|
-| `_value` | Aktuální normalizovaná hodnota. |
-| `_owner` | Odkaz na rodičovskou kompozici, pokud je tenhle atom jejím vnitřním prvkem. Jinak `UNSET`. |
-| `_locked` | Příznak zámku (`False` u čerstvé instance). |
-| `__weakref__` | Podpora slabých referencí (z `InstanceBase`). |
+| `_value` | The current normalized value. |
+| `_owner` | A reference to the parent composition, if this atom is one of its inner elements. Otherwise `UNSET`. |
+| `_locked` | The lock flag (`False` on a fresh instance). |
+| `__weakref__` | Weak-reference support (from `InstanceBase`). |
 
-### Veřejné rozhraní
+### Public interface
 
-| Člen | Typ | Popis |
+| Member | Type | Description |
 |---|---|---|
-| `value` | property (čtení/zápis) | Hlavní přístup k hodnotě. Zápis normalizuje, uloží a spustí bublání nahoru, pokud má instance vlastníka. |
-| `owner` | property (jen čtení) | Vrací `_owner`. |
-| `meta` | property (jen čtení) | Metadata blueprintu, ze kterého instance vznikla (`SimpleConstantMetadata`). |
-| `init_mixins()` | metoda | Prázdný hook (bez mixinů nic nedělá). |
-| `validate_type(value, ...)` | classmethod\* | Zděděno z blueprintu — deterministická typová validace. |
-| `validate(value, ...)` | classmethod\* | Zděděno z blueprintu — plná validace (typ + `_validate`). |
-| `is_valid(value)` | classmethod\* | Zděděno z blueprintu — boolean varianta `validate`. |
-| `normalize(value, ...)` | classmethod\* | Zděděno z blueprintu — normalizace vstupu. |
-| `__repr__()` | metoda | Diagnostický výpis: jméno třídy, blueprint path, aktuální hodnota, adresa v paměti. |
-| `__str__()` | metoda | Jméno třídy. |
+| `value` | property (read/write) | The main way to access the value. Writing normalizes, stores, and triggers bubbling upward if the instance has an owner. |
+| `owner` | property (read-only) | Returns `_owner`. |
+| `meta` | property (read-only) | The blueprint's metadata that the instance was created from (`SimpleConstantMetadata`). |
+| `init_mixins()` | method | An empty hook (does nothing without mixins). |
+| `validate_type(value, ...)` | classmethod\* | Inherited from the blueprint — deterministic type validation. |
+| `validate(value, ...)` | classmethod\* | Inherited from the blueprint — full validation (type + `_validate`). |
+| `is_valid(value)` | classmethod\* | Inherited from the blueprint — the boolean variant of `validate`. |
+| `normalize(value, ...)` | classmethod\* | Inherited from the blueprint — input normalization. |
+| `__repr__()` | method | A diagnostic dump: class name, blueprint path, current value, memory address. |
+| `__str__()` | method | The class name. |
 
-\* Tyto metody instance **dědí přímo z uživatelské blueprint třídy**
-(`meta.owner_class`), protože `make_atom_class` staví instanci na dvojí
-dědičnosti `(InstanceBase, meta.owner_class)` — viz
-[README_ATOM_CLASS.md](README_ATOM_CLASS.md#make_atom_class--kompilace-atomické-třídy).
-Fungují stejně, jako když se volají přímo na blueprintu, jen teď je volá
-konkrétní instance.
+\* These methods are **inherited directly from the user's blueprint
+class** (`meta.owner_class`), because `make_atom_class` builds the
+instance on dual inheritance, `(InstanceBase, meta.owner_class)` — see
+[README_ATOM_CLASS](README_ATOM_CLASS.md). They work exactly as if called
+directly on the blueprint — it's just that now a specific instance is
+calling them.
 
-### Co na instanci **není** (odstraněno při kompilaci)
+### The blueprint's declarative attributes
 
-`_type`, `_default`, `_validate` (jako přepisatelný hook — validace samotná
-zůstává dostupná přes `validate`/`is_valid`), `bool_or_raise_validate_error`
-— tohle jsou deklarativní artefakty blueprintu, které instance po
-kompilaci nemá (viz
-[README_ATOM_CLASS.md](README_ATOM_CLASS.md#make_atom_class--kompilace-atomické-třídy)).
+`_type`, `_default`, `_validate` (as an overridable hook — validation
+itself remains available via `validate`/`is_valid`), and
+`bool_or_raise_validate_error` are not part of the instance's own
+compiled namespace, but they **do** remain reachable on the instance
+through the MRO, since `meta.owner_class` (the user's blueprint) is one of
+its parents (see
+[README_ATOM_CLASS](README_ATOM_CLASS.md#make_atom_class--compiling-the-atomic-class)).
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## 2. Atomická immutable instance
+## 2. Atomic immutable instance
 
-Vytvoří se voláním `MyConstant(mutable=False)`. Vyžaduje, aby hodnota typu
-`_type` byla hashovatelná (kontrolováno v `create_instance`).
+Created by calling `MyConstant(mutable=False)`. Requires the `_type`
+value to be hashable (checked in `create_instance`).
 
-### Rozdíly oproti mutable variantě
+### Differences from the mutable variant
 
-| Člen | Rozdíl |
+| Member | Difference |
 |---|---|
-| `value` | Property má **jen getter**. Pokus o zápis (`instance.value = ...`) skončí `AttributeError` už na úrovni Pythonu — setter se pro immutable variantu vůbec nevytváří. |
-| `_root_value_setter` | **Neexistuje.** Tahle metoda se přidává do `class_dict` jen podmíněně, `if mutable` (viz [README_ATOM_CLASS.md](README_ATOM_CLASS.md#create_root_value_setter--reaktivní-zápis-hodnoty)). |
+| `value` | The property has **only a getter**. Attempting to write (`instance.value = ...`) fails with `AttributeError` already at the Python level — the setter is never even created for the immutable variant. |
+| `_root_value_setter` | **Doesn't exist.** This method is only added to `class_dict` conditionally, `if mutable` (see [README_ATOM_CLASS](README_ATOM_CLASS.md#create_root_value_setter--reactive-value-writes)). |
 
-Vše ostatní (sloty, `owner`, `meta`, validační metody, `__repr__`/`__str__`)
-je stejné jako u mutable varianty.
+Everything else (slots, `owner`, `meta`, the validation methods,
+`__repr__`/`__str__`) is the same as in the mutable variant.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## 3. Kompozitní mutable instance
+## 3. Composite mutable instance
 
-Vytvoří se voláním `MyObject()`. Dědí **vše** z
-[atomické mutable instance](#1-atomická-mutable-instance) — sloty
-`_value`/`_owner`/`_locked`, `owner`, `meta`, validační metody,
-`__repr__`/`__str__`. Tabulka níže ukazuje jen to, co přidává navíc.
+Created by calling `MyObject()`. Inherits **everything** from the
+[atomic mutable instance](#1-atomic-mutable-instance) — the
+`_value`/`_owner`/`_locked` slots, `owner`, `meta`, the validation
+methods, `__repr__`/`__str__`. The table below shows only what it adds on
+top.
 
-### Sloty navíc
+### Extra slots
 
-Jeden privátní slot pro **každý přímý vnitřní prvek** deklarovaný
-v `_inners` — např. pro `_inners = (Engine, Wheels)` vzniknou sloty
-`_engine`, `_wheels`, každý obsahující instanci daného vnitřního prvku.
+One private slot for **every direct inner element** declared in
+`_inners` — e.g. for `_inners = (Engine, Wheels)`, the slots `_engine`
+and `_wheels` are created, each holding an instance of the given inner
+element.
 
-### Veřejné rozhraní navíc
+### Extra public interface
 
-| Člen | Typ | Popis |
+| Member | Type | Description |
 |---|---|---|
-| `value` | property (čtení/zápis, **přepsáno**) | Getter stejný princip jako u atomu. Setter navíc vyžaduje `meta.is_decomposeable`, po zápisu automaticky rozešle novou hodnotu do vnitřních prvků (`_recalculate_inners`). |
-| `<jméno_inner>` | property (čtení/zápis*) | Pro každý přímý vnitřní prvek — přímý přístup k jeho hodnotě, např. `instance.engine`. Zápis podléhá stejným pravidlům jako `value` toho konkrétního prvku (atomický/kompozitní podle jeho vlastní povahy). |
-| `<jméno_inner>_instance` | property (jen čtení) | Přístup k samotné instanci vnitřního prvku, ne k jeho hodnotě, např. `instance.engine_instance`. |
-| `calculate_value(*args, **kwargs)` | classmethod\* | Zděděno z blueprintu — spočítá hodnotu z parametrů odpovídajících `_inners`. |
-| `decompose_value(value)` | classmethod\* | Zděděno z blueprintu — rozloží hodnotu zpět na díly pro `_inners` (jen pokud `is_decomposeable`). |
-| `_recalculate_self()` | metoda (interní) | Přepočítá vlastní hodnotu z aktuálních hodnot dětí a bublá nahoru. |
-| `_recalculate_inners()` | metoda (interní) | Rozloží vlastní hodnotu a rozešle díly dětem. |
+| `value` | property (read/write, **overridden**) | The getter follows the same principle as on the atom. The setter additionally requires `meta.is_decomposeable`, and after writing it automatically distributes the new value to the inner elements (`_recalculate_inners`). |
+| `<inner_name>` | property (read/write*) | For every direct inner element — direct access to its value, e.g. `instance.engine`. Writing follows the same rules as `value` for that particular element (atomic/composite, depending on its own nature). |
+| `<inner_name>_instance` | property (read-only) | Access to the inner element's instance itself, not its value, e.g. `instance.engine_instance`. |
+| `calculate_value(*args, **kwargs)` | classmethod\* | Inherited from the blueprint — computes the value from parameters matching `_inners`. |
+| `decompose_value(value)` | classmethod\* | Inherited from the blueprint — decomposes a value back into pieces for `_inners` (only if `is_decomposeable`). |
+| `_recalculate_self()` | method (internal) | Recalculates its own value from the children's current values and bubbles upward. |
+| `_recalculate_inners()` | method (internal) | Decomposes its own value and distributes the pieces to the children. |
 
-\* Stejně jako u atomu — zděděno z uživatelské blueprint třídy.
+\* Same as with the atom — inherited from the user's blueprint class.
 
-> **Poznámka k `<jméno_inner>` properties:** přesný seznam se liší podle
-> konkrétní třídy — závisí na tom, co je deklarované v `_inners`. Tahle
-> tabulka popisuje *mechanismus* (že každý inner dostane dvojici
-> property/instance property), ne konkrétní jména, která jsou vždy
-> specifická pro danou kompozici.
+> **Note on `<inner_name>` properties:** the exact list varies by class —
+> it depends on what's declared in `_inners`. This table describes the
+> *mechanism* (that every inner element gets a value/instance-property
+> pair), not the concrete names, which are always specific to the given
+> composition.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## 4. Kompozitní immutable instance
+## 4. Composite immutable instance
 
-Vytvoří se voláním `MyObject(mutable=False)`. Dědí **vše** z
-[atomické immutable instance](#2-atomická-immutable-instance) plus
-strukturu z [kompozitní mutable varianty](#3-kompozitní-mutable-instance),
-minus reaktivní zapisovací mechanismy.
+Created by calling `MyObject(mutable=False)`. Inherits **everything**
+from the [atomic immutable instance](#2-atomic-immutable-instance) plus
+the structure from the [composite mutable variant](#3-composite-mutable-instance),
+minus the reactive write mechanisms.
 
-### Rozdíly oproti kompozitní mutable variantě
+### Differences from the composite mutable variant
 
-| Člen | Rozdíl |
+| Member | Difference |
 |---|---|
-| `value` | Jen getter — stejně jako u atomické immutable varianty. |
-| `<jméno_inner>` | Jen getter — zápis do žádného vnitřního prvku není povolený. |
-| `_recalculate_self` | **Neexistuje.** Přidává se do `class_dict` jen podmíněně, `if mutable`. |
-| `_recalculate_inners` | **Neexistuje.** Stejný důvod. |
+| `value` | Getter only — same as with the atomic immutable variant. |
+| `<inner_name>` | Getter only — writing to any inner element is not allowed. |
+| `_recalculate_self` | **Doesn't exist.** Only added to `class_dict` conditionally, `if mutable`. |
+| `_recalculate_inners` | **Doesn't exist.** Same reason. |
 
-`<jméno_inner>_instance` zůstává (je vždy jen ke čtení, bez ohledu na
-mutabilitu) a `calculate_value`/`decompose_value` zůstávají dostupné jako
-zděděné metody — jde jen o výpočet/rozklad, ne o mutaci stavu instance.
+`<inner_name>_instance` remains (it's always read-only regardless of
+mutability), and `calculate_value`/`decompose_value` remain available as
+inherited methods — they're just computation/decomposition, not a
+mutation of the instance's state.
 
-Immutable kompozice je tedy po vytvoření **strukturálně zmrazená** — hodnotu
-lze přečíst na libovolné úrovni stromu, ale nikde ji nelze změnit.
+An immutable composition is therefore **structurally frozen** once
+created — the value can be read at any level of the tree, but it can't be
+changed anywhere.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)

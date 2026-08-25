@@ -1,32 +1,36 @@
-# 🔗 `value` property — Jednotný přístup k hodnotě
+# 🔗 The `value` property — Unified access to the value
 
-Property `value` je **jediné veřejné rozhraní**, přes které uživatel čte
-i zapisuje hodnotu — ať jde o kořenovou instanci, nebo o libovolně
-zanořený vnitřní prvek uvnitř kompozice. Tenhle dokument popisuje
-mechaniku, která tohle jednotné rozhraní staví.
-
----
-
-## 🧭 Obsah
-
-* [`create_value_property` — sestavení property](#create_value_property--sestavení-property)
-* [`create_value_getter` — čtení](#create_value_getter--čtení)
-* [`create_value_setter` — zápis](#create_value_setter--zápis)
-* [`create_instance_property` — přístup k instanci, ne k hodnotě](#create_instance_property--přístup-k-instanci-ne-k-hodnotě)
-* [`create_properties_for_inner` — obě dohromady pro jeden prvek](#create_properties_for_inner--obě-dohromady-pro-jeden-prvek)
+The `value` property is the **single public interface** through which the
+user both reads and writes the value — whether it's the root instance, or
+any arbitrarily nested inner element inside a composition. This document
+describes the mechanics behind building that unified interface.
 
 ---
 
-## `create_value_property` — sestavení property
+## 🧭 Contents
 
-**Parametry:**
-* `meta`: metadata prvku, ke kterému property patří.
-* `is_constant` (*bool*, výchozí `True`): atomické, nebo kompozitní chování setteru.
-* `mutable` (*bool*, výchozí `True`): jestli se má vůbec vytvářet setter.
-* `path` (*tuple | None*): `None` pro kořenovou hodnotu, jinak cesta ke
-  vnitřnímu prvku.
+* [`create_value_property` — assembling the property](#create_value_property--assembling-the-property)
+* [`create_value_getter` — reading](#create_value_getter--reading)
+* [`create_value_setter` — writing](#create_value_setter--writing)
+* [`create_instance_property` — accessing the instance, not the value](#create_instance_property--accessing-the-instance-not-the-value)
+* [`create_properties_for_inner` — both together, for one element](#create_properties_for_inner--both-together-for-one-element)
 
-**Návratová hodnota:** `property` objekt s vygenerovaným docstringem.
+[⬅️ Back to main README](../../../README.md)
+
+---
+
+## `create_value_property` — assembling the property
+
+**Parameters:**
+* `meta`: the metadata of the element the property belongs to.
+* `is_constant` (*bool*, default `True`): atomic or composite setter
+  behavior.
+* `mutable` (*bool*, default `True`): whether a setter should be created
+  at all.
+* `path` (*tuple | None*): `None` for the root value, otherwise the path
+  to an inner element.
+
+**Return value:** a `property` object with a generated docstring.
 
 ```python
 def create_value_property(meta, *, is_constant=True, mutable=True, path=None):
@@ -39,33 +43,35 @@ def create_value_property(meta, *, is_constant=True, mutable=True, path=None):
     return property(fget=getter, fset=setter, doc=...)
 ```
 
-**Immutable → jen getter.** Pokud je instance immutable, `property` se
-vůbec nesestaví se setterem — pokus o zápis (`instance.value = ...`)
-selže na úrovni Pythonu samotného (`AttributeError: can't set attribute`),
-ne na nějaké vlastní validaci. Nejsilnější možná garance immutability —
-zápis prostě neexistuje.
+**Immutable → getter only.** If the instance is immutable, the `property`
+is never even assembled with a setter — attempting to write
+(`instance.value = ...`) fails at the level of Python itself
+(`AttributeError: can't set attribute`), not through any custom
+validation. The strongest possible guarantee of immutability — the write
+path simply doesn't exist.
 
-**Automaticky generovaný docstring** se liší podle `is_constant` — u
-atomu popisuje normalizaci a bublání nahoru, u kompozice popisuje
-dekompozici a distribuci do vnitřních prvků. Díky tomu `help(MyClass.value)`
-dá uživateli rovnou smysluplný, kontextově správný popis, i když je celá
-property vygenerovaná dynamicky.
+**The automatically generated docstring** differs based on
+`is_constant` — for an atom it describes normalization and bubbling
+upward, for a composition it describes decomposition and distribution to
+the inner elements. Thanks to this, `help(MyClass.value)` gives the user a
+directly meaningful, contextually correct description, even though the
+whole property is generated dynamically.
 
-**Tahle funkce vytváří `value` pro dvě různé věci zároveň** — kořenovou
-hodnotu instance (`path=None`, volaná z `make_atom_class`/`make_composite_class`)
-i hodnotu libovolného vnitřního prvku (`path=(...)`, volaná z
-`create_properties_for_inner` níže). Je to jeden sjednocený mechanismus,
-ne dvě oddělené implementace.
+**This function creates `value` for two different things at once** — the
+root value of an instance (`path=None`, called from
+`make_atom_class`/`make_composite_class`) and the value of any arbitrary
+inner element (`path=(...)`, called from `create_properties_for_inner`
+below). It's one unified mechanism, not two separate implementations.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## `create_value_getter` — čtení
+## `create_value_getter` — reading
 
-**Parametry:** `meta`, `path` (`None`, nebo tuple).
+**Parameters:** `meta`, `path` (`None`, or a tuple).
 
-**Návratová hodnota:** getter funkce.
+**Return value:** the getter function.
 
 ```python
 def create_value_getter(meta, path):
@@ -81,26 +87,28 @@ def create_value_getter(meta, path):
     return getter
 ```
 
-**Getter je záměrně naprosto stejný pro atomy i kompozice** — vždy jen
-vrátí aktuální normalizovanou hodnotu. Veškerý rozdíl mezi atomickým a
-kompozitním chováním je soustředěný do **setteru** (viz níže); getter
-zůstává jednotný a bezstavový.
+**The getter is deliberately identical for atoms and compositions alike**
+— it always just returns the current normalized value. All the difference
+between atomic and composite behavior is concentrated in the **setter**
+(see below); the getter stays uniform and stateless.
 
-**`operator.attrgetter(*path)` místo řetězu `getattr`** — pro vnořený
-přístup (`path = ("_engine", "_pistons")`) je `attrgetter` rychlejší než
-ruční řetězení `getattr` volání a nealokuje mezikroky navíc.
+**`operator.attrgetter(*path)` instead of a chain of `getattr` calls** —
+for nested access (`path = ("_engine", "_pistons")`), `attrgetter` is
+faster than manually chaining `getattr` calls and doesn't allocate extra
+intermediate steps.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## `create_value_setter` — zápis
+## `create_value_setter` — writing
 
-**Parametry:** `meta`, `is_constant` (výchozí `False`), `path` (výchozí `None`).
+**Parameters:** `meta`, `is_constant` (default `False`), `path` (default
+`None`).
 
-**Návratová hodnota:** setter funkce.
+**Return value:** the setter function.
 
-**Pod kapotou (zkráceně):**
+**Under the hood (abridged):**
 ```python
 def create_value_setter(meta, is_constant=False, path=None):
     get_inner = attrgetter(*path) if path is not None else None
@@ -125,42 +133,43 @@ def create_value_setter(meta, is_constant=False, path=None):
     return setter
 ```
 
-Pět kroků, v přesně tomhle pořadí:
+Five steps, in exactly this order:
 
-1. **Zámek má vždy přednost.** `self._locked` se kontroluje jako úplně
-   první — žádná jiná logika se ani nezačne vyhodnocovat, pokud je
-   instance zamčená.
-2. **Kompozitní setter vyžaduje dekomponovatelnost.** Pokud jde o
-   kompozici (`not is_constant`) a `meta.is_decomposeable` je `False`,
-   zápis se rovnou zamítne — nemá smysl přijmout hodnotu, kterou by
-   nešlo rozložit do vnitřních prvků.
-3. **Rozliš kořen vs. vnitřní prvek** (`instance = get_inner(self) if
-   ... else self`) — od teď se pracuje s **cílovou** instancí, ne
-   nutně s `self`.
-4. **Zápis + případná dekompozice.** Vždy se nejdřív zapíše hodnota přes
-   `_root_value_setter(value, recalculate_up=True)` (bublání nahoru
-   povolené — tohle je veřejný, uživatelem iniciovaný zápis). Pokud jde o
-   kompozici, hned poté se zavolá `_recalculate_inners()`, aby se nová
-   hodnota rozdistribuovala dolů do vnitřních prvků.
-5. **Logování jen na kořenové úrovni.** `if path is None` — změna
-   vnitřního prvku se loguje jen jednou, na úrovni, kde ji uživatel
-   skutečně vyvolal, ne opakovaně na každém mezikroku kaskády.
+1. **The lock always comes first.** `self._locked` is checked as the very
+   first thing — no other logic is even evaluated if the instance is
+   locked.
+2. **A composite setter requires decomposability.** If it's a composition
+   (`not is_constant`) and `meta.is_decomposeable` is `False`, the write
+   is rejected outright — there's no point accepting a value that
+   couldn't be decomposed into the inner elements anyway.
+3. **Distinguish root vs. inner element**
+   (`instance = get_inner(self) if ... else self`) — from this point on,
+   the code works with the **target** instance, not necessarily `self`.
+4. **Write plus optional decomposition.** The value is always written
+   first via `_root_value_setter(value, recalculate_up=True)` (bubbling
+   upward allowed — this is a public, user-initiated write). If it's a
+   composition, `_recalculate_inners()` is then called right after, to
+   distribute the new value down into the inner elements.
+5. **Logging only at the root level.** `if path is None` — a change to an
+   inner element is only logged once, at the level where the user
+   actually triggered it, not repeatedly at every intermediate step of
+   the cascade.
 
-**Tenhle setter je most mezi dvěma reaktivními směry** popsanými
-v [README_COMPOSITE_CLASS.md](README_COMPOSITE_CLASS.md#reaktivita-jako-celek) —
-krok 4 spouští jak `_recalculate_self` (přes `_root_value_setter` →
-bublání), tak `_recalculate_inners` (přímo), podle toho, jestli je cíl
-atom, nebo kompozice.
+**This setter is the bridge between the two reactive directions**
+described in [README_COMPOSITE_CLASS](README_COMPOSITE_CLASS.md) — step 4
+triggers both `_recalculate_self` (via `_root_value_setter` → bubbling)
+and `_recalculate_inners` (directly), depending on whether the target is
+an atom or a composition.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## `create_instance_property` — přístup k instanci, ne k hodnotě
+## `create_instance_property` — accessing the instance, not the value
 
-**Parametry:** `inner_meta`, `path`.
+**Parameters:** `inner_meta`, `path`.
 
-**Návratová hodnota:** read-only `property`.
+**Return value:** a read-only `property`.
 
 ```python
 def create_instance_property(inner_meta, path):
@@ -172,25 +181,26 @@ def create_instance_property(inner_meta, path):
     return property(fget=getter, doc=...)
 ```
 
-Strukturální protějšek k `value` property — místo **hodnoty** vnitřního
-prvku vrací přímo jeho **instanci** (objekt se svým vlastním `.value`,
-`.owner`, případně metodami z mixinů). Vždy jen getter — nahrazení celé
-vnitřní instance zvenčí není nikdy povolené, jen nastavení její hodnoty
-(přes `value` property).
+The structural counterpart to the `value` property — instead of the inner
+element's **value**, it returns its **instance** directly (an object with
+its own `.value`, `.owner`, and possibly mixin methods). Always a getter
+only — replacing the entire inner instance from the outside is never
+allowed, only setting its value (via the `value` property).
 
-Tahle property se hodí hlavně pro introspekci a pokročilé použití, kde
-uživatel potřebuje sáhnout na vnitřní prvek jako na plnohodnotný objekt
-(např. zavolat na něm metodu z mixinu), ne jen přečíst jeho hodnotu.
+This property is mainly useful for introspection and advanced use cases,
+where the user needs to reach the inner element as a full-fledged object
+(e.g. to call a mixin method on it), not just read its value.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## `create_properties_for_inner` — obě dohromady pro jeden prvek
+## `create_properties_for_inner` — both together, for one element
 
-**Parametry:** `inner_meta`, `path` (výchozí `()`), `mutable` (výchozí `True`).
+**Parameters:** `inner_meta`, `path` (default `()`), `mutable` (default
+`True`).
 
-**Návratová hodnota:** `dict` se dvěma klíči.
+**Return value:** a `dict` with two keys.
 
 ```python
 def create_properties_for_inner(inner_meta, path=(), *, mutable=True):
@@ -204,26 +214,27 @@ def create_properties_for_inner(inner_meta, path=(), *, mutable=True):
     }
 ```
 
-Pro jeden vnitřní prvek (řekněme `engine`) vygeneruje **dvě** properties
-najednou:
+For a single inner element (say, `engine`), this generates **two**
+properties at once:
 
-* **`engine`** — hodnota (čtení vždy, zápis podle mutability a
-  dekomponovatelnosti).
-* **`engine_instance`** — samotná instance (vždy jen ke čtení).
+* **`engine`** — the value (always readable, writable depending on
+  mutability and decomposability).
+* **`engine_instance`** — the instance itself (always read-only).
 
-**`instance_path = path + (inner_meta.name_private,)`** — tohle je místo,
-kde se skládá cesta pro zanořený přístup. Funkce dostává `path` zvenčí
-(volající, typicky `create_properties_for_inners`, předává `()` pro
-přímé prvky) a rozšiřuje ji o vlastní privátní slot. Pro vícenásobně
-zanořené struktury (kdyby volající předal neprázdnou `path`) by výsledná
-cesta rostla o další úroveň — mechanismus je tedy připravený i na hlubší
-zanoření, i když v základním případě (`create_properties_for_inners`
-volá vždy s `path=()`) se používá jen jedna úroveň.
+**`instance_path = path + (inner_meta.name_private,)`** — this is where
+the path for nested access is built up. The function receives `path` from
+the outside (the caller, typically `create_properties_for_inners`, passes
+`()` for direct elements) and extends it with its own private slot. For
+multiply nested structures (if the caller were to pass a non-empty
+`path`), the resulting path would grow by another level — so the
+mechanism is prepared for deeper nesting too, even though in the base
+case (`create_properties_for_inners` always calls it with `path=()`) only
+one level is actually used.
 
-Výsledný `dict` se pak přímo slučuje (`|=`) do `class_dict` při kompilaci
-kompozitní třídy (viz
-[README_COMPOSITE_CLASS.md](README_COMPOSITE_CLASS.md#create_properties_for_inners--přístup-k-vnitřním-prvkům)).
+The resulting `dict` is then merged directly (`|=`) into `class_dict` when
+the composite class is compiled (see
+[README_COMPOSITE_CLASS](README_COMPOSITE_CLASS.md)).
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
-➡️ Pokračování: [README_INSTANCE_PROTOCOLS.md](README_INSTANCE_PROTOCOLS.md)
+➡️ Next: [README_INSTANCE_PROTOCOLS](README_INSTANCE_PROTOCOLS.md)

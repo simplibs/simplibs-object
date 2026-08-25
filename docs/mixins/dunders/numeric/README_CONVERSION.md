@@ -24,6 +24,9 @@ class Conversion(SimpleMixin):
 * [`__index__`](#__index__)
 * [`__round__`](#__round__)
 * [`__floor__` / `__ceil__` / `__trunc__`](#__floor__--__ceil__--__trunc__)
+* [`execute_conversion`](#execute_conversion)
+
+[⬅️ Back to main Mixins Overview](../../README_MIXINS_OVERVIEW.md)
 
 ---
 
@@ -197,4 +200,50 @@ def __trunc__(self):
 
 ---
 
-[⬅️ Back to Mixins Overview](../../../README_MIXINS_OVERVIEW.md)
+### `execute_conversion`
+
+Executes a native value conversion and provides a unified `TypeError`
+message if the conversion fails.
+
+**Parameters:**
+
+* `self` — the current instance.
+* `func` — the conversion function to execute.
+* `*args` — additional arguments passed to the conversion function.
+
+**Returns:**
+
+* the converted value.
+
+**Raises:**
+
+* `TypeError` — if the conversion fails because of an invalid type or value.
+
+**Example usage:**
+
+```python
+int(value)
+```
+
+**Under the hood:**
+
+```python
+def execute_conversion(
+    self: "ConversionProtocol",
+    func: Callable[..., Any],
+    *args: Any
+) -> Any:
+    try:
+        return func(self.value, *args)
+
+    except (TypeError, ValueError) as e:
+        raise TypeError(
+            f"Cannot execute {func.__name__}() on {self.meta.class_name} "
+            f"(value={self.value!r}): {e}"
+        ) from e
+```
+
+[▲ Back to top](#-table-of-contents)
+
+---
+

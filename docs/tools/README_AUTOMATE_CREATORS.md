@@ -1,44 +1,49 @@
-# 🏭 Automate Creators — Programové vytváření tříd bez `class` zápisu
+# 🏭 Automate Creators — Creating classes programmatically without `class` syntax
 
-Standardní způsob definice v Simple systému je psát `class MyConstant(SimpleConstant): ...`
-napevno v kódu. Tenhle nástroj dává alternativu: **vytvořit blueprint
-třídy programově, za běhu**, z hodnot, které třeba přišly z konfigurace,
-databáze, nebo uživatelského vstupu. Tři veřejné funkce tvoří jasnou
-hierarchii:
+The standard way to define something in the Simple system is to write
+`class MyConstant(SimpleConstant): ...` directly in code. This tool offers
+an alternative: **creating a class blueprint programmatically, at
+runtime**, from values that might come from configuration, a database, or
+user input. Three public functions form a clear hierarchy:
 
 ```
-create_simple_object          (univerzální fasáda — rozhoduje atom vs. kompozice)
-├── create_constant_class      (staví SimpleConstant podtřídy)
-└── create_object_class        (staví SimpleObject podtřídy)
+create_simple_object          (universal facade — decides atom vs. composition)
+├── create_constant_class      (builds SimpleConstant subclasses)
+└── create_object_class        (builds SimpleObject subclasses)
 ```
 
 ---
 
-## 🧭 Obsah
+## 🧭 Contents
 
-* [`create_constant_class` — programová konstanta](#create_constant_class--programová-konstanta)
-* [`create_object_class` — programová kompozice](#create_object_class--programová-kompozice)
-* [`create_simple_object` — univerzální fasáda](#create_simple_object--univerzální-fasáda)
-* [Pomocné funkce](#pomocné-funkce)
+* [`create_constant_class` — a constant, created programmatically](#create_constant_class--a-constant-created-programmatically)
+* [`create_object_class` — a composition, created programmatically](#create_object_class--a-composition-created-programmatically)
+* [`create_simple_object` — the universal facade](#create_simple_object--the-universal-facade)
+* [Helper functions](#helper-functions)
   * [`_is_lambda`](#_is_lambda)
-  * [`process_validate` a `process_decompose`](#process_validate-a-process_decompose)
+  * [`process_validate` and `process_decompose`](#process_validate-and-process_decompose)
   * [`process_logic`](#process_logic)
   * [`load_parameters_from_inners`](#load_parameters_from_inners)
   * [`calculate_default`](#calculate_default)
 
+[⬅️ Back to main README](../../README.md)
+
 ---
 
-## `create_constant_class` — programová konstanta
+## `create_constant_class` — a constant, created programmatically
 
-**Parametry:**
-* `class_name` (*str*): jméno nové třídy.
-* `default` (*Any*): povinná výchozí hodnota.
-* `value_type` (*type | UNSET*): explicitní typ; pokud `UNSET`, odvodí se z `type(default)`.
-* `validate` (*Callable | UNSET*): volitelná validační funkce nebo lambda.
+**Parameters:**
+* `class_name` (*str*): the name of the new class.
+* `default` (*Any*): the required default value.
+* `value_type` (*type | UNSET*): an explicit type; if `UNSET`, it's derived
+  from `type(default)`.
+* `validate` (*Callable | UNSET*): an optional validation function or
+  lambda.
 
-**Návratová hodnota:** nová `SimpleConstant` podtřída (blueprint, ne instance).
+**Return value:** a new `SimpleConstant` subclass (a blueprint, not an
+instance).
 
-**Pod kapotou (zkráceně):**
+**Under the hood (abridged):**
 ```python
 def create_constant_class(class_name, default, value_type=UNSET, validate=UNSET):
     ...
@@ -53,35 +58,37 @@ def create_constant_class(class_name, default, value_type=UNSET, validate=UNSET)
     return type(class_name, (SimpleConstant,), namespace)
 ```
 
-**Odvození typu z hodnoty je pohodlný default, ne magie.** Pokud uživatel
-nezadá `value_type` explicitně, systém prostě zavolá `type(default)` —
-stejně, jako by to typicky napsal ručně (`_type = int` pro `_default =
-20`). Tohle šetří psaní v jednoduchých případech, ale zůstává plně
-přepsatelné, když je potřeba typ volnější (např. union).
+**Deriving the type from the value is a convenient default, not magic.**
+If the user doesn't specify `value_type` explicitly, the system simply
+calls `type(default)` — the same as what someone would typically write by
+hand (`_type = int` for `_default = 20`). This saves typing in simple
+cases, but stays fully overridable when a looser type is needed (e.g. a
+union).
 
-Funkce je tenký obal nad tím, co by jinak vyžadovalo napsat celou `class`
-definici — výsledek prochází přesně stejnou `SimpleMeta`/`SimpleConstantMetadata`
-pipeline jako ručně psaná třída (viz
-[README_SIMPLE_META.md](README_SIMPLE_META.md#__new__--vznik-třídy)),
-protože `type(class_name, (SimpleConstant,), namespace)` spouští úplně
-stejný mechanismus jako `class` klíčové slovo v Pythonu.
+The function is a thin wrapper over what would otherwise require writing
+out a full `class` definition — the result goes through exactly the same
+`SimpleMeta`/`SimpleConstantMetadata` pipeline as a hand-written class (see
+[README_SIMPLE_META](../metadata/README_SIMPLE_META.md#__new__--class-creation)),
+because `type(class_name, (SimpleConstant,), namespace)` triggers exactly
+the same mechanism as Python's `class` keyword.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## `create_object_class` — programová kompozice
+## `create_object_class` — a composition, created programmatically
 
-**Parametry:**
-* `class_name` (*str*): jméno nové třídy.
-* `inners` (*tuple*): vnitřní prvky.
-* `logic` (*Callable*): povinná výpočetní funkce.
-* `value_type` (*type | UNSET*): explicitní typ; pokud `UNSET`, odvodí se z dry-runu `logic`.
-* `validate`, `decompose` (*Callable | UNSET*): volitelné hooky.
+**Parameters:**
+* `class_name` (*str*): the name of the new class.
+* `inners` (*tuple*): the inner elements.
+* `logic` (*Callable*): the required computation function.
+* `value_type` (*type | UNSET*): an explicit type; if `UNSET`, it's derived
+  from a dry run of `logic`.
+* `validate`, `decompose` (*Callable | UNSET*): optional hooks.
 
-**Návratová hodnota:** nová `SimpleObject` podtřída.
+**Return value:** a new `SimpleObject` subclass.
 
-**Pod kapotou (zkráceně):**
+**Under the hood (abridged):**
 ```python
 def create_object_class(class_name, inners, logic, value_type=UNSET, validate=UNSET, decompose=UNSET):
     ...
@@ -97,37 +104,40 @@ def create_object_class(class_name, inners, logic, value_type=UNSET, validate=UN
     return type(class_name, (SimpleObject,), namespace)
 ```
 
-**Odvození typu je tu o krok složitější než u konstanty** — nestačí
-`type(default)`, protože kompozice žádný explicitní default nemá (viz
-[README_SIMPLE_OBJECT.md](README_SIMPLE_OBJECT.md#důležité-_default-se-nesmí-definovat)).
-Místo toho se `logic` **skutečně jednou zavolá** s výchozími hodnotami
-odvozenými z `inners` (`calculate_default`, viz níže) a typ výsledku se
-použije jako `value_type`. Je to menší, ruční předehra k tomu, co pak
-stejně dělá `SimpleObjectMetadata` (dry-run `_logic` — viz
-[README_METHOD_PROCESSING.md](README_METHOD_PROCESSING.md#verify_calculation--dry-run-a-kontrola-výsledku)) —
-tady se to jen musí udělat o krok dřív, protože `value_type` je potřeba
-znát **předtím**, než se sestaví `namespace` pro `type(...)`.
+**Deriving the type is a step more complex here than for a constant** —
+`type(default)` isn't enough, because a composition has no explicit
+default at all (see
+[README_SIMPLE_OBJECT](../core/README_SIMPLE_OBJECT.md#important-_default-must-not-be-defined)).
+Instead, `logic` is **actually called once**, with default values derived
+from `inners` (`calculate_default`, see below), and the result's type is
+used as `value_type`. This is a smaller, manual preview of what
+`SimpleObjectMetadata` does anyway (dry-running `_logic` — see
+[README_METHOD_PROCESSING](../metadata/README_METHOD_PROCESSING.md#verify_calculation--dry-run-and-result-check))
+— here it just has to happen a step earlier, because `value_type` needs to
+be known **before** the `namespace` for `type(...)` is assembled.
 
-**`logic` prochází normalizací signatury** (`process_logic`) předtím, než
-se z ní vůbec zkusí spočítat default — to řeší nejčastější zdroj tření
-u programového API: uživatel typicky nechce psát `lambda cls, a, b: ...`,
-chce jen `lambda a, b: ...` (viz [pomocné funkce](#process_logic) níže).
+**`logic` goes through signature normalization** (`process_logic`) before
+any attempt is even made to compute a default from it — this handles the
+most common source of friction with the programmatic API: the user
+typically doesn't want to write `lambda cls, a, b: ...`, they just want
+`lambda a, b: ...` (see [helper functions](#process_logic) below).
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## `create_simple_object` — univerzální fasáda
+## `create_simple_object` — the universal facade
 
-**Parametry:** sjednocuje parametry obou tvůrců plus:
-* `return_instance` (*bool*, výchozí `False`): pokud `True`, vrátí rovnou
-  instanci místo blueprintu.
-* `mixins`, `as_atom`, `mutable`: předávané do `SimpleMeta.__call__`, pokud
-  `return_instance=True`.
+**Parameters:** unifies the parameters of both creators, plus:
+* `return_instance` (*bool*, default `False`): if `True`, returns an
+  instance directly instead of a blueprint.
+* `mixins`, `as_atom`, `mutable`: passed through to `SimpleMeta.__call__`
+  if `return_instance=True`.
 
-**Návratová hodnota:** buď blueprint třída, nebo instance (podle `return_instance`).
+**Return value:** either a blueprint class, or an instance (depending on
+`return_instance`).
 
-**Pod kapotou:**
+**Under the hood:**
 ```python
 def create_simple_object(class_name, default=UNSET, inners=UNSET, ..., return_instance=False, ...):
     if inners is UNSET:
@@ -138,27 +148,29 @@ def create_simple_object(class_name, default=UNSET, inners=UNSET, ..., return_in
     return _class if not return_instance else _class(mixins=mixins, as_atom=as_atom, mutable=mutable)
 ```
 
-**Směrovací pravidlo je jediný `if inners is UNSET`** — stejný princip
-jako u `SimpleMeta.__new__`, kde přítomnost `_inners` rozlišuje konstantu
-od kompozice (viz
-[README_SIMPLE_META.md](README_SIMPLE_META.md#__new__--vznik-třídy)).
-Tady se to samé rozhodnutí dělá ještě před vytvořením třídy, ne až uvnitř
-metaclassy — protože `create_constant_class` a `create_object_class` mají
-each odlišnou sadu povinných parametrů (default vs. inners+logic).
+**The routing rule is a single `if inners is UNSET`** — the same principle
+as in `SimpleMeta.__new__`, where the presence of `_inners` distinguishes
+a constant from a composition (see
+[README_SIMPLE_META](../metadata/README_SIMPLE_META.md#__new__--class-creation)).
+Here, the same decision is made before the class is even created, not
+inside the metaclass — because `create_constant_class` and
+`create_object_class` each have a different set of required parameters
+(default vs. inners+logic).
 
-**`create_simple_object` je jediné veřejné API, které dovede vrátit rovnou
-hotovou instanci** (`return_instance=True`) — poslední řádek jen deleguje
-na `_class(...)`, což je přesně to volání, které spustí `SimpleMeta.__call__`
-→ `create_instance` (viz [README_CREATE_INSTANCE.md](README_CREATE_INSTANCE.md)).
-Tohle je typický vzor "vytvoř třídu i instanci v jednom kroku", vhodný pro
-scénáře, kde blueprint stejně nikdo nebude znovu používat (např.
-jednorázová konstanta z konfiguračního souboru).
+**`create_simple_object` is the only public API that can return a finished
+instance directly** (`return_instance=True`) — the last line just delegates
+to `_class(...)`, which is exactly the call that triggers
+`SimpleMeta.__call__` → `create_instance` (see
+[README_CREATE_INSTANCE](../metadata/instance/README_CREATE_INSTANCE.md)). This is the
+typical "create the class and the instance in one step" pattern, suited
+for scenarios where nobody's going to reuse the blueprint anyway (e.g. a
+one-off constant from a config file).
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## Pomocné funkce
+## Helper functions
 
 ### `_is_lambda`
 
@@ -167,19 +179,20 @@ def _is_lambda(fn):
     return callable(fn) and getattr(fn, "__name__", None) == "<lambda>"
 ```
 
-Malý, ale klíčový detekční nástroj — všechny tři `process_*` funkce níže
-se chovají jinak podle toho, jestli dostaly pojmenovanou funkci, nebo
-anonymní `lambda`. Detekce je jednoduchá: každá `lambda` v Pythonu má
-`__name__ == "<lambda>"`, bez ohledu na to, do jaké proměnné je přiřazená.
+A small but key detection tool — all three `process_*` functions below
+behave differently depending on whether they received a named function or
+an anonymous `lambda`. The detection is simple: every `lambda` in Python
+has `__name__ == "<lambda>"`, regardless of what variable it's assigned
+to.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-### `process_validate` a `process_decompose`
+### `process_validate` and `process_decompose`
 
-Obě fungují na stejném principu — normalizují **signaturu** uživatelské
-funkce, ne její chování:
+Both work on the same principle — they normalize the **signature** of the
+user's function, not its behavior:
 
 ```python
 def process_validate(validate):
@@ -203,25 +216,26 @@ def process_decompose(decompose):
     return _decompose
 ```
 
-**Proč tohle vůbec existuje:** systém interně vždy volá `_validate(cls,
-value, *, return_bool=...)` a `_decompose(cls, value)` — signatury pevně
-dané a ověřované přes `verify_params` (viz
-[README_METHOD_PROCESSING.md](README_METHOD_PROCESSING.md#verify_params--kontrola-signatury-na-úrovni-bytecode)).
-Ale když uživatel v programovém API napíše `lambda v: v > 0`, chybí mu
-`cls` (a u validate i `return_bool`) — a lambda navíc nejde snadno
-"rozšířit" o další parametr bez přepsání. Obě funkce tedy pojmenovanou
-funkci nechají beze změny (předpokládá se, že už má správnou signaturu),
-ale lambdu **obalí** do wrapperu se správnou signaturou, který uvnitř
-zavolá původní lambdu jen s tím, co skutečně potřebuje (`value`).
+**Why this exists at all:** internally, the system always calls
+`_validate(cls, value, *, return_bool=...)` and `_decompose(cls, value)` —
+fixed signatures, enforced via `verify_params` (see
+[README_METHOD_PROCESSING](../metadata/README_METHOD_PROCESSING.md#verify_params--signature-check-at-the-bytecode-level)).
+But when the user writes `lambda v: v > 0` in the programmatic API, they're
+missing `cls` (and, for validate, `return_bool` too) — and a lambda can't
+easily be "extended" with an extra parameter without rewriting it. So both
+functions leave a named function unchanged (assuming it already has the
+correct signature), but **wrap** a lambda in a wrapper with the correct
+signature, which internally calls the original lambda with only what it
+actually needs (`value`).
 
-**Asymetrie mezi funkcemi a `process_logic`** (viz níže) není náhoda —
-`process_validate`/`process_decompose` mají vždy stejný, pevný počet
-parametrů (`value`, případně `return_bool`), takže obyčejný `def` wrapper
-stačí. `process_logic` na tenhle trik nemůže spoléhat, protože počet
-parametrů `_logic` je proměnlivý (podle počtu `_inners`) — proto potřebuje
-jiný přístup.
+**The asymmetry between these functions and `process_logic`** (see below)
+isn't accidental — `process_validate`/`process_decompose` always have the
+same, fixed number of parameters (`value`, and possibly `return_bool`), so
+a plain `def` wrapper is enough. `process_logic` can't rely on this trick,
+because the number of `_logic` parameters varies (based on the number of
+`_inners`) — which is why it needs a different approach.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
@@ -241,32 +255,34 @@ def process_logic(logic, params_name):
     return namespace["_logic"]
 ```
 
-Tady obyčejný pevný wrapper nestačí — `_logic` musí mít **přesně tolik
-parametrů, kolik má kompozice `_inners`**, a to číslo je předem neznámé
-(je to `params_name`, odvozené z konkrétní kompozice). Řešení je sestavit
-zdrojový kód wrapperu **jako řetězec** a zkompilovat ho přes `exec` — pro
-`_inners = (Width, Height)` by to vygenerovalo přesně:
+Here, a plain fixed wrapper isn't enough — `_logic` needs **exactly as
+many parameters as the composition has `_inners`**, and that number is
+unknown in advance (it's `params_name`, derived from the specific
+composition). The solution is to build the wrapper's source code **as a
+string** and compile it via `exec` — for `_inners = (Width, Height)` this
+would generate exactly:
 
 ```python
 def _logic(cls, width, height): return logic(width, height)
 ```
 
-Tohle je jedno z mála míst v celé knihovně, kde se používá `exec` — a je
-to záměrně izolované právě sem, protože jde o jediný praktický způsob, jak
-vyrobit funkci s **dynamickým počtem pojmenovaných parametrů** (na rozdíl
-od `*args`, které by ale nevyhovovalo přísné kontrole signatury v
-`verify_params`).
+This is one of the few places in the whole library where `exec` is used —
+and it's deliberately isolated to just this spot, because it's the only
+practical way to build a function with a **dynamic number of named
+parameters** (as opposed to `*args`, which wouldn't satisfy the strict
+signature check in `verify_params`).
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
 ### `load_parameters_from_inners`
 
-**Parametry:** `class_name` (pro diagnostiku), `inners` (tuple blueprintů).
+**Parameters:** `class_name` (for diagnostics), `inners` (a tuple of
+blueprints).
 
-**Návratová hodnota:** `dict[str, Any]` — `{name_snake: default}` pro
-každý vnitřní prvek.
+**Return value:** `dict[str, Any]` — `{name_snake: default}` for every
+inner element.
 
 ```python
 def load_parameters_from_inners(class_name, inners):
@@ -282,22 +298,22 @@ def load_parameters_from_inners(class_name, inners):
     return params
 ```
 
-Přímočará extrakce — pro každý `inner` (musí být podtřída `SimpleConstant`,
-tedy atom nebo kompozice) se vezme jeho `name_snake` a `default` z už
-existujících, hotových metadat. Výsledek slouží dvakrát: jednou jako
-zdroj jmen parametrů pro `process_logic`, podruhé jako zdroj hodnot pro
-`calculate_default`.
+A straightforward extraction — for each `inner` (which must be a subclass
+of `SimpleConstant`, i.e. an atom or a composition), its `name_snake` and
+`default` are taken from the already-existing, computed metadata. The
+result serves two purposes: first as the source of parameter names for
+`process_logic`, second as the source of values for `calculate_default`.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
 ### `calculate_default`
 
-**Parametry:** `logic` (už normalizovaná, s `cls` parametrem), `params`
-(tuple hodnot v pořadí `inners`).
+**Parameters:** `logic` (already normalized, with a `cls` parameter),
+`params` (a tuple of values in `inners` order).
 
-**Návratová hodnota:** vypočítaná výchozí hodnota.
+**Return value:** the computed default value.
 
 ```python
 def calculate_default(logic, params):
@@ -308,12 +324,13 @@ def calculate_default(logic, params):
         raise_calculate_default_failed(logic, params, exc)
 ```
 
-**`cls = None` je vědomý kompromis.** V tomhle bodě ještě **neexistuje**
-žádná třída, jejíž metodou by `logic` byla — teprve se buduje `namespace`,
-který se za chvíli použije k vytvoření té třídy. `_logic` funkce nicméně
-očekává `cls` jako první parametr (kvůli konzistenci s tím, jak `_logic`
-vypadá na ručně psaných třídách). Protože typická `_logic` implementace
-`cls` stejně nepoužívá (jen čte hodnoty parametrů), předání `None` je
-bezpečné a umožňuje to spustit dry-run dřív, než třída vůbec existuje.
+**`cls = None` is a deliberate trade-off.** At this point, there **isn't
+yet** any class whose method `logic` would be — the `namespace` that will
+soon be used to create that class is still being built. The `_logic`
+function nonetheless expects `cls` as its first parameter (for consistency
+with how `_logic` looks on hand-written classes). Since a typical `_logic`
+implementation doesn't actually use `cls` anyway (it just reads the
+parameter values), passing `None` is safe, and it allows the dry run to
+happen before the class even exists.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)

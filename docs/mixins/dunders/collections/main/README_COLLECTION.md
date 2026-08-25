@@ -21,6 +21,8 @@ class Collection(Iterable, Mapping, CollectionBase, SimpleMixin):
 
 * [Composition](#composition)
 
+[⬅️ Back to main Mixins Overview](../../../README_MIXINS_OVERVIEW.md)
+
 ---
 
 ### Composition
@@ -56,4 +58,3 @@ class Collection(Iterable, Mapping):
 
 ---
 
-[⬅️ Back to Mixins Overview](../../../../README_MIXINS_OVERVIEW.md)

@@ -84,7 +84,7 @@ class TestMakeCompositeClassSlots:
         )
 
 
-class TestMakeCompositeClassCleanup:
+class TestMakeCompositeClassNoLeakedDeclarativeAttrs:
 
     def test_declarative_attributes_are_removed(self, NonDecomposablePairObject):
         composite_class = make_composite_class(

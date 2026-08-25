@@ -1,32 +1,35 @@
-# ⚛️ Atomická instance — `make_atom_class` a její stavební bloky
+# ⚛️ Atomic instance — `make_atom_class` and its building blocks
 
-Tenhle dokument popisuje, jak se z blueprintu (`SimpleConstant`/`SimpleObject`
-třídy) stane **skutečná, běžící atomická instance** — nejmenší strukturální
-jednotka celého systému. Kompozitní instance (viz
-[README_COMPOSITE_CLASS.md](README_COMPOSITE_CLASS.md)) na ní přímo staví
-dědičností.
+This document describes how a blueprint (a `SimpleConstant`/`SimpleObject`
+class) turns into an **actual, running atomic instance** — the smallest
+structural unit in the whole system. A composite instance (see
+[README_COMPOSITE_CLASS](README_COMPOSITE_CLASS.md)) builds directly on top
+of it through inheritance.
 
 ```
-InstanceBase                        (identita, sloty, meta property)
-└── {Meta.owner_class}AtomBase      ← vytváří make_atom_class
+InstanceBase                        (identity, slots, meta property)
+└── {Meta.owner_class}AtomBase      ← created by make_atom_class
 ```
 
 ---
 
-## 🧭 Obsah
+## 🧭 Contents
 
-* [`InstanceBase` — společný kořen všech instancí](#instancebase--společný-kořen-všech-instancí)
-* [`make_atom_class` — kompilace atomické třídy](#make_atom_class--kompilace-atomické-třídy)
-* [`create_atom_init` — konstruktor](#create_atom_init--konstruktor)
-* [`create_root_value_setter` — reaktivní zápis hodnoty](#create_root_value_setter--reaktivní-zápis-hodnoty)
+* [InstanceBase — the shared root of every instance](#instancebase--the-shared-root-of-every-instance)
+* [make_atom_class — compiling the atomic class](#make_atom_class--compiling-the-atomic-class)
+* [create_atom_init — the constructor](#create_atom_init--the-constructor)
+* [create_root_value_setter — reactive value writes](#create_root_value_setter--reactive-value-writes)
+
+[⬅️ Back to main README](../../../README.md)
 
 ---
 
-## `InstanceBase` — společný kořen všech instancí
+## `InstanceBase` — the shared root of every instance
 
-Než se podíváme na `make_atom_class`, stojí za připomenutí, co dává
-`InstanceBase` (viz i [README_SIMPLE_META.md](README_SIMPLE_META.md#odkud-se-berou-skutečné-runtime-třídy))
-úplně **každé** instanci — atomické i kompozitní:
+Before looking at `make_atom_class`, it's worth remembering what
+`InstanceBase` (see also
+[README_SIMPLE_META](../README_SIMPLE_META.md)) gives to **absolutely
+every** instance — atomic and composite alike:
 
 ```python
 class InstanceBase:
@@ -43,32 +46,33 @@ class InstanceBase:
     def __str__(self) -> str: ...
 ```
 
-* **`_is_instance_class = True`** — signál pro `SimpleMeta.__new__`, aby
-  dynamicky vytvořenou třídu nebral jako nový blueprint (viz
-  [README_SIMPLE_META.md](README_SIMPLE_META.md#__new__--vznik-třídy)).
-* **`__slots__ = ("__weakref__",)`** — žádný `__dict__`, jen podpora slabých
-  referencí. Ostatní sloty (`_value`, `_owner`, `_locked`...) přidává až
-  konkrétní atomická/kompozitní třída.
-* **`init_mixins`** — prázdný default, přepsaný/rozšířený dynamicky přes
-  `_build_combined_init_mixins` (viz
-  [README_CREATE_INSTANCE.md](README_CREATE_INSTANCE.md#_build_combined_init_mixins)),
-  pokud instance obsahuje mixiny s vlastní inicializací.
-* **`meta`** — konstantní přístup k metadatům přímo z třídy instance
-  (`self.__class__.__metadata__`), ne přes žádné vyhledávání.
+* **`_is_instance_class = True`** — a signal to `SimpleMeta.__new__` so it
+  doesn't treat the dynamically created class as a new blueprint (see
+  [README_SIMPLE_META](../README_SIMPLE_META.md)).
+* **`__slots__ = ("__weakref__",)`** — no `__dict__`, just weak-reference
+  support. The other slots (`_value`, `_owner`, `_locked`...) are added
+  later by the concrete atomic/composite class.
+* **`init_mixins`** — an empty default, overridden/extended dynamically
+  via `_build_combined_init_mixins` (see
+  [README_CREATE_INSTANCE](README_CREATE_INSTANCE.md)) if the instance
+  includes mixins with their own initialization.
+* **`meta`** — constant-time access to the metadata directly from the
+  instance's class (`self.__class__.__metadata__`), with no lookups
+  involved.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## `make_atom_class` — kompilace atomické třídy
+## `make_atom_class` — compiling the atomic class
 
-**Parametry:**
-* `meta` (*SimpleMetadataLike*): metadata blueprintu.
-* `mutable` (*bool*, výchozí `True`): mutable, nebo immutable varianta.
+**Parameters:**
+* `meta` (*SimpleMetadataLike*): the blueprint's metadata.
+* `mutable` (*bool*, default `True`): the mutable or immutable variant.
 
-**Návratová hodnota:** dynamicky vytvořená třída (`AtomInstanceProtocol`).
+**Return value:** a dynamically created class (`AtomInstanceProtocol`).
 
-**Pod kapotou (zkráceně):**
+**Under the hood (abridged):**
 ```python
 def make_atom_class(meta, *, mutable=True):
     base_class_name = f"{meta.class_name}Atom{'Mutable' if mutable else 'Immutable'}Base"
@@ -87,42 +91,39 @@ def make_atom_class(meta, *, mutable=True):
 
     atom_class = type(base_class_name, class_parents, class_dict)
 
-    for name in ("_type", "_default", "_validate", "bool_or_raise_validate_error"):
-        if name in atom_class.__dict__:
-            delattr(atom_class, name)
-
     return atom_class
 ```
 
-**Dvojí dědičnost je záměrná.** `class_parents = (InstanceBase,
-meta.owner_class)` — instance dědí jak strukturální identitu
-(`InstanceBase`), tak **doménové chování z blueprintu samotného**
-(`meta.owner_class`, tedy třída, kterou napsal uživatel — se svou
-`_validate`, případně dalšími metodami). Instance tak "je" tou uživatelskou
-třídou i strukturálně kompatibilní runtime objekt zároveň.
+**Dual inheritance is deliberate.** `class_parents = (InstanceBase,
+meta.owner_class)` — the instance inherits both structural identity
+(`InstanceBase`) and **the domain behavior from the blueprint itself**
+(`meta.owner_class`, i.e. the class the user wrote — with its
+`_validate` and any other methods). The instance is thus both "the" user
+class and a structurally compatible runtime object at the same time.
 
-**Sloty `_value`, `_owner`, `_locked`** — tři pole, která stačí na
-kompletní atomický stav: aktuální hodnota, odkaz na rodiče v kompozici
-(pro bublání změn nahoru), a příznak immutability.
+**The `_value`, `_owner`, `_locked` slots** — three fields, enough for the
+complete atomic state: the current value, a reference to the parent in a
+composition (for bubbling changes upward), and an immutability flag.
 
-**Cleanup na konci je stejně důležitý jako sestavení.** Po vytvoření třídy
-se z ní **odstraní deklarativní artefakty** (`_type`, `_default`,
-`_validate`, `bool_or_raise_validate_error`) — instance nemá přístup ke
-schématu blueprintu, jen k výsledku. Uživatel, který drží v ruce instanci,
-tak nevidí "definiční" API — jen runtime API (`value`, `owner`, případně
-metody z mixinů).
+**A note on the blueprint's declarative attributes** (`_type`, `_default`,
+`_validate`, `bool_or_raise_validate_error`): `class_dict` never contains
+them, so they never end up in `atom_class`'s own `__dict__` — but that
+doesn't hide them. `class_parents` includes `meta.owner_class`, so the
+instance still reaches them through the MRO, exactly like any other
+inherited attribute. `type(...)` only controls the new class's own
+namespace; it has no way to remove something a parent already exposes.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## `create_atom_init` — konstruktor
+## `create_atom_init` — the constructor
 
-**Parametry:** `meta`, `base_class_name` (pro `__qualname__`).
+**Parameters:** `meta`, `base_class_name` (for `__qualname__`).
 
-**Návratová hodnota:** funkce `__init__` jako closure.
+**Return value:** the `__init__` function as a closure.
 
-**Pod kapotou:**
+**Under the hood:**
 ```python
 def create_atom_init(meta, base_class_name):
     def __init__(self):
@@ -136,40 +137,45 @@ def create_atom_init(meta, base_class_name):
     return __init__
 ```
 
-**Closure místo obyčejné metody** — `meta` je zachycená v uzávěru, takže
-konstruktor nemusí při každém vytvoření instance dohledávat metadata znovu
-(`self.meta` by šlo taky, ale closure je rychlejší a přímočařejší, protože
-`meta` je v okamžiku kompilace třídy už definitivně známá).
+**A closure instead of a plain method** — `meta` is captured in the
+closure, so the constructor doesn't have to look up the metadata again on
+every instance creation (`self.meta` would also work, but a closure is
+faster and more direct, since `meta` is already definitively known at
+class-compilation time).
 
-**Reflection alignment** (`__name__`, `__qualname__`) — bez tohohle kroku
-by dynamicky vytvořená funkce v tracebacku vypadala jako anonymní
-"`<locals>.__init__`". Přepsáním těchto atributů vypadá `__init__` v
-diagnostice jako **nativní člen generované třídy** — důležité pro
-ladění, protože celý systém běžně vytváří desítky dynamických tříd.
+**Reflection alignment** (`__name__`, `__qualname__`) — without this step,
+the dynamically created function would show up in a traceback as an
+anonymous `"<locals>.__init__"`. Overwriting these attributes makes
+`__init__` look like a **native member of the generated class** in
+diagnostics — important for debugging, since the whole system routinely
+creates dozens of dynamic classes.
 
-Instance vždy startuje s **výchozí hodnotou z metadat** (`meta.default`),
-bez vlastníka (`_owner = UNSET`) a odemčená (`_locked = False`) — vlastnictví
-se přiřazuje až zvenčí, když se instance stane vnitřním prvkem kompozice
-(viz [README_COMPOSITE_CLASS.md](README_COMPOSITE_CLASS.md#create_composite_init--konstruktor)).
+An instance always starts with **the default value from the metadata**
+(`meta.default`), with no owner (`_owner = UNSET`) and unlocked
+(`_locked = False`) — ownership is only assigned from the outside, when
+the instance becomes an inner element of a composition (see
+[README_COMPOSITE_CLASS](README_COMPOSITE_CLASS.md)).
 
-Poslední krok, `self.init_mixins()`, je hák, na kterém stojí celá
-rozšiřitelnost mixiny — v základní atomické třídě je to prázdná metoda z
-`InstanceBase`, ale jakmile jsou přidané mixiny s vlastní inicializací,
-`create_instance_class` ji nahradí sloučeným řetězem volání (viz
-[README_CREATE_INSTANCE.md](README_CREATE_INSTANCE.md#_build_combined_init_mixins)).
+The last step, `self.init_mixins()`, is the hook that the whole
+mixin-based extensibility relies on — on the base atomic class it's the
+empty method from `InstanceBase`, but once mixins with their own
+initialization are added, `create_instance_class` replaces it with a
+merged call chain (see
+[README_CREATE_INSTANCE](README_CREATE_INSTANCE.md)).
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## `create_root_value_setter` — reaktivní zápis hodnoty
+## `create_root_value_setter` — reactive value writes
 
-**Parametry:** `base_class_name`.
+**Parameters:** `base_class_name`.
 
-**Návratová hodnota:** funkce `_root_value_setter` jako closure. Existuje
-jen na **mutable** variantě — immutable instance ji vůbec nemá.
+**Return value:** the `_root_value_setter` function as a closure. It only
+exists on the **mutable** variant — the immutable instance doesn't have it
+at all.
 
-**Pod kapotou:**
+**Under the hood:**
 ```python
 def create_root_value_setter(base_class_name):
     def _root_value_setter(self, value, recalculate_up=True):
@@ -187,30 +193,31 @@ def create_root_value_setter(base_class_name):
     return _root_value_setter
 ```
 
-Tohle je **skutečné srdce reaktivity směrem nahoru** ("🔼" z úvodního
-konceptu knihovny). Čtyři kroky:
+This is the **real heart of upward reactivity** (the "🔼" from the
+library's introductory concept). Four steps:
 
-1. **Normalizace** — vstup vždy projde `self.normalize(value,
-   process_none=True)`, takže `None` je automaticky nahrazeno defaultem
-   místo vyhození chyby (na rozdíl od veřejného `value` setteru, kde
-   `None` typicky chyba je — tohle je interní, permisivnější varianta pro
-   reaktivní propagaci).
-2. **Short-circuit při shodě** — pokud se nová hodnota rovná staré, funkce
-   skončí okamžitě. Tohle je klíčová optimalizace: bez ní by každá byť
-   nulová změna spustila celou kaskádu přepočtů směrem nahoru.
-3. **Zápis** — `self._value = new_value`.
-4. **Bublání nahoru** — jen pokud instance **má** vlastníka (`self._owner`
-   není `UNSET`) **a** je povolené bublání (`recalculate_up=True`),
-   zavolá se `self._owner._recalculate_self()`.
+1. **Normalization** — the input always goes through
+   `self.normalize(value, process_none=True)`, so `None` is automatically
+   replaced with the default instead of raising an error (unlike the
+   public `value` setter, where `None` is typically an error — this is
+   the internal, more permissive variant for reactive propagation).
+2. **Short-circuit on a match** — if the new value equals the old one, the
+   function returns immediately. This is a key optimization: without it,
+   even a no-op change would trigger a whole cascade of recalculations
+   upward.
+3. **Write** — `self._value = new_value`.
+4. **Bubbling upward** — only if the instance **has** an owner (`self._owner`
+   is not `UNSET`) **and** bubbling is allowed (`recalculate_up=True`),
+   `self._owner._recalculate_self()` is called.
 
-**Parametr `recalculate_up` je záměrně přepínatelný**, protože
-`_root_value_setter` se používá ve dvou různých směrech: veřejný zápis
-hodnoty (`value = ...`, kde bublání dává smysl) a vnitřní distribuce
-hodnot směrem dolů z `_recalculate_inners` (viz
-[README_COMPOSITE_CLASS.md](README_COMPOSITE_CLASS.md#create_recalculate_inners--tok-hodnot-dolů)),
-kde by bublání zpátky nahoru vytvořilo nekonečnou smyčku — proto se tam
-volá s `recalculate_up=False`.
+**The `recalculate_up` parameter is deliberately toggleable**, because
+`_root_value_setter` is used in two different directions: a public value
+write (`value = ...`, where bubbling makes sense) and internal downward
+distribution of values from `_recalculate_inners` (see
+[README_COMPOSITE_CLASS](README_COMPOSITE_CLASS.md)), where bubbling back
+upward would create an infinite loop — which is why it's called there with
+`recalculate_up=False`.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
-➡️ Pokračování: [README_COMPOSITE_CLASS.md](README_COMPOSITE_CLASS.md)
+➡️ Next: [README_COMPOSITE_CLASS](README_COMPOSITE_CLASS.md)

@@ -27,6 +27,9 @@ class Arithmetic(Snapshot, NodesDicts, NodesTuple, SimpleMixin):
 * [`__floordiv__` / `__rfloordiv__`](#__floordiv__--__rfloordiv__)
 * [`__mod__` / `__rmod__`](#__mod__--__rmod__)
 * [`__pow__` / `__rpow__`](#__pow__--__rpow__)
+* [`execute_arithmetic_op`](#execute_arithmetic_op)
+
+[⬅️ Back to main Mixins Overview](../../README_MIXINS_OVERVIEW.md)
 
 ---
 
@@ -210,4 +213,68 @@ def __pow__(self, other):
 
 ---
 
-[⬅️ Back to Mixins Overview](../../../README_MIXINS_OVERVIEW.md)
+
+### `execute_arithmetic_op`
+
+Executes a standard or right-hand arithmetic operation and returns a new
+instance with the calculated value. If the operation initially fails due to
+an operand type mismatch, it attempts safe type alignment before returning
+`NotImplemented`.
+
+**Parameters:**
+
+* `self` — the current instance.
+* `operator` — the arithmetic operator to execute.
+* `other` — the second operand.
+* `is_reversed` — whether the operation uses reversed operand order.
+
+**Returns:**
+
+* a new instance with the calculated value.
+* `NotImplemented` if the operation cannot be performed.
+
+**Example usage:**
+
+```python
+price + tax
+```
+
+**Under the hood:**
+
+```python
+def execute_arithmetic_op(
+    self: "ArithmeticProtocol",
+    operator: "Operator",
+    other: Any,
+    *,
+    is_reversed: bool = False
+) -> Any:
+    other_value = getattr(other, "value", other)
+
+    try:
+        value = (
+            operator(other_value, self.value)
+            if is_reversed
+            else operator(self.value, other_value)
+        )
+        return with_composite(self, self.meta.name_snake, value)
+
+    except TypeError:
+        coerced = _align_operand_type(self, other_value)
+
+        try:
+            value = (
+                operator(coerced, self.value)
+                if is_reversed
+                else operator(self.value, coerced)
+            )
+            return with_composite(self, self.meta.name_snake, value)
+
+        except TypeError:
+            return NotImplemented
+```
+
+[▲ Back to top](#-table-of-contents)
+
+---
+

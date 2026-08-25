@@ -1,34 +1,37 @@
-# 🧱 `SimpleBase` — Kořen celé hierarchie
+# 🧱 `SimpleBase` — Root of the whole hierarchy
 
-`SimpleBase` je nejnižší patro celého Simple systému. Sama o sobě nic nedělá —
-jejím jediným úkolem je dát všem deklarativním třídám (`SimpleConstant`,
-`SimpleObject`) společnou identitu a napojit je na metaclassu `SimpleMeta`,
-která teprve vdechne život skutečnému chování.
+`SimpleBase` is the lowest layer of the whole Simple system. It doesn't do
+anything on its own — its only job is to give all declarative classes
+(`SimpleConstant`, `SimpleObject`) a shared identity and hook them up to the
+`SimpleMeta` metaclass, which is what actually brings real behavior to life.
 
 ```
-SimpleBase            (metaclass=SimpleMeta, žádná deklarativní logika)
-└── SimpleConstant    (atom: _type, _default, _validate)
-    └── SimpleObject  (kompozice: _inners, _logic, _decompose)
+SimpleBase             (metaclass=SimpleMeta, no declarative logic)
+└── SimpleConstant     (atom: _type, _default, _validate)
+    └── SimpleObject   (composition: _inners, _logic, _decompose)
 ```
 
 ---
 
-## 🧭 Obsah
+## 🧭 Contents
 
-* [Proč tahle třída vůbec existuje](#proč-tahle-třída-vůbec-existuje)
+* [Why this class exists at all](#why-this-class-exists-at-all)
 * [`__slots__`](#__slots__)
 * [`__metadata__`](#__metadata__)
-* [Architektonická role](#architektonická-role)
+* [Architectural role](#architectural-role)
+
+[⬅️ Back to main README](../../README.md)
 
 ---
 
-## Proč tahle třída vůbec existuje
+## Why this class exists at all
 
-Bez `SimpleBase` by musela `SimpleConstant` i `SimpleObject` samostatně řešit
-napojení na `SimpleMeta` a musely by si každá zvlášť definovat placeholder pro
-metadata. Tím, že je tohle vytažené do společného kořene, má celý systém jeden
-jediný bod, ve kterém se historicky rozhoduje "od teď je každá třída v této
-hierarchii Simple třída" — a tenhle bod se nikdy nemusí měnit.
+Without `SimpleBase`, both `SimpleConstant` and `SimpleObject` would have to
+separately hook themselves up to `SimpleMeta`, and each would need its own
+placeholder for metadata. By pulling this out into a shared root, the whole
+system has a single place where it's historically decided "from now on, every
+class in this hierarchy is a Simple class" — and that place never needs to
+change.
 
 ```python
 class SimpleBase(metaclass=SimpleMeta):
@@ -36,11 +39,11 @@ class SimpleBase(metaclass=SimpleMeta):
     __metadata__: "SimpleMetadataLike" = UNSET
 ```
 
-Třída se **nepoužívá přímo** — neexistuje scénář, kdy bys dědil rovnou ze
-`SimpleBase`. Je to čistě architektonický "kotevní bod", ne funkční stavební
-kámen.
+The class is **never used directly** — there's no scenario where you'd
+inherit straight from `SimpleBase`. It's a purely architectural "anchor
+point," not a functional building block.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
@@ -50,16 +53,16 @@ kámen.
 __slots__ = ()
 ```
 
-Prázdný slot tuple neznamená "žádná data" — znamená "žádná *vlastní* data".
-`SimpleBase` jen garantuje, že se do hierarchie od začátku nedostane `__dict__`
-(a s ním neomezené, nekontrolované přidávání atributů za běhu). Každá
-podtřída musí definovat svoje vlastní `__slots__`, aby si tuhle výhodu
-zachovala — `SimpleBase` sama o sobě ji jen nastavuje jako výchozí standard.
+An empty slot tuple doesn't mean "no data" — it means "no *own* data".
+`SimpleBase` simply guarantees that `__dict__` (and, with it, unlimited,
+uncontrolled runtime attribute additions) never enters the hierarchy from the
+start. Every subclass has to define its own `__slots__` to keep this benefit
+— `SimpleBase` itself just sets it as the default standard.
 
-Přínos je čistě výkonnostní a paměťový: menší instance, rychlejší přístup
-k atributům, předvídatelný layout v paměti.
+The benefit here is purely about performance and memory: smaller instances,
+faster attribute access, a predictable memory layout.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
@@ -69,32 +72,35 @@ k atributům, předvídatelný layout v paměti.
 __metadata__: "SimpleMetadataLike" = UNSET
 ```
 
-Tohle je placeholder, ne skutečná hodnota. `SimpleBase` (a systémové třídy
-obecně) žádná metadata nemají a mít nepotřebují — `UNSET` tu jen garantuje,
-že atribut `__metadata__` **existuje** na každé třídě v hierarchii, i než ho
-`SimpleMeta.__new__` doplní skutečnými, vypočítanými metadaty pro konkrétní
-uživatelskou deklarativní třídu.
+This is a placeholder, not a real value. `SimpleBase` (and system classes in
+general) doesn't have — and doesn't need — any metadata; `UNSET` here simply
+guarantees that the `__metadata__` attribute **exists** on every class in the
+hierarchy, even before `SimpleMeta.__new__` fills it in with real, computed
+metadata for a specific user-defined declarative class.
 
-Díky tomu může zbytek systému bezpečně předpokládat "`__metadata__` na téhle
-třídě existuje", aniž by musel řešit `AttributeError` na okrajích hierarchie.
+Thanks to this, the rest of the system can safely assume "`__metadata__`
+exists on this class" without having to handle an `AttributeError` at the
+edges of the hierarchy.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## Architektonická role
+## Architectural role
 
-`SimpleBase` shrnutě:
+`SimpleBase`, in short:
 
-* sjednocuje dědičnost — jeden společný předek pro atomy i kompozice,
-* dává stabilní kotvu pro chování metaclassy,
-* garantuje, že každá Simple třída sdílí stejný strukturální základ
-  (sloty, přítomnost `__metadata__`).
+* unifies inheritance — a single common ancestor for both atoms and
+  compositions,
+* provides a stable anchor for the metaclass's behavior,
+* guarantees that every Simple class shares the same structural foundation
+  (slots, presence of `__metadata__`).
 
-Je to "kořenový uzel" celého Simple ekosystému — záměrně minimální, aby
-nezanášel veřejné API ničím zbytečným. Veškeré skutečné chování je
-definované až v `SimpleConstant`, `SimpleObject` a v samotné `SimpleMeta`.
+It's the "root node" of the whole Simple ecosystem — deliberately minimal, so
+it doesn't clutter the public API with anything unnecessary. All actual
+behavior is defined later, in `SimpleConstant`, `SimpleObject`, and in
+`SimpleMeta` itself.
 
-➡️ Pokračování: [README_SIMPLE_CONSTANT.md](README_SIMPLE_CONSTANT.md)
+➡️ Next: [README_SIMPLE_CONSTANT](README_SIMPLE_CONSTANT.md)
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)

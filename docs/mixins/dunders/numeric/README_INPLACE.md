@@ -24,6 +24,9 @@ class Inplace(SimpleMixin):
 * [`__ifloordiv__`](#__ifloordiv__)
 * [`__imod__`](#__imod__)
 * [`__ipow__`](#__ipow__)
+* [`execute_inplace_op`](#execute_inplace_op)
+
+[⬅️ Back to main Mixins Overview](../../README_MIXINS_OVERVIEW.md)
 
 ---
 
@@ -167,4 +170,57 @@ def __ipow__(self, other):
 
 ---
 
-[⬅️ Back to Mixins Overview](../../../README_MIXINS_OVERVIEW.md)
+### `execute_inplace_op`
+
+Executes an in-place arithmetic operation, safely writes the resulting value
+back into `self.value`, and returns the current instance. If the operands
+cannot be aligned or the operation fails, it returns `NotImplemented`.
+
+**Parameters:**
+
+* `self` — the current instance.
+* `operator` — the arithmetic operator to execute.
+* `other` — the second operand.
+
+**Returns:**
+
+* `self` with the updated value.
+* `NotImplemented` if the operation cannot be performed.
+
+**Example usage:**
+
+```python
+price += tax
+```
+
+**Under the hood:**
+
+```python
+def execute_inplace_op(
+    self: "InplaceProtocol",
+    operator: "Operator",
+    other: Any
+) -> Any:
+    other_value = getattr(other, "value", other)
+
+    try:
+        self.value = operator(self.value, other_value)
+        return self
+
+    except TypeError:
+        coerced = _align_operand_type(self, other_value)
+
+        try:
+            self.value = operator(self.value, coerced)
+            return self
+
+        except (TypeError, ZeroDivisionError):
+            return NotImplemented
+
+    except ZeroDivisionError:
+        return NotImplemented
+```
+
+[▲ Back to top](#-table-of-contents)
+
+---

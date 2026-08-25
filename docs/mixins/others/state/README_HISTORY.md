@@ -33,6 +33,8 @@ class History(Serialization, Snapshot, NodesDicts, NodesTuple, SimpleMixin):
 * [`remove_history_limit`](#remove_history_limit)
 * [`diff`](#diff)
 
+[⬅️ Back to main Mixins Overview](../../README_MIXINS_OVERVIEW.md)
+
 ---
 
 ### `init_mixins`
@@ -473,4 +475,3 @@ def diff(self, snap1, snap2, *, constants_only=False):
 
 ---
 
-[⬅️ Back to Mixins Overview](../../../README_MIXINS_OVERVIEW.md)

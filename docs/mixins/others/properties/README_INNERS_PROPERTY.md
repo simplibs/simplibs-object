@@ -19,6 +19,8 @@ class InnersProperty(SimpleMixin):
 
 * [`__extend_instance_class__`](#__extend_instance_class__)
 
+[⬅️ Back to main Mixins Overview](../../README_MIXINS_OVERVIEW.md)
+
 ---
 
 ### `__extend_instance_class__`
@@ -100,4 +102,3 @@ def _collect_nested_inner_properties(meta, path, result):
 
 ---
 
-[⬅️ Back to Mixins Overview](../../../README_MIXINS_OVERVIEW.md)

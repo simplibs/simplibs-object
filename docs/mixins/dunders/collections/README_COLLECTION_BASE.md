@@ -23,6 +23,8 @@ inners to map.
 * [`values`](#values)
 * [`items`](#items)
 
+[⬅️ Back to main Mixins Overview](../../README_MIXINS_OVERVIEW.md)
+
 ---
 
 ### `init_mixins`
@@ -131,4 +133,3 @@ def items(self) -> list[tuple]:
 
 ---
 
-[⬅️ Back to Mixins Overview](../../../README_MIXINS_OVERVIEW.md)

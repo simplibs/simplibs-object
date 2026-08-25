@@ -18,6 +18,8 @@ class Equality(SimpleMixin):
 * [`__eq__`](#__eq__)
 * [`__hash__`](#__hash__)
 
+[⬅️ Back to main Mixins Overview](../../README_MIXINS_OVERVIEW.md)
+
 ---
 
 ### `__eq__`
@@ -78,4 +80,3 @@ def __hash__(self) -> int:
 
 ---
 
-[⬅️ Back to Mixins Overview](../../../README_MIXINS_OVERVIEW.md)

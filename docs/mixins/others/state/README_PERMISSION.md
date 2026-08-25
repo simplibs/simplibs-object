@@ -28,6 +28,8 @@ class Permission(SimpleMixin):
 * [`lock`](#lock)
 * [`unlock`](#unlock)
 
+[⬅️ Back to main Mixins Overview](../../README_MIXINS_OVERVIEW.md)
+
 ---
 
 ### `is_locked`
@@ -109,4 +111,3 @@ def unlock(self) -> None:
 
 ---
 
-[⬅️ Back to Mixins Overview](../../../README_MIXINS_OVERVIEW.md)

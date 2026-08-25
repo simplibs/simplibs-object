@@ -18,6 +18,8 @@ class ContextManager(SimpleMixin):
 * [`__enter__`](#__enter__)
 * [`__exit__`](#__exit__)
 
+[⬅️ Back to main Mixins Overview](../../README_MIXINS_OVERVIEW.md)
+
 ---
 
 ### `__enter__`
@@ -76,4 +78,3 @@ def __exit__(self, exc_type, exc_val, exc_tb):
 
 ---
 
-[⬅️ Back to Mixins Overview](../../../README_MIXINS_OVERVIEW.md)

@@ -1,39 +1,42 @@
-# 🧩 `SimpleObjectMetadata` — Kompilátor metadat pro kompozice
+# 🧩 `SimpleObjectMetadata` — Metadata compiler for compositions
 
-`SimpleObjectMetadata` dědí ze `SimpleConstantMetadata` (a tím pádem i ze
-`SimpleBaseMetadata`) a rozšiřuje ji o vše, co potřebuje kompozice: validaci
-`_inners`, vazbu na `_logic`/`_decompose`, odvození výchozí hodnoty a líné
-vytváření kompozitních instančních tříd.
+`SimpleObjectMetadata` inherits from `SimpleConstantMetadata` (and thereby
+from `SimpleBaseMetadata` too) and extends it with everything a composition
+needs: validating `_inners`, wiring up `_logic`/`_decompose`, deriving the
+default value, and lazily creating composite instance classes.
 
 ```
 SimpleBaseMetadata
 └── SimpleConstantMetadata
-    └── SimpleObjectMetadata   ← jsi tady
+    └── SimpleObjectMetadata   ← you are here
 ```
 
-Protože je to podtřída `SimpleConstantMetadata`, automaticky dědí i pole
-jako `value_type`/`value_type_name` a mechanismus zpracování `_validate` —
-viz [README_SIMPLE_CONSTANT_METADATA.md](README_SIMPLE_CONSTANT_METADATA.md).
-Tenhle dokument popisuje jen to, co `SimpleObjectMetadata` přidává navíc.
+Because it's a subclass of `SimpleConstantMetadata`, it automatically
+inherits fields like `value_type`/`value_type_name` and the `_validate`
+processing mechanism too — see
+[README_SIMPLE_CONSTANT_METADATA](README_SIMPLE_CONSTANT_METADATA.md).
+This document only covers what `SimpleObjectMetadata` adds on top of that.
 
 ---
 
-## 🧭 Obsah
+## 🧭 Contents
 
-* [`_process_user_data` — inicializační pipeline](#_process_user_data--inicializační-pipeline)
-* [Zakázaný `_default`](#zakázaný-_default)
-* [Zpracování vnitřních prvků (`process_inners`)](#zpracování-vnitřních-prvků-process_inners)
-* [Kolize jmen](#kolize-jmen)
-* [Sestavení lookup map](#sestavení-lookup-map)
-* [Zpracování `_logic` a odvození defaultu](#zpracování-_logic-a-odvození-defaultu)
-* [Zpracování `_decompose` a dekomponovatelnost](#zpracování-_decompose-a-dekomponovatelnost)
-* [Líné vytváření kompozitních tříd](#líné-vytváření-kompozitních-tříd)
+* [`_process_user_data` — initialization pipeline](#_process_user_data--initialization-pipeline)
+* [The forbidden `_default`](#the-forbidden-_default)
+* [Processing inner elements (`process_inners`)](#processing-inner-elements-process_inners)
+* [Name collisions](#name-collisions)
+* [Building the lookup maps](#building-the-lookup-maps)
+* [Processing `_logic` and deriving the default](#processing-_logic-and-deriving-the-default)
+* [Processing `_decompose` and decomposability](#processing-_decompose-and-decomposability)
+* [Lazy creation of composite classes](#lazy-creation-of-composite-classes)
+
+[⬅️ Back to main README](../../README.md)
 
 ---
 
-## `_process_user_data` — inicializační pipeline
+## `_process_user_data` — initialization pipeline
 
-Jedenáct kroků, opět spuštěných jednou při definici třídy:
+Eleven steps, again run once when the class is defined:
 
 ```python
 def _process_user_data(self):
@@ -58,75 +61,79 @@ def _process_user_data(self):
     self._composite_class_immutable = UNSET
 ```
 
-Pořadí kroků tu není náhodné — `_logic` (krok 7) potřebuje mít předem
-hotové `inners_default`/`inners_annotations` z kroku 6, `_decompose`
-(krok 8) potřebuje mít hotový `self.default` z kroku 7 (jako testovací
-hodnotu pro dry-run) a `is_decomposeable` (krok 9) potřebuje mít hotové
-oboje.
+The order of these steps isn't accidental — `_logic` (step 7) needs
+`inners_default`/`inners_annotations` from step 6 already prepared,
+`_decompose` (step 8) needs `self.default` from step 7 already ready (as
+the dry-run test value), and `is_decomposeable` (step 9) needs both of
+those ready.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## Zakázaný `_default`
+## The forbidden `_default`
 
 ```python
 if "_default" in self.owner_class.__dict__:
     raise_default_is_defined_in_composition(self.owner_class)
 ```
 
-Tohle je úplně první doménová kontrola, ještě před zpracováním typu nebo
-`_inners` — kompozice **nesmí** sama definovat `_default`. Kontrola je
-záměrně na `self.owner_class.__dict__` (jen lokální namespace), ne na
-`hasattr` — kdyby se kontrolovalo přes `hasattr`, narazilo by to i na
-zděděné `_default` ze `SimpleConstant` (kde má hodnotu `UNSET` jako
-placeholder) a blokovalo by to úplně všechno.
+This is the very first domain check, even before type or `_inners`
+processing — a composition **must not** define `_default` itself. The
+check is deliberately on `self.owner_class.__dict__` (the local namespace
+only), not `hasattr` — if it checked via `hasattr`, it would also hit the
+inherited `_default` from `SimpleConstant` (which holds `UNSET` as a
+placeholder there) and would block absolutely everything.
 
-**Proč je tohle pravidlo nekompromisní:** default kompozice musí být vždy
-odvozený z `_logic(defaulty _inners)` (viz
-[README_SIMPLE_OBJECT.md](README_SIMPLE_OBJECT.md#důležité-_default-se-nesmí-definovat)).
-Ruční `_default` by vytvořil dva konkurující zdroje pravdy — jeden
-deklarovaný, jeden vypočítaný — a nebylo by garantováno, že jsou shodné.
-Chybová hláška z `raise_default_is_defined_in_composition` navíc rovnou radí,
-jak třídu opravit: buď `_default` odstranit, nebo (pokud byl záměr jiný)
-odstranit `_inners`/`_logic` a udělat z třídy obyčejnou konstantu.
+**Why this rule is non-negotiable:** a composition's default must always be
+derived from `_logic(defaults of _inners)` (see
+[README_SIMPLE_OBJECT](../core/README_SIMPLE_OBJECT.md#important-_default-must-not-be-defined)).
+A manual `_default` would create two competing sources of truth — one
+declared, one computed — with no guarantee they'd agree. The error message
+from `raise_default_is_defined_in_composition` also directly advises how
+to fix the class: either remove `_default`, or (if the intent was
+different) remove `_inners`/`_logic` and turn the class into a plain
+constant instead.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## Zpracování vnitřních prvků (`process_inners`)
+## Processing inner elements (`process_inners`)
 
-**Invariant, na kterém celá funkce stojí:** díky tomu, jak `SimpleMeta.__new__`
-směruje třídy (`hasattr(cls, "_inners")` rozhoduje mezi `SimpleObjectMetadata`
-a `SimpleConstantMetadata`), `process_inners` se vůbec nespustí, pokud
-`_inners` neexistuje — funkce si tedy může dovolit rovnou `getattr(owner_class,
-"_inners")` bez fallbacku na `UNSET`.
+**The invariant the whole function relies on:** because of how
+`SimpleMeta.__new__` routes classes (`hasattr(cls, "_inners")` decides
+between `SimpleObjectMetadata` and `SimpleConstantMetadata`),
+`process_inners` never runs at all if `_inners` doesn't exist — so the
+function can safely go straight to `getattr(owner_class, "_inners")`
+without a fallback to `UNSET`.
 
-**Optimalizace: validovat jen lokálně deklarované `_inners`.**
+**Optimization: only validate locally declared `_inners`.**
 ```python
 need_validations = "_inners" in owner_class.__dict__
 ```
-Pokud třída `_inners` jen zdědila (nedefinovala je znovu sama), validace se
-přeskočí — byly už jednou ověřené na rodičovské třídě a nemá smysl to dělat
-znovu. Tenhle vzor (`need_validations` na základě lokální přítomnosti
-klíče) se opakuje napříč metadatovým systémem, viz i
-[`verify_classmethod`](README_METHOD_PROCESSING.md#verify_classmethod--brána-validovat-klonovat-nebo-zdědit).
+If the class merely inherited `_inners` (didn't redefine it itself),
+validation is skipped — it was already checked once on the parent class,
+and there's no point doing it again. This pattern (`need_validations`
+based on local key presence) recurs throughout the metadata system, see
+also
+[`verify_classmethod`](README_METHOD_PROCESSING.md#verify_classmethod--the-gate-validate-clone-or-inherit).
 
-**Validace, které proběhnou (jen když `need_validations`):**
-* `_inners` musí být `tuple` a nesmí být prázdný,
-* každý prvek musí být třída, musí dědit ze `SimpleConstant` a nesmí to být
-  přímo `SimpleConstant`/`SimpleObject` samotné (jen konkrétní podtřídy).
+**Validations that run (only when `need_validations`):**
+* `_inners` must be a `tuple` and must not be empty,
+* every element must be a class, must inherit from `SimpleConstant`, and
+  must not be `SimpleConstant`/`SimpleObject` themselves (only concrete
+  subclasses are allowed).
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## Kolize jmen
+## Name collisions
 
-Systém garantuje **globálně unikátní jména napříč celým stromem
-kompozice** — dva různé vnitřní prvky (i v různých úrovních zanoření) nikdy
-nesmí mít stejné `name_snake`. Mechanismus:
+The system guarantees **globally unique names across the whole composition
+tree** — two different inner elements (even at different nesting levels)
+may never share the same `name_snake`. The mechanism:
 
 ```python
 new_node_names_set = node_names_set.copy()
@@ -141,41 +148,42 @@ for inner in raw_inners:
     new_node_names_set.update(inner.meta.node_names_set)
 ```
 
-Průnik množin (`&`) mezi tím, co je dosud zaregistrované, a jmenným
-prostorem nově přidávaného `inner` (`inner.meta.node_names_set` — což
-zahrnuje i všechna jména *zanořená uvnitř* toho inner, ne jen jeho vlastní
-jméno) okamžitě odhalí kolizi na jakékoliv hloubce. Rozlišují se dva druhy
-kolize: s vlastníkem samotným (`validate_if_collision_with_owner_class`) a
-mezi sourozeneckými `_inners` navzájem (`validate_collision_within_inners`).
+The set intersection (`&`) between what's already registered and the
+namespace of the newly added `inner` (`inner.meta.node_names_set` — which
+includes all names *nested inside* that inner, not just its own name)
+immediately catches a collision at any depth. Two kinds of collision are
+distinguished: with the owner itself
+(`validate_if_collision_with_owner_class`), and between sibling `_inners`
+(`validate_collision_within_inners`).
 
-**Namespace se šíří inkrementálně** — `new_node_names_set` je kopie
-rodičovské množiny (`node_names_set.copy()`, aby se zabránilo "znečištění"
-sourozeneckých podstromů) a po každém zpracovaném `inner` se aktualizuje
-(`update`), takže každý další `inner` ve stejné iteraci už vidí jména všech
-předchozích.
+**The namespace propagates incrementally** — `new_node_names_set` is a copy
+of the parent set (`node_names_set.copy()`, to avoid "contaminating"
+sibling subtrees), and it's updated (`update`) after each processed
+`inner`, so every subsequent `inner` in the same iteration already sees the
+names of all the previous ones.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## Sestavení lookup map
+## Building the lookup maps
 
 ```python
 self.inners_map = {inner.meta.name_snake: inner for inner in self.inners}
 self.inners_params_name = tuple(inner.meta.name_snake for inner in self.inners)
 ```
 
-Tyhle dvě struktury jsou to, co používá `_process_calculate_value_params`
-při volání `calculate_value` (viz
-[README_SIMPLE_OBJECT.md](README_SIMPLE_OBJECT.md#calculate_value)) —
-`inners_map` pro mapování jméno → třída (validace, defaulty),
-`inners_params_name` pro odvození očekávané signatury `_logic`.
+These two structures are what `_process_calculate_value_params` uses when
+`calculate_value` is called (see
+[README_SIMPLE_OBJECT](../core/README_SIMPLE_OBJECT.md#calculate_value)) —
+`inners_map` for mapping name → class (validation, defaults),
+`inners_params_name` for deriving `_logic`'s expected signature.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## Zpracování `_logic` a odvození defaultu
+## Processing `_logic` and deriving the default
 
 ```python
 inners_default = tuple(inner.meta.default for inner in self.inners)
@@ -194,24 +202,24 @@ self.logic, self.default = process_classmethod(
 )
 ```
 
-Očekávaná signatura `_logic` se **sestavuje dynamicky** z `_inners` —
-`expected_params` je `("cls",)` plus jméno každého vnitřního prvku, ve
-stejném pořadí. Díky `return_calculated_value=True` vrací
-`process_classmethod` dvojici `(metoda, hodnota)` — a `self.default` je
-přesně ten výsledek dry-runu s výchozími hodnotami všech `_inners`. Tohle
-je konkrétní místo v kódu, kde platí pravidlo zmíněné výše: *default
-kompozice = `_logic(defaulty _inners)`*, spočítané jednou při definici
-třídy a od teď fixní.
+`_logic`'s expected signature is **built dynamically** from `_inners` —
+`expected_params` is `("cls",)` plus the name of every inner element, in
+the same order. Thanks to `return_calculated_value=True`,
+`process_classmethod` returns a `(method, value)` pair — and `self.default`
+is exactly the result of the dry run using all `_inners`' default values.
+This is the concrete spot in the code where the rule mentioned above holds
+true: *a composition's default = `_logic(defaults of _inners)`*, computed
+once at class-definition time and fixed from then on.
 
-Kompletní popis, jak samotné `process_classmethod` metodu ověřuje (kontrola
-signatury, anotací, dry-run), je v
-[README_METHOD_PROCESSING.md](README_METHOD_PROCESSING.md).
+A full description of how `process_classmethod` itself verifies the method
+(signature checks, annotations, dry run) is in
+[README_METHOD_PROCESSING](README_METHOD_PROCESSING.md).
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## Zpracování `_decompose` a dekomponovatelnost
+## Processing `_decompose` and decomposability
 
 ```python
 self.decompose = process_classmethod(
@@ -231,25 +239,25 @@ self.is_decomposeable = (
 )
 ```
 
-`_decompose` je volitelný — pokud ho uživatel nedefinuje,
-`process_classmethod` (přes `verify_classmethod`, viz
-[README_METHOD_PROCESSING.md](README_METHOD_PROCESSING.md#verify_classmethod--brána-validovat-klonovat-nebo-zdědit))
-vrátí `UNSET`, aniž by spouštěl dry-run.
+`_decompose` is optional — if the user doesn't define it,
+`process_classmethod` (via `verify_classmethod`, see
+[README_METHOD_PROCESSING](README_METHOD_PROCESSING.md#verify_classmethod--the-gate-validate-clone-or-inherit))
+returns `UNSET` without running a dry run.
 
-**`is_decomposeable` je rekurzivní podmínka, ne jen lokální kontrola.**
-Nestačí, že tahle konkrétní třída definuje `_decompose` — kompozice je
-dekomponovatelná jen tehdy, pokud **úplně každý** její vnitřní prvek buď
-je konstanta (`inner.meta.is_constant`, atomy jsou triviálně
-"dekomponovatelné" samy do sebe), nebo je to sama dekomponovatelná
-kompozice (`inner.meta.is_decomposeable`). Jinými slovy: řetězec
-dekomponovatelnosti se musí táhnout přes celý strom, jinak by zpětná
-dekompozice na nejnižší úrovni "uvázla".
+**`is_decomposeable` is a recursive condition, not just a local check.**
+It's not enough for this particular class to define `_decompose` — a
+composition is only decomposable if **every single one** of its inner
+elements is either a constant (`inner.meta.is_constant`, atoms are
+trivially "decomposable" into themselves) or is itself a decomposable
+composition (`inner.meta.is_decomposeable`). In other words: the chain of
+decomposability has to run all the way through the whole tree, otherwise
+decomposing back would "get stuck" at the lowest level.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## Líné vytváření kompozitních tříd
+## Lazy creation of composite classes
 
 ```python
 @property
@@ -259,12 +267,12 @@ def composite_class_mutable(self):
     return self._composite_class_mutable
 ```
 
-Stejný lazy vzor jako u `atom_class_mutable`/`atom_class_immutable` v
-`SimpleConstantMetadata` — skutečná runtime třída se kompiluje (přes
-`make_composite_class`) až při prvním přístupu.
+The same lazy pattern as `atom_class_mutable`/`atom_class_immutable` in
+`SimpleConstantMetadata` — the actual runtime class is compiled (via
+`make_composite_class`) only on first access.
 
-Hlubší popis toho, co přesně `make_composite_class` sestavuje (dědičnost
-z atomické třídy, sloty pro `_inners`, reaktivní hooky), bude
-v navazujícím README o vytváření instancí.
+A deeper look at exactly what `make_composite_class` assembles (inheriting
+from the atomic class, slots for `_inners`, reactive hooks) will be in the
+follow-up README about instance creation.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)

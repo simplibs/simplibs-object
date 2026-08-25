@@ -1,30 +1,32 @@
-# 🧱 `SimpleBaseMetadata` — Základ pro veškerá metadata
+# 🧱 `SimpleBaseMetadata` — Foundation for all metadata
 
-`SimpleBaseMetadata` je společný předek pro `SimpleConstantMetadata`
-a `SimpleObjectMetadata`. Sama o sobě nepočítá žádná doménová data (typ,
-default, `_inners`...) — stará se výhradně o věci, které potřebuje **úplně
-každá** metadata instance: identitu jména, evidenci jmenného prostoru,
-čitelnou cestu v hierarchii a immutabilitu.
+`SimpleBaseMetadata` is the common ancestor of `SimpleConstantMetadata` and
+`SimpleObjectMetadata`. It doesn't compute any domain-specific data itself
+(type, default, `_inners`...) — it's responsible exclusively for the things
+**every single** metadata instance needs: name identity, namespace
+bookkeeping, a readable hierarchy path, and immutability.
 
 ```
-SimpleBaseMetadata           ← jsi tady
+SimpleBaseMetadata           ← you are here
 ├── SimpleConstantMetadata
 │   └── SimpleObjectMetadata
 ```
 
 ---
 
-## 🧭 Obsah
+## 🧭 Contents
 
-* [Inicializační pipeline](#inicializační-pipeline)
-* [Jmenná identita (`create_names`)](#jmenná-identita-create_names)
-* [Cesta v hierarchii (`calculate_blueprint_path`)](#cesta-v-hierarchii-calculate_blueprint_path)
-* [Write-once pravidlo](#write-once-pravidlo)
-* [Architektura podtříd](#architektura-podtříd)
+* [Initialization pipeline](#initialization-pipeline)
+* [Name identity (`create_names`)](#name-identity-create_names)
+* [Hierarchy path (`calculate_blueprint_path`)](#hierarchy-path-calculate_blueprint_path)
+* [The write-once rule](#the-write-once-rule)
+* [Subclass architecture](#subclass-architecture)
+
+[⬅️ Back to main README](../../README.md)
 
 ---
 
-## Inicializační pipeline
+## Initialization pipeline
 
 ```python
 def __init__(self, owner_class):
@@ -36,45 +38,48 @@ def __init__(self, owner_class):
     self._process_user_data()
 ```
 
-Pět deterministických kroků, vždy ve stejném pořadí:
+Five deterministic steps, always in the same order:
 
-1. **Reference na vlastníka** — `owner_class`, tedy třída, pro kterou se
-   metadata počítají.
-2. **Jmenná identita** — čtyři odvozené varianty jména třídy (viz níže).
-3. **Evidence jmenného prostoru** (`node_names_set`) — začíná jako
-   jednoprvková množina obsahující vlastní `name_snake`. Podtřídy
-   (`SimpleObjectMetadata`) ji při zpracování `_inners` rozšiřují o jména
-   všech vnořených prvků — to je mechanismus, kterým systém hlídá **globálně
-   unikátní jména napříč celým stromem kompozice** (viz
-   [README_SIMPLE_OBJECT_METADATA.md](README_SIMPLE_OBJECT_METADATA.md#kolize-jmen)).
-4. **Blueprint path** — čitelná reprezentace pozice v hierarchii dědičnosti.
-5. **Hook pro podtřídy** (`_process_user_data`) — prázdná metoda, kterou
-   přepisují `SimpleConstantMetadata`/`SimpleObjectMetadata` se svou
-   vlastní doménovou logikou.
+1. **Owner reference** — `owner_class`, i.e. the class the metadata is
+   being computed for.
+2. **Name identity** — four derived variants of the class name (see below).
+3. **Namespace bookkeeping** (`node_names_set`) — starts as a one-element
+   set containing the class's own `name_snake`. Subclasses
+   (`SimpleObjectMetadata`) extend it, while processing `_inners`, with the
+   names of all nested elements — this is the mechanism the system uses to
+   enforce **globally unique names across the whole composition tree**
+   (see
+   [README_SIMPLE_OBJECT_METADATA](README_SIMPLE_OBJECT_METADATA.md#name-collisions)).
+4. **Blueprint path** — a readable representation of the position within
+   the inheritance hierarchy.
+5. **Subclass hook** (`_process_user_data`) — an empty method that
+   `SimpleConstantMetadata`/`SimpleObjectMetadata` override with their own
+   domain logic.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## Jmenná identita (`create_names`)
+## Name identity (`create_names`)
 
-`create_names` vygeneruje ze jména třídy tři odvozené varianty, každou pro
-jiný účel:
+`create_names` generates three derived variants from the class name, each
+for a different purpose:
 
-| Varianta | Formát | Účel |
-|---|---|---|
-| `name_tuple` | `("My", "HTTP", "Client")` | sémantické jednotky se zachovanou kapitalizací |
-| `name_snake` | `"my_http_client"` | jména parametrů, interní klíče |
-| `name_private` | `"_my_http_client"` | privátní sloty a interní atributy |
+| Variant        | Format                     | Purpose                                      |
+|:---------------|:---------------------------|:---------------------------------------------|
+| `name_tuple`   | `("My", "HTTP", "Client")` | semantic units with capitalization preserved |
+| `name_snake`   | `"my_http_client"`         | parameter names, internal keys               |
+| `name_private` | `"_my_http_client"`        | private slots and internal attributes        |
 
-Princip je **"nejdřív rozděl, pak normalizuj"**: `_class_name_splitter`
-rozseká PascalCase jméno na sémantické jednotky (a při tom validuje, že
-jméno je platný identifikátor, čistě ASCII a bez podtržítek), zatímco
-`create_names` teprve tyhle jednotky spojí a znormalizuje na `snake_case`.
-Rozdělení zodpovědností je striktní — splitter nezná pojem "snake_case",
-`create_names` nezná pravidla dělení PascalCase.
+The principle is **"split first, then normalize"**: `_class_name_splitter`
+breaks the PascalCase name into semantic units (validating along the way
+that the name is a valid identifier, purely ASCII, and free of
+underscores), while `create_names` only joins those units afterward and
+normalizes them to `snake_case`. The separation of responsibilities is
+strict — the splitter knows nothing about the concept of "snake_case", and
+`create_names` knows nothing about PascalCase splitting rules.
 
-**Rozpoznávání hranic slov** ve splitteru zvládá i akronymy:
+**Word-boundary detection** in the splitter also handles acronyms:
 
 ```text
 MyClass       → ("My", "Class")
@@ -83,26 +88,28 @@ User123       → ("User", "123")
 MyHTTPClient  → ("My", "HTTP", "Client")
 ```
 
-Klíčový trik je v chování na hranici akronym → slovo (`HTTPServer`): když
-po sérii velkých písmen přijde malé písmeno, poslední velké písmeno se
-"vrátí zpět" a stane se začátkem nového slova (`Server`), zatímco zbytek
-(`HTTP`) se uzavře jako samostatná jednotka. Bez tohohle kroku by
-`HTTPServer` skončilo jako jedno slovo, ne jako dvě.
+The key trick is in the behavior at the acronym → word boundary
+(`HTTPServer`): when a lowercase letter follows a run of uppercase letters,
+the last uppercase letter is "given back" and becomes the start of a new
+word (`Server`), while the rest (`HTTP`) is closed off as its own unit.
+Without this step, `HTTPServer` would end up as a single word instead of
+two.
 
-Všechny tři varianty jsou **navzájem odvozené, ne nezávisle sestavené** —
-`name_snake` vždy vychází z `name_tuple`, `name_private` vždy z
-`name_snake`. To garantuje, že mezi nimi nikdy nemůže vzniknout
-nekonzistence.
+All three variants are **derived from one another, not built
+independently** — `name_snake` always comes from `name_tuple`,
+`name_private` always comes from `name_snake`. This guarantees they can
+never end up inconsistent with each other.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## Cesta v hierarchii (`calculate_blueprint_path`)
+## Hierarchy path (`calculate_blueprint_path`)
 
-Vytváří čitelnou reprezentaci dědičnosti pro účely `__repr__` (viz
-[README_SIMPLE_META.md](README_SIMPLE_META.md#__repr__-a-__str__--reprezentace)) —
-ukazuje, ze kterých **doménových** (ne systémových) rodičů třída dědí.
+Builds a readable representation of inheritance for `__repr__` purposes
+(see
+[README_SIMPLE_META](README_SIMPLE_META.md#__repr__-and-__str__--representation))
+— showing which **domain** (not system) parents the class inherits from.
 
 ```python
 def calculate_blueprint_path(cls):
@@ -116,26 +123,28 @@ def calculate_blueprint_path(cls):
     return cls.__name__ if not parents else f"{cls.__name__}({', '.join(parents)})"
 ```
 
-Filtruje MRO (`__mro__`) na tři podmínky zároveň: rodič musí být součástí
-Simple ekosystému (`issubclass(base, SimpleBase)`), nesmí to být
-framework-samotný kořen (`SimpleBase`/`SimpleConstant`/`SimpleObject` z
-`BASE_CLASS_NAMES`) a nesmí to být třída sama.
+It filters the MRO (`__mro__`) on three conditions at once: the parent
+must be part of the Simple ecosystem (`issubclass(base, SimpleBase)`), it
+must not be the framework's own root
+(`SimpleBase`/`SimpleConstant`/`SimpleObject` from `BASE_CLASS_NAMES`), and
+it must not be the class itself.
 
-| Hierarchie | Výstup |
-|---|---|
-| `MyConstant(SimpleConstant)` | `"MyConstant"` |
-| `MyObject(BaseObject, SimpleObject)` | `"MyObject(BaseObject)"` |
+| Hierarchy                               | Output                      |
+|:----------------------------------------|:----------------------------|
+| `MyConstant(SimpleConstant)`            | `"MyConstant"`              |
+| `MyObject(BaseObject, SimpleObject)`    | `"MyObject(BaseObject)"`    |
 | `Child(ParentA, ParentB, SimpleObject)` | `"Child(ParentA, ParentB)"` |
 
-Import `SimpleBase` je záměrně lokální (uvnitř funkce) — zabraňuje to
-cyklické závislosti při raném importu metadatového modulu, kdy
-`SimpleBase` sám ještě může být ve fázi definice.
+The `SimpleBase` import is deliberately local (inside the function) — this
+avoids a circular dependency during the early import of the metadata
+module, when `SimpleBase` itself might still be in the process of being
+defined.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## Write-once pravidlo
+## The write-once rule
 
 ```python
 def __setattr__(self, attr_name, new_value):
@@ -145,41 +154,41 @@ def __setattr__(self, attr_name, new_value):
     super().__setattr__(attr_name, new_value)
 ```
 
-Stejný princip jako u `SimpleMeta.__setattr__` na úrovni tříd (viz
-[README_SIMPLE_META.md](README_SIMPLE_META.md#__setattr__--write-once-ochrana)),
-tady aplikovaný na úrovni **instance metadat**: pole smí být nastaveno
-právě jednou. Dokud má hodnotu `UNSET`, přiřazení projde; jakmile je jednou
-nastavené, další pokus o zápis vyhodí `raise_metadata_is_immutable`.
+The same principle as `SimpleMeta.__setattr__` at the class level (see
+[README_SIMPLE_META](README_SIMPLE_META.md#__setattr__--write-once-protection)),
+applied here at the **metadata instance** level: a field may be set exactly
+once. As long as its value is `UNSET`, assignment goes through; once it's
+been set, any further write attempt raises `raise_metadata_is_immutable`.
 
-Tohle je důvod, proč `__slots__` v `SimpleBaseMetadata` obsahuje jen jména
-polí (`owner_class`, `class_name`, ...) bez výchozích hodnot — pole
-"neexistují", dokud je `__init__` (respektive `_process_user_data`)
-skutečně nenastaví, a `getattr(self, attr_name, UNSET)` vrátí `UNSET` pro
-cokoliv, co ještě nebylo přiřazeno.
+This is why `__slots__` in `SimpleBaseMetadata` only lists field names
+(`owner_class`, `class_name`, ...) without default values — the fields
+"don't exist" until `__init__` (or, more precisely, `_process_user_data`)
+actually sets them, and `getattr(self, attr_name, UNSET)` returns `UNSET`
+for anything not yet assigned.
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)
 
 ---
 
-## Architektura podtříd
+## Subclass architecture
 
-Klíčové pravidlo pro každého, kdo by chtěl rozšířit metadatový systém:
-**podtřídy nesmí přepisovat `__init__`.** Veškerá vlastní inicializace patří
-do `_process_user_data()`.
+The key rule for anyone wanting to extend the metadata system: **subclasses
+must not override `__init__`.** All custom initialization belongs in
+`_process_user_data()`.
 
-Díky tomu je garantované, že:
+This guarantees that:
 
-* jmenná identita se vždy spočítá stejným způsobem,
-* `node_names_set` se vždy inicializuje konzistentně,
-* `blueprint_path` se vždy vygeneruje,
-* struktura metadat je napříč celým systémem předvídatelná.
+* name identity is always computed the same way,
+* `node_names_set` is always initialized consistently,
+* `blueprint_path` is always generated,
+* the metadata structure is predictable across the whole system.
 
-`SimpleBaseMetadata` samotná je záměrně odlehčená — veškerá těžká logika je
-delegovaná do specializovaných procesorů (`create_names`,
-`calculate_blueprint_path`, a v podtřídách `process_type`,
+`SimpleBaseMetadata` itself is deliberately lightweight — all the heavy
+logic is delegated to specialized processors (`create_names`,
+`calculate_blueprint_path`, and, in subclasses, `process_type`,
 `process_default_for_constant`, `process_inners`, `process_classmethod`).
-Metadata objekt se vytváří jednou za třídu a nikdy se nemutuje.
+The metadata object is created once per class and is never mutated.
 
-➡️ Pokračování: [README_SIMPLE_CONSTANT_METADATA.md](README_SIMPLE_CONSTANT_METADATA.md)
+➡️ Next: [README_SIMPLE_CONSTANT_METADATA](README_SIMPLE_CONSTANT_METADATA.md)
 
-[▲ Nahoru](#-obsah)
+[▲ Back to Contents](#-contents)

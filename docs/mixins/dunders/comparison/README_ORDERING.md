@@ -20,6 +20,8 @@ class Ordering(SimpleMixin):
 * [`__gt__`](#__gt__)
 * [`__ge__`](#__ge__)
 
+[⬅️ Back to main Mixins Overview](../../README_MIXINS_OVERVIEW.md)
+
 ---
 
 ### `__lt__`
@@ -142,4 +144,3 @@ def __ge__(self, other):
 
 ---
 
-[⬅️ Back to Mixins Overview](../../../README_MIXINS_OVERVIEW.md)

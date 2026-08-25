@@ -48,7 +48,7 @@ class TestCreateValuePropertyDocstring:
         """Verifies composite property docstring details value decomposition."""
         meta = SimpleNamespace(value_type=int, value_type_name="int", is_decomposeable=True)
         prop = create_value_property(meta, is_constant=False, mutable=True)
-        assert "dekompon" in prop.__doc__.lower()
+        assert "decomposes" in prop.__doc__.lower()
 
     def test_value_type_name_appears_in_docstring(self) -> None:
         """Verifies metadata value_type_name is injected into property docstring."""

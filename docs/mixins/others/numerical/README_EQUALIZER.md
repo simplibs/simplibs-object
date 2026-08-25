@@ -6,7 +6,6 @@ property named `<inner_name>_stepper` — one fader per channel.
 ```python
 from src.simplibs.object.mixins.base_class import SimpleMixin
 from src.simplibs.object.mixins.core_mixins import NodesTuple
-from ._stepper_class import Stepper
 
 class Equalizer(NodesTuple, SimpleMixin):
     ...
@@ -20,6 +19,8 @@ class Equalizer(NodesTuple, SimpleMixin):
 
 * [`__extend_instance_class__`](#__extend_instance_class__)
 * [`init_mixins`](#init_mixins)
+
+[⬅️ Back to main Mixins Overview](../../README_MIXINS_OVERVIEW.md)
 
 ---
 
@@ -86,8 +87,10 @@ def init_mixins(self):
     }
 ```
 
+A closer look at the Stepper class:  
+➡️ [README_STEPPER](stepper_class/README_STEPPER.md)    
+
 [▲ Back to top](#-table-of-contents)
 
 ---
 
-[⬅️ Back to Mixins Overview](../../../README_MIXINS_OVERVIEW.md)
