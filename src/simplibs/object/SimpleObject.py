@@ -39,7 +39,7 @@ class SimpleObject(SimpleConstant):
 
     @classmethod
     def _logic(
-        cls: "SimpleObjectProtocol",
+        cls,
         *args,
         **kwargs
     ) -> Any:
@@ -58,7 +58,7 @@ class SimpleObject(SimpleConstant):
 
     @classmethod
     def _decompose(
-        cls: "SimpleObjectProtocol",
+        cls,
         value: Any
     ) -> Any:
         """
@@ -75,7 +75,7 @@ class SimpleObject(SimpleConstant):
 
     @classmethod
     def _validate(
-        cls: "SimpleObjectProtocol",
+        cls,
         value: Any,
         *,
         return_bool: bool = False

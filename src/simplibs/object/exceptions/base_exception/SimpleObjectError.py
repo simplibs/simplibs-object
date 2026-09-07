@@ -13,7 +13,7 @@ class SimpleObjectError(SimpleException):
     # Skip internal library frames when generating error location metadata.
     # This ensures that error messages point to user code rather than internal
     # implementation details, unless no user-level frames remain.
-    _skip_locations = ("simplibs/object",)
+    skip_locations = ("simplibs/object",)
 
 
 _DESIGN_NOTES = """
@@ -30,11 +30,11 @@ clean error reporting.
 
 ---
 
-## 1. Error Location Filtering (`_skip_locations`)
+## 1. Error Location Filtering (`skip_locations`)
 The attribute:
 
 ```python
-_skip_locations = ("simplibs/object",)
+skip_locations = ("simplibs/object",)
 
 ```
 

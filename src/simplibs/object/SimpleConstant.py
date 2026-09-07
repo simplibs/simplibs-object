@@ -40,7 +40,7 @@ class SimpleConstant(SimpleBase):
 
     @classmethod
     def _validate(
-        cls: "SimpleConstantProtocol",
+        cls,
         value: Any,
         *,
         return_bool: bool = False,

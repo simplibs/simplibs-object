@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.1] - 2026-09-07
+
+### 🐛 Fixed
+
+* **Root Exception `skip_locations` Field**:
+Renamed `_skip_locations` to `skip_locations` in `SimpleObjectError` to align with the constructor contract of `simplibs-exception`. This ensures internal library stack frames are correctly filtered out from tracebacks, pointing diagnostics directly to user code.
+
+### 📋 Improved
+
+* **IDE Autocompletion DX**:
+Removed explicit `cls: "Simple...Protocol"` type annotations from user-facing declarative hook signatures (`_validate` on `SimpleConstant`; `_logic`, `_decompose`, and `_validate` on `SimpleObject`). This prevents IDEs like PyCharm from injecting protocol imports into subclasses when auto-generating method stubs.
+* **Core Dependency Update**:
+Upgraded `simplibs-exception` to `1.0.2` to resolve type checker warnings (`PyTypeChecker`) when using context-managed test helpers.
+
+---
+
 ## [0.1.0] - 2026-08-24
 
 ### ✨ Added
