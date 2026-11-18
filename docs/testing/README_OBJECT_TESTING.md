@@ -100,9 +100,9 @@ detail:
 ```python
 verbose_value_change = test_value_change is UNSET
 # ... after assert_reactivity_upward:
-verbose_value_change = verbose_value_change or test_reactivity_up is UNSET
+verbose_value_change = verbose_value_change and test_reactivity_up is UNSET
 # ... after assert_reactivity_downward:
-verbose_value_change = verbose_value_change or test_reactivity_down is UNSET
+verbose_value_change = verbose_value_change and test_reactivity_down is UNSET
 ```
 
 Several parameter tests (`assert_reactivity_upward`,
@@ -258,7 +258,10 @@ root), `verbose`, `verbose_value_change`, `intro`.
 4. expected_values = instance.decompose_value(new_value)
    guard: if decomposition fails → return
 
-5. For every inner: getattr(instance, inner.meta.name_snake) must match
+5. len(expected_values) MUST equal the number of inners (otherwise fail:
+   `zip` would stop at the shorter side and leave inners unchecked)
+
+6. For every inner: getattr(instance, inner.meta.name_snake) must match
    the corresponding value from expected_values (zipped in order)
 ```
 
@@ -299,9 +302,11 @@ Two symmetrical tests, each covering one half of the mutability contract.
 ```
 1. instance = test_class(mutable=False)
 2. original_id, original_value = id(instance), instance.value
-3. instance.value = new_value  MUST raise an exception
-4. id(instance) MUST remain the same
-5. instance.value MUST remain the same as original_value
+3. new_value MUST be valid for the class and differ from original_value
+   (otherwise fail: a rejected assignment of such a value proves nothing)
+4. instance.value = new_value  MUST raise an exception
+5. id(instance) MUST remain the same
+6. instance.value MUST remain the same as original_value
 ```
 
 **Both tests share the same identity check** (`id(instance)` unchanged),

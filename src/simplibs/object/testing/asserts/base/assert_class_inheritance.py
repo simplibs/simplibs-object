@@ -41,7 +41,10 @@ def assert_class_inheritance(
             name=f"{intro}{subintro}test_inheritance_simple_constant",
             verbose=verbose,
         ):
-            assert issubclass(test_class, SimpleConstant)
+            assert isinstance(test_class, type) and issubclass(test_class, SimpleConstant), (
+                f"Expected {test_class!r} to be a class derived from SimpleConstant "
+                f"(it defines no `_inners`)."
+            )
 
     # 2. Validate inheritance for composite object classes
     else:
@@ -50,26 +53,29 @@ def assert_class_inheritance(
             name=f"{intro}{subintro}test_inheritance_simple_object",
             verbose=verbose,
         ):
-            assert issubclass(test_class, SimpleObject)
+            assert isinstance(test_class, type) and issubclass(test_class, SimpleObject), (
+                f"Expected {test_class!r} to be a class derived from SimpleObject "
+                f"(it defines `_inners`)."
+            )
 
 
 _DESIGN_NOTES = """
 # assert_class_inheritance (Structural Blueprint Inheritance Gate)
 
 ## Purpose
-Acts as the entry-level structural gate for verifying that a class under test is a valid 
+Acts as the entry-level structural gate for verifying that a class under test is a valid
 blueprint derived from the core framework base classes (`SimpleObject` or `SimpleConstant`).
 
 ## Structural Routing Logic
 The assertion inspects the target class signature to route verification dynamically:
-1. **Atomic Constants (`not hasattr(test_class, "_inners")`):** Verifies that classes 
-   representing single atomic value containers derive directly from `SimpleConstant`.
-2. **Composite Objects (`hasattr(test_class, "_inners")`):** Verifies that classes 
-   defining composite node hierarchies derive directly from `SimpleObject`.
+1. **Atomic Constants (`not hasattr(test_class, "_inners")`):** Verifies that classes
+   representing single atomic value containers derive (directly or indirectly) from `SimpleConstant`.
+2. **Composite Objects (`hasattr(test_class, "_inners")`):** Verifies that classes
+   defining composite node hierarchies derive (directly or indirectly) from `SimpleObject`.
 
 ## Pipeline Lifecycle Role
-This shallow structural check serves as a Fail-Fast boundary in orchestrators such as 
-`assert_simple_object`. By ensuring the class properly inherits from the framework's 
-base primitives before executing deeper instance creation or reactivity tests, it prevents 
+This shallow structural check serves as a Fail-Fast boundary in orchestrators such as
+`assert_simple_object`. By ensuring the class properly inherits from the framework's
+base primitives before executing deeper instance creation or reactivity tests, it prevents
 misleading runtime errors caused by malformed or non-framework class inputs.
 """

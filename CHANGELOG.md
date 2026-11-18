@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.2] - 2026-11-18
+
+### 🐛 Fixed
+
+* **`assert_immutable_behavior` could pass while proving nothing.** Any exception counted as
+  "assignment rejected", so a `new_value` that the class would reject anyway (invalid) or that equals
+  the current value made the check green. A new subtest `new_value_is_acceptable` first requires the
+  value to be valid for the class and different from the current one, as `assert_value_change` does for
+  the mutable case. **Behavior change** of the testing helper: a test passing such a value now fails.
+* **`assert_reactivity_downward` compared with `zip`**, which stops at the shorter side: a
+  `decompose_value` returning too few (or too many) values left the remaining inner components unchecked
+  and the test green. The two lengths are compared first.
+* **`verbose_value_change` cascade in `assert_simple_object`** used `or`, which turned detailed reporting
+  back on after an earlier stage had already reported the value change. It now uses `and`, as the
+  documentation always described: detailed only while no earlier stage reported it.
+* **`assert_value_change`**: `InnerValue.as_instance_tuple` returns the bare `UNSET` (not a pair) when
+  the path cannot be resolved; unpacking it failed with a confusing `TypeError`. The result is checked
+  first, so a wrong path is reported as "could not be resolved".
+* **`assert_user_instance_creation`** could end on an unbound name when the creation failed in verbose
+  mode. It now returns `None` in that case, and `assert_simple_object` stops there instead of going on
+  with `None`.
+* **`assert_class_inheritance`**: passing something that is not a class raised `TypeError` from
+  `issubclass`; it is now a failed check with a message.
+
+### 🔄 Changed
+
+* **Failure messages**: the plain `assert` statements of the testing package now say what was expected
+  (pytest does not rewrite the asserts of an installed package, so they failed with an empty text).
+
+### 📋 Improved
+
+* **Tests**: new tests for the acceptable-value check and the non-class guard.
+* **Documentation**: corrected design notes (`TestMixin` is not used by the method-level assertions;
+  "directly or indirectly" for the inheritance contract).
+
+---
+
 ## [0.1.1] - 2026-09-07
 
 ### 🐛 Fixed

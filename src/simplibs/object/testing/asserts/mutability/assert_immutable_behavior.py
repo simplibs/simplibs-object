@@ -38,7 +38,9 @@ def assert_immutable_behavior(
         except Exception as exc:
             pytest.fail(f"Failed to create immutable instance for '{test_class.__name__}': {exc}")
 
-        assert instance is not None
+        assert instance is not None, (
+            f"Instantiating '{getattr(test_class, '__name__', test_class)}' with mutable=False returned None."
+        )
 
     # 1.1 Guard clause: Halt execution if immutable instance creation failed
     if instance is None:
@@ -52,6 +54,28 @@ def assert_immutable_behavior(
     ):
         original_id = id(instance)
         original_value = instance.value
+
+    # 2.1 The value must be one the class would accept. Otherwise the setter may reject it for
+    # the wrong reason and the check proves nothing about immutability.
+    acceptable = False
+    with maybe_subtest(
+        subtests,
+        name=f"{intro}{subintro}new_value_is_acceptable",
+        verbose=verbose,
+    ):
+        if not instance.validate(new_value, return_bool=True):
+            pytest.fail(
+                f"Value {new_value!r} is invalid for '{test_class.__name__}', so a rejected assignment "
+                f"would not prove immutability. Use a valid value."
+            )
+        if new_value == original_value:
+            pytest.fail(
+                f"Value {new_value!r} equals the current value of '{test_class.__name__}'; "
+                f"use a different one so that an accepted assignment would be visible."
+            )
+        acceptable = True
+    if not acceptable:
+        return
 
     # 3. Attempt to apply new value (must raise an exception)
     with maybe_subtest(
@@ -98,21 +122,25 @@ _DESIGN_NOTES = """
 # assert_immutable_behavior (Immutability Enforcement Gate)
 
 ## Purpose
-Verifies the runtime immutability contract when an object instance is initialized with `mutable=False`. 
-It ensures that the property setter strictly guards internal state, throwing exceptions upon 
+Verifies the runtime immutability contract when an object instance is initialized with `mutable=False`.
+It ensures that the property setter strictly guards internal state, throwing exceptions upon
 mutation attempts while guaranteeing full preservation of object identity and value consistency.
 
 ## Execution Pipeline Steps
-1. **Immutable Instantiation & Guard Gate:** Instantiates `test_class(mutable=False)` inside a protected context. 
+1. **Immutable Instantiation & Guard Gate:** Instantiates `test_class(mutable=False)` inside a protected context.
    Halts execution early via a guard clause if instance creation fails to prevent uninitialized attribute access.
 2. **State Snapshot:** Captures the initial Python object ID (`id(instance)`) and value state (`instance.value`).
-3. **Setter Interception Gate:** Attempts `instance.value = new_value`. Asserts that an exception is raised, 
+3. **Setter Interception Gate:** Attempts `instance.value = new_value`. Asserts that an exception is raised,
    failing fast via `pytest.fail` if the assignment succeeds.
 4. **Identity Preservation Assertion:** Asserts that object ID remains identical (`id(instance) == original_id`).
 5. **Value State Preservation Assertion:** Asserts that internal value remains untouched (`instance.value == original_value`).
 
 ## Pipeline Lifecycle Role
-Acts as a behavioral assertion blade in test orchestrators (such as `assert_simple_object`). 
-It guarantees that framework instances configured for write-once or immutable runtime patterns 
+Acts as a behavioral assertion blade in test orchestrators (such as `assert_simple_object`).
+It guarantees that framework instances configured for write-once or immutable runtime patterns
 strictly reject side-effect state mutations.
+## The Value Must Be Acceptable
+`except Exception` counts any exception as "rejected", so an invalid or unchanged `new_value` made the
+check pass without saying anything about immutability. A subtest first requires `new_value` to be valid
+for the class and different from the current value, as `assert_value_change` does for the mutable case.
 """

@@ -44,9 +44,12 @@ def assert_value_change(
         verbose=verbose,
     ):
         if isinstance(value, InnerValue):
-            target, candidate_value = value.as_instance_tuple(instance)
-            if target is UNSET:
+            resolved = value.as_instance_tuple(instance)
+            # `as_instance_tuple` returns the bare UNSET (not a pair) when the path cannot be resolved,
+            # so it must be checked before unpacking.
+            if resolved is UNSET or resolved[0] is UNSET:
                 pytest.fail("InnerValue path could not be resolved on target instance.")
+            target, candidate_value = resolved
         else:
             target = instance
             candidate_value = value
@@ -120,23 +123,27 @@ _DESIGN_NOTES = """
 # assert_value_change (Universal Value Mutation Assertion)
 
 ## Purpose
-Provides a robust, unified assertion blade for validating value changes on both root instances 
-and deeply nested composite inner objects (`InnerValue`). It encapsulates target resolution, 
+Provides a robust, unified assertion blade for validating value changes on both root instances
+and deeply nested composite inner objects (`InnerValue`). It encapsulates target resolution,
 schema pre-validation, state-diff sanity assertions, property setter execution, and post-mutation verification.
 
 ## Execution Matrix & Pipeline Steps
-1. **Target Resolution & Guard Gate (`InnerValue` Adapter):** Dynamically resolves whether mutation targets 
-   the root instance or a nested inner attribute via `value.as_instance_tuple(instance)`. Aborts early via 
+1. **Target Resolution & Guard Gate (`InnerValue` Adapter):** Dynamically resolves whether mutation targets
+   the root instance or a nested inner attribute via `value.as_instance_tuple(instance)`. Aborts early via
    a guard clause if resolution fails.
-2. **Schema Pre-Validation & Guard Gate:** Executes `target.validate(candidate_value, return_bool=True)` 
+2. **Schema Pre-Validation & Guard Gate:** Executes `target.validate(candidate_value, return_bool=True)`
    to guarantee the candidate value is valid before mutating state, terminating early if validation fails.
-3. **Difference Assertion & Guard Gate:** Confirms `candidate_value != old_value` upfront to prevent 
+3. **Difference Assertion & Guard Gate:** Confirms `candidate_value != old_value` upfront to prevent
    false-positive no-op assignment passes, guarded by an early exit.
 4. **Setter Invocation:** Applies `target.value = candidate_value` inside a protected interception block.
 5. **State Verification:** Asserts that `target.value == candidate_value` to guarantee state persistence.
 
 ## Downstream Role
-Returns the validated `candidate_value`. This enables composite reactivity orchestrators (such as 
-`assert_reactivity_upward` and `assert_reactivity_downward`) to chain value changes and verify 
+Returns the validated `candidate_value`. This enables composite reactivity orchestrators (such as
+`assert_reactivity_upward` and `assert_reactivity_downward`) to chain value changes and verify
 cascade propagation seamlessly.
+## Unresolvable `InnerValue` Path
+`InnerValue.as_instance_tuple` returns the bare `UNSET` sentinel, not a pair, when a part of the path is
+missing. The result is therefore compared with `UNSET` first and unpacked only afterwards, so a wrong
+path is reported as "could not be resolved" instead of failing on the unpacking itself.
 """

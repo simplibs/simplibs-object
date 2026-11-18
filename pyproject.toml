@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=69.0"]
+requires = ["setuptools>=77.0.3"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "simplibs-object"
-version = "0.1.1"
+version = "0.1.2"
 description = "A powerful meta-programming framework for building structured, validated, and composable parametric classes."
 readme = "README.md"
 license = "MIT"

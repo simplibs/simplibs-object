@@ -94,13 +94,13 @@ _DESIGN_NOTES = """
 # TestMixin (Synthetic Test Double Container)
 
 ## Purpose
-Acts as a universal, non-restrictive test double that implements the full `SimpleMixin` lifecycle contract. 
-It provides predefined slots, properties, methods, initialization hooks (`init_mixins`), and class extension 
+Acts as a universal, non-restrictive test double that implements the full `SimpleMixin` lifecycle contract.
+It provides predefined slots, properties, methods, initialization hooks (`init_mixins`), and class extension
 hooks (`__extend_instance_class__`) used to test dynamic mixin injection across target classes.
 
 ## Class Design & Unrestricted Compatibility
-By setting all compatibility flags (`_constant_only`, `_composite_only`, `_mutable_only`, `_immutable_only`) to `False` 
-and `_only_types` to `UNSET`, `TestMixin` can be dynamically attached to any `SimpleConstant` or `SimpleObject` 
+By setting all compatibility flags (`_constant_only`, `_composite_only`, `_mutable_only`, `_immutable_only`) to `False`
+and `_only_types` to `UNSET`, `TestMixin` can be dynamically attached to any `SimpleConstant` or `SimpleObject`
 subclass without triggering compatibility constraint failures.
 
 ## Member Contracts
@@ -113,10 +113,6 @@ subclass without triggering compatibility constraint failures.
 ## Framework Usage Locations
 1. **`asserts/base/assert_instance_creation.py`:**
    Passes `mixins=(TestMixin,)` to test synthetic class composition and dynamic mixin injection.
-2. **`asserts/methods/assert_validate_method.py`:**
-   Uses `TestMixin` during instance instantiation for isolated `_validate` method unit tests.
-3. **`asserts/methods/assert_calculate_value_method.py`:**
-   Uses `TestMixin` during instance instantiation for isolated `_logic` calculation method unit tests.
-4. **`asserts/methods/assert_decompose_value_method.py`:**
-   Uses `TestMixin` during instance instantiation for isolated `_decompose` method unit tests.
+2. **Method-level assertions** (`assert_validate_method`, `assert_calculate_value_method`,
+   `assert_decompose_value_method`) do **not** use `TestMixin`: they call the class-level methods directly.
 """

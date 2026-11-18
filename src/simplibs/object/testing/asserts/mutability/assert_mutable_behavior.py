@@ -42,7 +42,9 @@ def assert_mutable_behavior(
         except Exception as exc:
             pytest.fail(f"Failed to create mutable instance for '{test_class.__name__}': {exc}")
 
-        assert instance is not None
+        assert instance is not None, (
+            f"Instantiating '{getattr(test_class, '__name__', test_class)}' with mutable=True returned None."
+        )
 
     # 1.1 Guard clause: Halt execution if mutable instance creation failed
     if instance is None:
@@ -87,22 +89,22 @@ _DESIGN_NOTES = """
 # assert_mutable_behavior (Mutable State Behavior Gate)
 
 ## Purpose
-Verifies the runtime mutability contract when an object instance is initialized with `mutable=True`. 
-It guarantees that in-place state updates succeed via property setters while preserving the exact 
+Verifies the runtime mutability contract when an object instance is initialized with `mutable=True`.
+It guarantees that in-place state updates succeed via property setters while preserving the exact
 Python object identity (`id(instance)`), ensuring no hidden instance re-creation occurs.
 
 ## Execution Pipeline Steps
-1. **Mutable Instantiation & Guard Gate:** Instantiates `test_class(mutable=True)` within a protected 
-   interception block. Halts execution early via a guard clause if instance creation fails to prevent 
+1. **Mutable Instantiation & Guard Gate:** Instantiates `test_class(mutable=True)` within a protected
+   interception block. Halts execution early via a guard clause if instance creation fails to prevent
    uninitialized attribute access in downstream steps.
 2. **Identity Snapshot:** Captures the memory address / identity of the newly created instance (`id(instance)`).
-3. **In-Place Mutation Intercept:** Delegates value validation, setter invocation, and state update 
+3. **In-Place Mutation Intercept:** Delegates value validation, setter invocation, and state update
    verification to `assert_value_change`.
-4. **Identity Preservation Assertion:** Asserts that the memory address remains strictly unchanged 
+4. **Identity Preservation Assertion:** Asserts that the memory address remains strictly unchanged
    (`id(instance) == original_id`) after the mutation pass completes.
 
 ## Pipeline Lifecycle Role
-Acts as a behavioral assertion blade within test runners like `assert_simple_object`. 
-By pairing with `assert_immutable_behavior`, it guarantees full symmetry and contract compliance 
+Acts as a behavioral assertion blade within test runners like `assert_simple_object`.
+By pairing with `assert_immutable_behavior`, it guarantees full symmetry and contract compliance
 across both mutable and immutable execution modes of the framework.
 """

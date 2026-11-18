@@ -60,7 +60,7 @@ def assert_simple_object(
         deep_check: Enables deep structural checks (synthetic mixin injection, internal methods verification).
 
     Returns:
-        The created user instance with optional mixins applied.
+        The created user instance with optional mixins applied (None if it could not be created).
     """
 
     # ------------------------------------------------------------
@@ -83,6 +83,10 @@ def assert_simple_object(
         verbose=verbose,
         intro=intro,
     )
+
+    # Guard clause: without an instance (verbose mode records the failure) no later stage can run
+    if instance is None:
+        return None
 
     # ------------------------------------------------------------
     # 2. PARAMETER TESTS (State mutation, reactivity & mutability)
@@ -113,7 +117,7 @@ def assert_simple_object(
 
     # Test downward reactivity (root to leaves decomposition cascade)
     if test_reactivity_down is not UNSET:
-        verbose_value_change = verbose_value_change or test_reactivity_up is UNSET
+        verbose_value_change = verbose_value_change and test_reactivity_up is UNSET
         assert_reactivity_downward(
             subtests,
             instance,
@@ -125,7 +129,7 @@ def assert_simple_object(
 
     # Test mutable behavior contract (in-place modification preserving identity)
     if test_mutability is not UNSET:
-        verbose_value_change = verbose_value_change or test_reactivity_down is UNSET
+        verbose_value_change = verbose_value_change and test_reactivity_down is UNSET
         assert_mutable_behavior(
             subtests,
             test_class,
@@ -192,9 +196,9 @@ _DESIGN_NOTES = """
 # assert_simple_object (Master Object Testing Orchestrator)
 
 ## Purpose
-Serves as the primary end-to-end testing pipeline entry point for verifying the compliance and structural 
-integrity of `SimpleObject` and `SimpleConstant` class implementations. It unifies shallow structural checks, 
-state mutation parameters, behavioral reactivity pipelines, and deep framework lifecycle validation into 
+Serves as the primary end-to-end testing pipeline entry point for verifying the compliance and structural
+integrity of `SimpleObject` and `SimpleConstant` class implementations. It unifies shallow structural checks,
+state mutation parameters, behavioral reactivity pipelines, and deep framework lifecycle validation into
 a single high-level runner.
 
 ## Execution Stages & Cascading Verbosity
@@ -207,13 +211,14 @@ a single high-level runner.
    - Downward decomposition cascades via `assert_reactivity_downward`.
    - In-place mutable state behavior via `assert_mutable_behavior`.
    - Identity-changing immutable state behavior via `assert_immutable_behavior`.
-   - *Verbosity Cascade Control:* Dynamically manages `verbose_value_change` flags across child assertions 
-     to avoid redundant subtest report spamming when nested mutations occur.
+   - *Verbosity Cascade Control:* `verbose_value_change` is True only while no earlier stage has already
+     reported the value change step by step (`test_value_change`, then upward, then downward reactivity).
+     The first stage that runs it reports it in detail, the later ones fold it into their own subtest.
 3. **Deep Suite (`deep_check=True`):**
    - Injects a synthetic testing mixin via `assert_instance_creation` to guarantee subclass dynamic mixin stability.
    - Direct isolated method testing for `_validate`, `_logic` (composite calculation), and `_decompose`.
 
 ## Returns
-Returns the live user instance created in Step 1, allowing calling unit tests to perform additional custom 
+Returns the live user instance created in Step 1, allowing calling unit tests to perform additional custom
 assertions post-orchestration.
 """

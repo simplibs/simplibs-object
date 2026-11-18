@@ -45,7 +45,9 @@ def assert_instance_creation(
         except Exception as exc:
             pytest.fail(f"Unexpected error during instance creation: {exc}")
 
-        assert instance is not None
+        assert instance is not None, (
+            f"Instantiating '{getattr(test_class, '__name__', test_class)}' with TestMixin returned None."
+        )
 
     # 1.1 Guard clause: If the instance has not been created, we end the test
     if instance is None:
@@ -58,7 +60,9 @@ def assert_instance_creation(
         verbose=verbose,
     ):
         # noinspection PyProtectedMember
-        assert instance._test_slot == "test_value"
+        assert instance._test_slot == "test_value", (
+            f"Expected slot '_test_slot' to be 'test_value', got {instance._test_slot!r}."
+        )
 
     # 3. Verify property propagation
     with maybe_subtest(
@@ -66,7 +70,9 @@ def assert_instance_creation(
         name=f"{intro}{subintro}test_property_propagation",
         verbose=verbose,
     ):
-        assert instance.test_property == "test_value"
+        assert instance.test_property == "test_value", (
+            f"Expected 'test_property' to be 'test_value', got {instance.test_property!r}."
+        )
 
     # 4. Verify method propagation
     with maybe_subtest(
@@ -74,7 +80,9 @@ def assert_instance_creation(
         name=f"{intro}{subintro}test_method_propagation",
         verbose=verbose,
     ):
-        assert instance.test_method() == "[TestMixin] property=test_value"
+        assert instance.test_method() == "[TestMixin] property=test_value", (
+            f"Unexpected result of 'test_method()': {instance.test_method()!r}."
+        )
 
     # 5. Verify class-level attribute propagation
     with maybe_subtest(
@@ -82,7 +90,10 @@ def assert_instance_creation(
         name=f"{intro}{subintro}test_class_attribute",
         verbose=verbose,
     ):
-        assert getattr(instance.__class__, "test_class_attribute", None) == "class_level_ok"
+        assert getattr(instance.__class__, "test_class_attribute", None) == "class_level_ok", (
+            f"Expected class attribute 'test_class_attribute' to be 'class_level_ok', "
+            f"got {getattr(instance.__class__, 'test_class_attribute', None)!r}."
+        )
 
     # 6. Verify class-level method propagation
     with maybe_subtest(
@@ -90,7 +101,9 @@ def assert_instance_creation(
         name=f"{intro}{subintro}test_class_method",
         verbose=verbose,
     ):
-        assert instance.test_class_method() == "class_method_ok"
+        assert instance.test_class_method() == "class_method_ok", (
+            f"Unexpected result of 'test_class_method()': {instance.test_class_method()!r}."
+        )
 
     return instance
 
@@ -99,12 +112,12 @@ _DESIGN_NOTES = """
 # assert_instance_creation (Mixin-Enriched Instance Creation Gate)
 
 ## Purpose
-Serves as a structural verification gate confirming that the metaclass and dynamic instance builder 
+Serves as a structural verification gate confirming that the metaclass and dynamic instance builder
 can instantiate the target class blueprint while properly binding and propagating mixin capabilities.
 
 ## Verification Pipeline
 The function executes a comprehensive check of mixin feature propagation across multiple architectural layers:
-1. **Instantiation & Guard Gate:** Instantiates `test_class` with `mixins=(TestMixin,)`. If instantiation fails, 
+1. **Instantiation & Guard Gate:** Instantiates `test_class` with `mixins=(TestMixin,)`. If instantiation fails,
    a fail-fast guard terminates execution early to prevent downstream cascading errors on an uninitialized instance.
 2. **Slot Propagation:** Confirms internal instance slots (`_test_slot`) are correctly allocated and initialized.
 3. **Property Propagation:** Validates dynamic property getters (`test_property`).
@@ -113,7 +126,7 @@ The function executes a comprehensive check of mixin feature propagation across 
 6. **Class-Level Method Propagation:** Verifies class methods (`test_class_method()`) operate smoothly on the instance interface.
 
 ## Pipeline Lifecycle Role
-Acts as the second shallow gate inside composite orchestrators (e.g., `assert_simple_object`). 
-By returning the created `instance`, it allows downstream test stages to reuse a fully functional, 
+Acts as the second shallow gate inside composite orchestrators (e.g., `assert_simple_object`).
+By returning the created `instance`, it allows downstream test stages to reuse a fully functional,
 mixin-enriched object without requiring redundant instantiation calls.
 """

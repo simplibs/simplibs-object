@@ -33,7 +33,8 @@ def assert_user_instance_creation(
         intro: Optional prefix string added to the generated subtest identity name.
 
     Returns:
-        The created user runtime instance.
+        The created user runtime instance, or None when the mixins check or the creation failed
+        (in verbose mode the failure is recorded by its subtest and the run continues).
     """
     subintro = "test_user_instance_creation::"
 
@@ -56,6 +57,7 @@ def assert_user_instance_creation(
         return None
 
     # 2. Instantiate target class with user mixins (or vanilla default)
+    instance = None
     with maybe_subtest(
         subtests,
         name=f"{intro}{subintro}create_instance",
@@ -69,7 +71,9 @@ def assert_user_instance_creation(
                 f"with mixins={mixins_tuple}: {exc}"
             )
 
-        assert instance is not None
+        assert instance is not None, (
+            f"Instantiating '{getattr(test_class, '__name__', test_class)}' returned None."
+        )
 
     return instance
 
@@ -78,20 +82,24 @@ _DESIGN_NOTES = """
 # assert_user_instance_creation (User Instance Instantiation Gate)
 
 ## Purpose
-Provides a lightweight instantiation check for user-defined configuration scenarios. 
-It verifies that a blueprint class can be instantiated with custom user mixins or in a 
+Provides a lightweight instantiation check for user-defined configuration scenarios.
+It verifies that a blueprint class can be instantiated with custom user mixins or in a
 vanilla (mixin-free) state without raising runtime instantiation errors.
 
 ## Execution Matrix & Sentinel Handling
-1. **Mixin Normalization & Guard Gate:** Evaluates the `mixins` parameter. If left as `UNSET`, it defaults 
-   to an empty tuple `()`. If passed explicitly, it validates that `mixins` is formatted as a `tuple`, 
+1. **Mixin Normalization & Guard Gate:** Evaluates the `mixins` parameter. If left as `UNSET`, it defaults
+   to an empty tuple `()`. If passed explicitly, it validates that `mixins` is formatted as a `tuple`,
    failing fast via `pytest.fail` and aborting execution via a guard clause if an invalid type is supplied.
-2. **Instantiation Intercept:** Invokes `test_class(mixins=mixins_tuple)` within a protected context, 
+2. **Instantiation Intercept:** Invokes `test_class(mixins=mixins_tuple)` within a protected context,
    capturing unexpected runtime exceptions and emitting clear diagnostic logs.
 
 ## Architectural Distinction
-- **`assert_instance_creation`**: Internal structural gate that forces `TestMixin` injection to test 
+- **`assert_instance_creation`**: Internal structural gate that forces `TestMixin` injection to test
   deep feature propagation (slots, properties, methods, class attributes).
-- **`assert_user_instance_creation`**: User-facing scenario gate focusing strictly on successful 
+- **`assert_user_instance_creation`**: User-facing scenario gate focusing strictly on successful
   instantiation under clean or custom runtime conditions. Returns the created instance for downstream checks.
+## Failed Creation
+With `verbose=True` a failed creation is recorded by its subtest and the function returns `None`
+(`instance` is initialised to `None` first, so the return never hits an unbound name). A caller must
+not continue with `None`; `assert_simple_object` stops there.
 """
